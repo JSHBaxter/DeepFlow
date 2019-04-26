@@ -127,9 +127,9 @@ struct PottsMeanpass3dGradFunctor<GPUDevice>{
 
         //std::cout << "\t" << buffers_full << std::endl;
 
-        float epsilon = 0.001;
-        float beta = 1e-20;
-        float tau = 0.5;
+        const float epsilon = 0.00001;
+        const float beta = 1e-20;
+        const float tau = 0.5;
         int n_bat = sizes[0];
         int n_c = sizes[1];
         int n_x = sizes[2];
@@ -137,17 +137,19 @@ struct PottsMeanpass3dGradFunctor<GPUDevice>{
         int n_z = sizes[4];
         int n_s = n_x*n_y*n_z;
 
-
         float* du_i = buffers_full[0];
         float* dy = buffers_full[1];
         float* u_tmp = buffers_full[2];
+
+        //std::cout << du_i << std::endl;
+        //std::cout << g_data << std::endl;
 
         //std::cout << "\t" << du_i << std::endl;
         //std::cout << "\t" << dy << std::endl;
         //std::cout << "\t" << u_tmp << std::endl;
 
         int max_loops = n_x+n_y+n_z;
-        int min_iters = 10;
+        const int min_iters = 10;
 
         for (int b = 0; b < n_bat; b++){
 
@@ -165,16 +167,13 @@ struct PottsMeanpass3dGradFunctor<GPUDevice>{
             //get initial gradient for the final logits
             softmax(d, u_b, NULL, u_tmp, n_s, n_c);
             copy_buffer(d, g_b, g_d_b, n_s*n_c);
-            populate_reg_mean_gradients(d, g_d_b, u_tmp, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_c);
-            //clear_buffer(d,g_rx_b,n_s*n_c);
-            //clear_buffer(d,g_ry_b,n_s*n_c);
-            //clear_buffer(d,g_rz_b,n_s*n_c);
+            populate_reg_mean_gradients(d, g_b, u_tmp, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_c);
 
             //push gradients back a number of iterations
             float max_change = 0.0f;
             get_gradient_for_u(d, g_b, du_i, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_c);
-            int i = 0;
-            for( ; i < max_loops; i++){
+            
+            for(int i = 0; i < max_loops; i++){
                 for(int iter = 0; iter < min_iters; iter++){
                     process_grad_potts(d, du_i, u_tmp, dy, n_s, n_c, tau);
                     populate_reg_mean_gradients_and_add(d, dy, u_tmp, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_c);
