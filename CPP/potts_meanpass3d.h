@@ -1,4 +1,4 @@
-// kernel_example.h
+// potts_meanpass3d.h
 #ifndef POTTS_MEANPASS3D_H_
 #define POTTS_MEANPASS3D_H_
 

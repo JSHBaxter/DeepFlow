@@ -127,9 +127,6 @@ private:
     const float* ry_cost;
     const float* rz_cost;
     const float* grad;
-    float* u; 
-    float* dy;
-    float* g_u;
     
 public:
     GradientBatchThreadChannelsLast(
@@ -143,8 +140,7 @@ public:
         float* g_d,
         float* g_rx,
         float* g_ry,
-        float* g_rz,
-        float** full_buffers) :
+        float* g_rz) :
     batch(batch),
     n_x(sizes[1]),
     n_y(sizes[2]),
@@ -158,11 +154,8 @@ public:
     rx_cost(rx_cost),
     ry_cost(ry_cost),
     rz_cost(rz_cost),
-    logits(logits),
-    grad(g),
-    u(full_buffers[0]),
-    dy(full_buffers[1]),
-    g_u(full_buffers[2])
+    logits(u),
+    grad(g)
     {}
 
     inline int idx (const int s, const int c){
@@ -263,6 +256,9 @@ public:
     }
     
     void operator()(){
+        const float epsilon = 0.00001;
+        const float beta = 1e-20;
+        const float tau = 0.5;
         
         int b = this->batch;
         float* g_d_b = g_data + b*n_s*n_c;
@@ -274,74 +270,51 @@ public:
         const float* rz_b = rz_cost + b*n_s*n_c;
         const float* g_b = grad + b*n_s*n_c;
         const float* l_b = logits + b*n_s*n_c;
-        float* g_r_eff = g_d_b; //new T[n_s*n_c];
-
-        const float epsilon = 10e-5f;
-        const float tau = 0.5f;
-        const float beta = 1e-30f;
+        float* g_r_eff = g_d_b; 
         
         int max_loops = n_x+n_y+n_z;
         const int min_iters = 10;
         
-        //bool nanexist = false;
-        //for (int x = 0; x < n_x; x++) {
-        //for (int y = 0; y < n_y; y++) {
-        //for (int z = 0; z < n_z; z++) {
-        //for (int c = 0; c < n_c; c++) {
-        //    if(!std::isfinite(g_b[idx(x,y,z,c)])){
-        //        std::cout << "G_U : " << x << " " << y << " " << z << " " << c << std::endl;
-        //        nanexist = true;
-        //        break;
-        //    }
-        //    if(nanexist) break; }
-        //    if(nanexist) break; }
-        //    if(nanexist) break; }
-        //    if(nanexist) break; }
+        //allocate temporary variables
+        float* u = new float[n_s*n_c];
+        float* dy = new float[n_s*n_c];
+        float* g_u = new float[n_s*n_c];
         
         //transformat logits into labelling
         softmax(l_b, u, n_s, n_c);
 
-        //get initial gradient for the data term
-        for(int i = 0; i < n_s*n_c; i++)
-            g_d_b[i] = g_b[i];
-
-        //get initial gradient for the regularization terms
-        for(int i = 0; i < n_s*n_c; i++)
-            g_rx_b[i] = g_ry_b[i] = g_rz_b[i] = 0.0f;
+        //get initial gradient for the data and regularization terms
+        copy(g_b,g_d_b,n_s*n_c);
+        clear(g_rx_b,g_ry_b,g_rz_b,n_s*n_c);
         get_reg_gradients(g_b, u, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_c, 1.0f);
          
         //psuh gradient back an iteration
         get_gradient_for_u(g_b, rx_b, ry_b, rz_b, g_u, n_x, n_y, n_z, n_c, 1);
         
-        int i = 0;
-        for( ; i < max_loops; i++){
+        for(int i = 0; i < max_loops; i++){
             for(int iter = 0; iter < min_iters; iter++){
                 //untangle softmax
                 untangle_softmax(g_u, u, dy, n_s, n_c);
                 
                 // populate data gradient
-                for(int i = 0; i < n_s*n_c; i++)
-                    g_d_b[i] += tau*dy[i];
+                inc(dy,g_d_b,tau,n_s*n_c);
 
                 // populate effective regularization gradient
                 get_reg_gradients(g_b, u, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_c, tau);
 
                 //push back gradient 
-                get_gradient_for_u(dy, rx_b, ry_b, rz_b, g_u, n_x, n_y, n_z, n_c, 1);
+                get_gradient_for_u(dy, rx_b, ry_b, rz_b, g_u, n_x, n_y, n_z, n_c, tau);
             }
             
-            //get max of gu
-            float gu_max = 0.0f;
-            for(int i = 0; i < n_s*n_c; i++)
-                if( -gu_max > g_u[i] )
-                    gu_max = -g_u[i];
-                else if( gu_max > g_u[i] )
-                    gu_max = g_u[i];
-            
-            //determine if converged
+            //get max of gu and break if converged
+            float gu_max = maxabs(g_u, n_s*n_c);
             if( gu_max < beta )
                 break;
         }
+        
+        delete u;
+        delete dy;
+        delete g_u;
     }
 };
 
@@ -392,7 +365,7 @@ struct PottsMeanpass3dGradFunctor<CPUDevice> {
       float* g_rx,
       float* g_ry,
       float* g_rz,
-      float** full_buffers,
+      float** /*unused full buffers*/,
       float** /*unused image buffers*/
   ){
       
@@ -401,7 +374,7 @@ struct PottsMeanpass3dGradFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(GradientBatchThreadChannelsLast(b, sizes, u, g, rx_cost, ry_cost, rz_cost, g_data, g_rx, g_ry, g_rz, full_buffers));
+        threads[b] = new std::thread(GradientBatchThreadChannelsLast(b, sizes, u, g, rx_cost, ry_cost, rz_cost, g_data, g_rx, g_ry, g_rz));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)
@@ -410,6 +383,6 @@ struct PottsMeanpass3dGradFunctor<CPUDevice> {
       
   }
     
-  int num_buffers_full(){ return 3; }
+  int num_buffers_full(){ return 0; }
   int num_buffers_images(){ return 0; }
 };

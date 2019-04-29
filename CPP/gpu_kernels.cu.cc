@@ -35,19 +35,46 @@ void clear_buffer(const Eigen::GpuDevice& dev, int* buffer, const int size){
 }
 
 // update the source flow
-
-__global__ void update_source_flows_kernel_channel_last(float* ps, const float* pt, const float* div, const float* u, float icc, const int n_c, const int n_s) {
+__global__ void update_source_sink_multiplier_potts_kernel(float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_c, const int n_s){
+    
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
+    //update source flow
     float ps_t = icc;
     for(int c = 0; c < n_c; c++)
-        ps_t += pt[i*n_c+c]+div[i*n_c+c]-u[i*n_c+c]*icc;
-    ps_t /= (float) n_c;
+        ps_t += pt[c*n_s+i]+div[c*n_s+i]-u[c*n_s+i]*icc;
+    ps_t /= n_c;
     if( i < n_s )
         ps[i] = ps_t;
     
+    //update sink flow
+    for(int c = 0; c < n_c; c++){
+        float pt_t = ps_t;
+        pt_t -= div[c*n_s+i];
+        pt_t += u[c*n_s+i]*icc;
+        float d_t = -d[c*n_s+i];
+        pt_t = (pt_t > d_t) ? d_t : pt_t;
+    
+        
+        //update multiplier
+        float erru_t = cc * (ps_t - div[c*n_s+i] - pt_t);
+        float u_t = u[c*n_s+i] + erru_t;
+        erru_t = (erru_t < 0.0f) ? -erru_t : erru_t;
+        
+        //output
+        if( i < n_s ){
+            pt[c*n_s+i] = pt_t;
+            u[c*n_s+i] = u_t;
+            erru[c*n_s+i] = erru_t;
+        }
+    }
+    
 }
 
+void update_source_sink_multiplier_potts(const Eigen::GpuDevice& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_c, const int n_s){
+    update_source_sink_multiplier_potts_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(ps, pt, div, u, erru, d, cc, icc, n_c, n_s);
+    if(CHECK_ERRORS) check_error(dev, "update_source_sink_multiplier_potts launch failed with error");
+}
 
 __global__ void update_source_flows_kernel_channel_first(float* ps, const float* pt, const float* div, const float* u, float icc, const int n_c, const int n_s) {
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
@@ -77,7 +104,7 @@ __global__ void update_sink_flows_kernel(const float* ps, float* pt, const float
     float pt_t = ps[ps_i];
     pt_t -= div[i];
     pt_t += icc * u[i];
-    float constraint = d[i];
+    float constraint = -d[i];
     pt_t = (pt_t > constraint) ? constraint: pt_t;
     if( i < b_size )
         pt[i] = pt_t;
@@ -279,7 +306,22 @@ void abs_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* cons
     
 }
 
+__global__ void log_buffer_kernel(const float* in, float* out, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    float value = in[i];
+    value = log(value + 0.00001f);
+    
+    if(i < n_s)
+        out[i] = value;
+    
+}
 
+void log_buffer(const Eigen::GpuDevice& dev, const float* in, float* out, const int n_s){
+    log_buffer_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(in, out, n_s);
+    if(CHECK_ERRORS) check_error(dev, "log_buffer launch failed with error");
+    
+}
 
 __global__ void binary_constrain_kernel(float* b, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
@@ -737,46 +779,39 @@ void change_to_diff(const Eigen::GpuDevice& dev, float* transfer, float* diff, c
     if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
 }
 
+__device__ float get_effective_reg_kernel_up(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){
+        float ut = u[c*n_s+i+a];
+        float rt = r[c*n_s+i];
+        return (d < n_d-1) ? ut*rt : 0.0f;
+}
+__device__ float get_effective_reg_kernel_dn(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d){
+        float ut = u[c*n_s+i-a];
+        float rt = r[c*n_s+i-a];
+        return (d > 0) ? ut*rt : 0.0f;
+}
+
 __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     int i_temp = i;
     int z = i_temp % n_z; i_temp /= n_z;
     int y = i_temp % n_y; i_temp /= n_y;
-    int x = i_temp % n_x; i_temp /= n_x;
+    int x = i_temp % n_x;
     int n_s = n_x*n_y*n_z;
     
     for(int c = 0; c < n_c; c++){
         float reg_tot = 0.0f;
 
-        //z+ direction
-        float ut = u[c*n_s+i+1];
-        float r = rz[c*n_s+i];
-        reg_tot += (z < n_z-1) ? ut*r : 0.0f;
-        
-        //z- direction
-        ut = u[c*n_s+i-1];
-        r = rz[c*n_s+i-1];
-        reg_tot += (z > 0) ? ut*r : 0.0f;
+        //z direction
+        reg_tot += get_effective_reg_kernel_up(u, rz, c, n_s, i, 1, z, n_z);
+        reg_tot += get_effective_reg_kernel_dn(u, rz, c, n_s, i, 1, z);
 
-        //y+ direction
-        ut = u[c*n_s+i+n_z];
-        r = ry[c*n_s+i];
-        reg_tot += (y < n_y-1) ? ut*r : 0.0f;
-        
-        //y- direction
-        ut = u[c*n_s+i-n_z];
-        r = ry[c*n_s+i-n_z];
-        reg_tot += (y > 0) ? ut*r : 0.0f;
+        //y direction
+        reg_tot += get_effective_reg_kernel_up(u, ry, c, n_s, i, n_z, y, n_y);
+        reg_tot += get_effective_reg_kernel_dn(u, ry, c, n_s, i, n_z, y);
 
-        //x+ direction
-        ut = u[c*n_s+i+n_z*n_y];
-        r = rx[c*n_s+i];
-        reg_tot += (x < n_x-1) ? ut*r : 0.0f;
-        
-        //x- direction
-        ut = u[c*n_s+i-n_z*n_y];
-        r = rx[c*n_s+i-n_z*n_y];
-        reg_tot += (x > 0) ? ut*r : 0.0f;
+        //x direction
+        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_s, i, n_z*n_y, x, n_x);
+        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_s, i, n_z*n_y, x);
         
         reg_tot *= 0.5f;
         if(i < n_s)
@@ -784,11 +819,59 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
     }
 }
 
+__global__ void get_effective_reg_kernel(float* r_eff, const float* u, const float* rx, const float* ry, const int n_x, const int n_y, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_y;
+    
+    for(int c = 0; c < n_c; c++){
+        float reg_tot = 0.0f;
+
+        //y direction
+        reg_tot += get_effective_reg_kernel_up(u, ry, c, n_s, i, 1, y, n_y);
+        reg_tot += get_effective_reg_kernel_dn(u, ry, c, n_s, i, 1, y);
+
+        //x direction
+        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_s, i, n_y, x, n_x);
+        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_s, i, n_y, x);
+        
+        reg_tot *= 0.5f;
+        if(i < n_s)
+            r_eff[c*n_s+i] = reg_tot;
+    }
+}
+
+__global__ void get_effective_reg_kernel(float* r_eff, const float* u, const float* rx, const int n_x, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    for(int c = 0; c < n_c; c++){
+        float reg_tot = 0.0f;
+        
+        //x direction
+        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_x, i, 1, i, n_x);
+        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_x, i, 1, i);
+        
+        reg_tot *= 0.5f;
+        if(i < n_x)
+            r_eff[c*n_x+i] = reg_tot;
+    }
+}
+
 void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int n_s = n_x*n_y*n_z;
     get_effective_reg_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(r_eff, u, rx, ry, rz, n_x, n_y, n_z, n_c);
-    if(CHECK_ERRORS) check_error(dev, "get_effective_reg launch failed with error");
-    
+    if(CHECK_ERRORS) check_error(dev, "get_effective_reg (3D) launch failed with error");
+}
+void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u, const float* rx, const float* ry, const int n_x, const int n_y, const int n_c){
+    int n_s = n_x*n_y;
+    get_effective_reg_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(r_eff, u, rx, ry, n_x, n_y, n_c);
+    if(CHECK_ERRORS) check_error(dev, "get_effective_reg (2D) launch failed with error");
+}
+void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u, const float* rx, const int n_x, const int n_c){
+    get_effective_reg_kernel<<<((n_x+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(r_eff, u, rx, n_x, n_c);
+    if(CHECK_ERRORS) check_error(dev, "get_effective_reg (1D) launch failed with error");
 }
 
 
@@ -847,56 +930,93 @@ void process_grad_potts(const Eigen::GpuDevice& dev, const float* du_i, const fl
     if(CHECK_ERRORS) check_error(dev, "process_grad_potts launch failed with error");
 }
 
+__device__ float get_gradient_for_u_kernel_dn(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d){
+    float multiplier = dy[c*n_s+i-a];
+    float inc = multiplier*r[c*n_s+i-a];
+    return (d > 0) ? inc: 0.0f;
+}
+__device__ float get_gradient_for_u_kernel_up(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){
+    float multiplier = dy[c*n_s+i+a];
+    float inc = multiplier*r[c*n_s+i+a];
+    return (d < n_d-1) ? inc: 0.0f;
+}
+
 __global__ void get_gradient_for_u_kernel(const float* dy, float* du, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     int i_temp = i;
     int z = i_temp % n_z; i_temp /= n_z;
     int y = i_temp % n_y; i_temp /= n_y;
-    int x = i_temp % n_x; i_temp /= n_x;
+    int x = i_temp % n_x;
     int n_s = n_x*n_y*n_z;
     
     for(int c = 0; c < n_c; c++){
         float grad_val = 0.0f;
             
-        //z down
-        float multiplier = dy[c*n_s+i-1];
-        float inc = 0.5f*multiplier*rz[c*n_s+i-1];
-        grad_val += (z > 0) ? inc: 0.0f;
-
-        //y down
-        multiplier = dy[c*n_s+i-n_z];
-        inc = 0.5f*multiplier*ry[c*n_s+i-n_z];
-        grad_val += (y > 0) ? inc: 0.0f;
-
-        //x down
-        multiplier = dy[c*n_s+i-n_z*n_y];
-        inc = 0.5f*multiplier*rx[c*n_s+i-n_z*n_y];
-        grad_val += (x > 0) ? inc: 0.0f;
-
-        //z up
-        multiplier = dy[c*n_s+i+1];
-        inc = 0.5f*multiplier*rz[c*n_s+i];
-        grad_val += (z < n_z-1) ? inc: 0.0f;
-
-        //y up
-        multiplier = dy[c*n_s+i+n_z];
-        inc = 0.5f*multiplier*ry[c*n_s+i];
-        grad_val += (y < n_y-1) ? inc: 0.0f;
-
-        //x up
-        multiplier = dy[c*n_s+i+n_z*n_y];
-        inc = 0.5f*multiplier*rx[c*n_s+i];
-        grad_val += (x < n_x-1) ? inc: 0.0f;
-            
+        grad_val += get_gradient_for_u_kernel_dn(dy, rz, c, n_s, i, 1, z);
+        grad_val += get_gradient_for_u_kernel_up(dy, rz, c, n_s, i, 1, z, n_z);
+        
+        grad_val += get_gradient_for_u_kernel_dn(dy, ry, c, n_s, i, n_z, y);
+        grad_val += get_gradient_for_u_kernel_up(dy, ry, c, n_s, i, n_z, y, n_y);
+        
+        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_s, i, n_z*n_y, x);
+        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_s, i, n_z*n_y, x, n_x);
+        
+        grad_val *= 0.5f;
         if(i < n_s)
             du[c*n_s+i] = grad_val;
+    }
+}
+
+__global__ void get_gradient_for_u_kernel(const float* dy, float* du, const float* rx, const float* ry, const int n_x, const int n_y, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_y;
+    
+    for(int c = 0; c < n_c; c++){
+        float grad_val = 0.0f;
+        
+        grad_val += get_gradient_for_u_kernel_dn(dy, ry, c, n_s, i, 1, y);
+        grad_val += get_gradient_for_u_kernel_up(dy, ry, c, n_s, i, 1, y, n_y);
+        
+        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_s, i, n_y, x);
+        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_s, i, n_y, x, n_x);
+        
+        grad_val *= 0.5f;
+        if(i < n_s)
+            du[c*n_s+i] = grad_val;
+    }
+}
+
+__global__ void get_gradient_for_u_kernel(const float* dy, float* du, const float* rx, const int n_x, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    for(int c = 0; c < n_c; c++){
+        float grad_val = 0.0f;
+        
+        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_x, i, 1, i);
+        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_x, i, 1, i, n_x);
+        
+        grad_val *= 0.5f;
+        if(i < n_x)
+            du[c*n_x+i] = grad_val;
     }
 }
 
 void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int n_s = n_x*n_y*n_z;
     get_gradient_for_u_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(dy, du, rx, ry, rz, n_x, n_y, n_z, n_c);
-    if(CHECK_ERRORS) check_error(dev, "get_gradient_for_u launch failed with error");
+    if(CHECK_ERRORS) check_error(dev, "get_gradient_for_u (3D) launch failed with error");
+}
+void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du, const float* rx, const float* ry, const int n_x, const int n_y, const int n_c){
+    int n_s = n_x*n_y;
+    get_gradient_for_u_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(dy, du, rx, ry, n_x, n_y, n_c);
+    if(CHECK_ERRORS) check_error(dev, "get_gradient_for_u (2D) launch failed with error");
+}
+void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du, const float* rx, const int n_x, const int n_c){
+    get_gradient_for_u_kernel<<<((n_x+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(dy, du, rx, n_x, n_c);
+    if(CHECK_ERRORS) check_error(dev, "get_gradient_for_u (1D) launch failed with error");
 }
 
 #endif // GOOGLE_CUDA

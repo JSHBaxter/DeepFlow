@@ -1,9 +1,10 @@
 /// \file potts_meanpass3d.cc
 /// \author John S.H. Baxter
-/// \brief Implementation of the augmented Lagrangian solver for a Potts 
+/// \brief Implementation of the mean-field message passing approximate solver for a Potts 
 /// segmentation model operation in Tensorflow.
 
 #include "potts_meanpass3d.h"
+#include "tf_memory_utils.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/platform/default/logging.h"
@@ -46,6 +47,7 @@ public:
                     errors::InvalidArgument("Too many elements in tensor"));
         
         // check shapes of input and weights
+        const DataType data_type = data_cost->dtype();
         const TensorShape& data_shape = data_cost->shape();
         const TensorShape& rx_shape = rx_cost->shape();
         const TensorShape& ry_shape = ry_cost->shape();
@@ -85,31 +87,14 @@ public:
         OP_REQUIRES_OK(context, context->allocate_output(0, data_shape, &u));
 
         // create intermediate buffers as needed
+        int n_s = size_array[1]*size_array[2]*size_array[3]*size_array[4];
+        int n_i = size_array[2]*size_array[3]*size_array[4];
         int num_intermediates_full = PottsMeanpass3dFunctor<Device>().num_buffers_full();
         int num_intermediates_images = PottsMeanpass3dFunctor<Device>().num_buffers_images();
-        float** buffers_full = (num_intermediates_full > 0) ? new float*[num_intermediates_full]: NULL;
-        float** buffers_imgs = (num_intermediates_images > 0) ? new float*[num_intermediates_images]: NULL;
-        TensorShape full_shape;
-        full_shape.AddDim(size_array[1]);
-        full_shape.AddDim(size_array[2]);
-        full_shape.AddDim(size_array[3]);
-        full_shape.AddDim(size_array[4]);
-        for(int b = 0; b < num_intermediates_full; b++){
-            Tensor buffer;
-            OP_REQUIRES_OK(context, context->allocate_temp(data_cost->dtype(), full_shape, &buffer));
-            buffers_full[b] = buffer.flat<float>().data();
-        }
-        TensorShape img_shape;
-        img_shape.AddDim(size_array[2]);
-        img_shape.AddDim(size_array[3]);
-        img_shape.AddDim(size_array[4]);
-        for(int b = 0; b < num_intermediates_images; b++){
-            Tensor buffer;
-            OP_REQUIRES_OK(context, context->allocate_temp(data_cost->dtype(), img_shape, &buffer));
-            buffers_imgs[b] = buffer.flat<float>().data();
-        }
-        
-        //std::cout << "FOR - Made tensors for intermediates" << std::endl;
+        float** buffers_full = NULL;
+        get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, data_cost);
+        float** buffers_imgs = NULL;
+        get_temporary_buffers(context, buffers_imgs, n_i, num_intermediates_images, data_cost);
         
         // call function
         PottsMeanpass3dFunctor<Device>()(
@@ -124,11 +109,9 @@ public:
             buffers_imgs
         );
         
-        //deallocate buffers - done autoamtically
-        if(buffers_full != NULL)
-            free(buffers_full);
-        if(buffers_imgs != NULL)
-            free(buffers_imgs);
+        //deallocate buffers
+        clear_temporary_buffers(context, buffers_full, n_s, num_intermediates_full);
+        clear_temporary_buffers(context, buffers_imgs, n_i, num_intermediates_images);
     }
 };
 
@@ -157,6 +140,7 @@ public:
                     errors::InvalidArgument("Too many elements in tensor"));
         
         // check shapes of input and weights
+        const DataType data_type = data_cost->dtype();
         const TensorShape& data_shape = data_cost->shape();
         const TensorShape& rx_shape = rx_cost->shape();
         const TensorShape& ry_shape = ry_cost->shape();
@@ -191,31 +175,6 @@ public:
         DCHECK_EQ(data_shape.dim_size(3), rz_shape.dim_size(3));
         DCHECK_EQ(data_shape.dim_size(4), rz_shape.dim_size(4));
         
-        // create intermediate buffers as needed
-        int num_intermediates_full = PottsMeanpass3dGradFunctor<Device>().num_buffers_full();
-        int num_intermediates_images = PottsMeanpass3dGradFunctor<Device>().num_buffers_images();
-        float** buffers_full = (num_intermediates_full > 0) ? new float*[num_intermediates_full]: NULL;
-        float** buffers_imgs = (num_intermediates_images > 0) ? new float*[num_intermediates_images]: NULL;
-        TensorShape full_shape;
-        full_shape.AddDim(size_array[1]);
-        full_shape.AddDim(size_array[2]);
-        full_shape.AddDim(size_array[3]);
-        full_shape.AddDim(size_array[4]);
-        for(int b = 0; b < num_intermediates_full; b++){
-            Tensor buffer;
-            OP_REQUIRES_OK(context, context->allocate_temp(data_cost->dtype(), full_shape, &buffer));
-            buffers_full[b] = buffer.flat<float>().data();
-        }
-        TensorShape img_shape;
-        img_shape.AddDim(size_array[2]);
-        img_shape.AddDim(size_array[3]);
-        img_shape.AddDim(size_array[4]);
-        for(int b = 0; b < num_intermediates_images; b++){
-            Tensor buffer;
-            OP_REQUIRES_OK(context, context->allocate_temp(data_cost->dtype(), img_shape, &buffer));
-            buffers_imgs[b] = buffer.flat<float>().data();
-        }
-        
         //get output tensors
         Tensor* grad_data = NULL;
         Tensor* grad_rx = NULL;
@@ -226,20 +185,15 @@ public:
         OP_REQUIRES_OK(context, context->allocate_output(2, ry_shape, &grad_ry));
         OP_REQUIRES_OK(context, context->allocate_output(3, rz_shape, &grad_rz));
         
-        //std::cout << "GRA - Made tensors for intermediates" << std::endl;
-        //std::cout << data_cost->flat<float>().data() << std::endl;
-        //std::cout << rx_cost->flat<float>().data() << std::endl;
-        //std::cout << ry_cost->flat<float>().data() << std::endl;
-        //std::cout << rz_cost->flat<float>().data() << std::endl;
-        //std::cout << u->flat<float>().data() << std::endl;
-        //std::cout << grad->flat<float>().data() << std::endl;
-        //std::cout << grad_data->flat<float>().data() << std::endl;
-        //std::cout << grad_rx->flat<float>().data() << std::endl;
-        //std::cout << grad_ry->flat<float>().data() << std::endl;
-        //std::cout << grad_rz->flat<float>().data() << std::endl;
-        //std::cout << buffers_full << std::endl;
-        //std::cout << buffers_imgs << std::endl;
-        //std::cout << "\t done printing vars" << std::endl;
+        // create intermediate buffers as needed
+        int n_s = size_array[1]*size_array[2]*size_array[3]*size_array[4];
+        int n_i = size_array[2]*size_array[3]*size_array[4];
+        int num_intermediates_full = PottsMeanpass3dGradFunctor<Device>().num_buffers_full();
+        int num_intermediates_images = PottsMeanpass3dGradFunctor<Device>().num_buffers_images();
+        float** buffers_full = NULL;
+        get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, data_cost);
+        float** buffers_imgs = NULL;
+        get_temporary_buffers(context, buffers_imgs, n_i, num_intermediates_images, data_cost);
         
         // call function for gradient
         PottsMeanpass3dGradFunctor<Device>()(
@@ -259,13 +213,9 @@ public:
             buffers_imgs
         );
         
-        //std::cout << "GRA - Done" << std::endl;
-        
-        //deallocate buffers - done automatically at lower levels
-        //if(buffers_full != NULL)
-        //    free(buffers_full);
-        //if(buffers_imgs != NULL)
-        //    free(buffers_imgs);
+        //deallocate buffers
+        clear_temporary_buffers(context, buffers_full, n_s, num_intermediates_full);
+        clear_temporary_buffers(context, buffers_imgs, n_i, num_intermediates_images);
     }
 };
 
