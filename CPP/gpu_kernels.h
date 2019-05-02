@@ -50,8 +50,8 @@ void update_multiplier(const Eigen::GpuDevice& dev, const float* ps, const float
 void update_source_sink_multiplier_potts(const Eigen::GpuDevice& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_c, const int n_s);
 void find_min_constraint(const Eigen::GpuDevice& dev, float* output, const float* neg_constraint, const int n_c, const int n_s);
 
-void calc_divergence(const Eigen::GpuDevice& dev, float* div, const float* px, const float* py, const float* pz, const int n_x, const int n_y, const int n_z, const int n_c);
-void update_spatial_flows(const Eigen::GpuDevice& dev, float* g, const float* div, float* px, float* py, float* pz, const float* ps, const float* pt, const float* u, const int n_x, const int n_y, const int n_z, const int n_c, float icc, float tau);
+void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
+void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_t);
 void abs_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s);
 void binary_constrain(const Eigen::GpuDevice& dev, float* buffer, const int n_s);
 

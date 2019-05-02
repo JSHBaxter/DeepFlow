@@ -31,6 +31,7 @@ void compute_sink_flow( const float* u, const float* ps, float* pt, const float*
 void compute_multipliers( float* erru, float* u, const float* ps, const float* pt, const float* div, const float cc, const int n_c, const int n_s);
 void compute_source_sink_multipliers( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_c, const int n_s);
 void compute_flows( float* g, const float* u, const float* ps, const float* pt, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const float tau, const float icc, const int n_c, const int n_x, const int n_y, const int n_z);
+void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s);
 
 //Functions specifically for the mean field forward calculation
 void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c);

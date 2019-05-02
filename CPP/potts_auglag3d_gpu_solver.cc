@@ -45,11 +45,11 @@ struct PottsAuglag3dFunctor<GPUDevice>{
         float* pz = buffers_full[5];
 
         // optimization constants
-        const float tau = 0.1f;
         const float beta = 0.01f;
-        const float cc = 1.0f;
+        const float epsilon = 0.01f;
+        const float tau = 0.1f;
+        const float cc = 1.0;
         const float icc = 1.0f / cc;
-        const float epsilon = 10e-5f;
 
         for(int b = 0; b < n_bat; b++){
             //std::cout << "Batch: " << b << std::endl;
@@ -61,16 +61,16 @@ struct PottsAuglag3dFunctor<GPUDevice>{
             float* u_b = u + b*n_s*n_c;
 
             //initialize variables
-            //softmax(d, data_b, NULL, u_b, n_s, n_c);
-            clear_buffer(d, u_b, n_s*n_c);
+            softmax(d, data_b, NULL, u_b, n_s, n_c);
+            //clear_buffer(d, u_b, n_s*n_c);
             clear_buffer(d, px, n_s*n_c);
             clear_buffer(d, py, n_s*n_c);
             clear_buffer(d, pz, n_s*n_c);
             clear_buffer(d, ps, n_s);
             clear_buffer(d, pt, n_s*n_c);
             clear_buffer(d, div, n_s*n_c);
-            //find_min_constraint(d, ps, data_b, n_c, n_s);
-            //rep_buffer(d, ps, pt, n_c, n_s);
+            find_min_constraint(d, ps, data_b, n_c, n_s);
+            rep_buffer(d, ps, pt, n_c, n_s);
 
             // iterate in blocks
             int min_iter = 10;
@@ -88,11 +88,12 @@ struct PottsAuglag3dFunctor<GPUDevice>{
                 // - updating the source flow and sink flow and constraining them
                 // - updating the multipliers, saving the change in a seperate buffer
                 for(int iter = 0; iter < min_iter; iter++){
-                    update_spatial_flows(d, g, div, px, py, pz, ps, pt, u_b, n_x, n_y, n_z, n_c, icc, tau);
-                    abs_constrain(d, px, rx_b, n_s*n_c);
-                    abs_constrain(d, py, ry_b, n_s*n_c);
-                    abs_constrain(d, pz, rz_b, n_s*n_c);
-                    calc_divergence(d, div, px, py, pz, n_x, n_y, n_z, n_c);
+                    calc_capacity_potts(d, g, div, ps, pt, u_b, n_s, n_c, icc, tau);
+                    update_spatial_flows(d, g, div, px, py, pz, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_s*n_c);
+                    //abs_constrain(d, px, rx_b, n_s*n_c);
+                    //abs_constrain(d, py, ry_b, n_s*n_c);
+                    //abs_constrain(d, pz, rz_b, n_s*n_c);
+                    //calc_divergence(d, div, px, py, pz, n_x, n_y, n_z, n_c);
                     
                     update_source_sink_multiplier_potts(d, ps, pt, div, u_b, g, data_b, cc, icc, n_c, n_s);
                     //update_source_flows(d, ps, pt, div, u_b, icc, n_c, n_s);
@@ -104,7 +105,7 @@ struct PottsAuglag3dFunctor<GPUDevice>{
                 //get the max change
                 float max_change = max_of_buffer(d, g, n_c*n_s);
 
-                //std::cout << "Iter #: " << iter << " Max change: " << max_change << std::endl;
+                std::cout << "Iter # : " << i << " Max change: " << max_change << std::endl;
                 if (max_change < tau*beta)
                     break;
 
@@ -112,20 +113,21 @@ struct PottsAuglag3dFunctor<GPUDevice>{
 
             //extra block for good measure
             for(int iter = 0; iter < min_iter; iter++){
-                update_spatial_flows(d, g, div, px, py, pz, ps, pt, u_b, n_x, n_y, n_z, n_c, icc, tau);
-                abs_constrain(d, px, rx_b, n_s*n_c);
-                abs_constrain(d, py, ry_b, n_s*n_c);
-                abs_constrain(d, pz, rz_b, n_s*n_c);
-                calc_divergence(d, div, px, py, pz, n_x, n_y, n_z, n_c);
+                calc_capacity_potts(d, g, div, ps, pt, u_b, n_s, n_c, icc, tau);
+                update_spatial_flows(d, g, div, px, py, pz, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_s*n_c);
+                //abs_constrain(d, px, rx_b, n_s*n_c);
+                //abs_constrain(d, py, ry_b, n_s*n_c);
+                //abs_constrain(d, pz, rz_b, n_s*n_c);
+                //calc_divergence(d, div, px, py, pz, n_x, n_y, n_z, n_c);
 
-                update_source_sink_multiplier_potts(d,ps,pt,div,u_b,g,data_b,cc,icc,n_c, n_s);
+                update_source_sink_multiplier_potts(d, ps, pt, div, u_b, g, data_b, cc, icc, n_c, n_s);
                 //update_source_flows(d, ps, pt, div, u_b, icc, n_c, n_s);
                 //update_sink_flows(d, ps, pt, div, u_b, data_b, icc, n_c, n_s);
                 //update_multiplier(d, ps, pt, div, u_b, g, cc, n_c, n_s);
             }
 
             //do logarithm on u
-            //log_buffer(d,u_b,u_b,n_c*n_s);
+            log_buffer(d,u_b,u_b,n_c*n_s);
         }
 
     }    

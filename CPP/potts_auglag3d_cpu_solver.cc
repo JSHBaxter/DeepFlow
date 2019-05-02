@@ -69,10 +69,12 @@ public:
         float* pz = new float[n_s*n_c];
 
         //initialize variables
-        clear(u_b, n_c*n_s);
-        //softmax(data_b, u_b, n_s, n_c);
+        //clear(u_b, n_c*n_s);
+        softmax(data_b, u_b, n_s, n_c);
+        //init_flows(data_b,ps,pt,n_s,n_c);
         clear(ps, n_s);
-        clear(pt, g, div, n_c*n_s);
+        clear(pt, n_s*n_c);
+        clear(g, div, n_c*n_s);
         clear(px, py, pz, n_c*n_s);
 
         // iterate in blocks
@@ -105,7 +107,7 @@ public:
         }
         
         //get final output
-        //log_buffer(u_b,n_s*n_c);
+        log_buffer(u_b,n_s*n_c);
         
         //deallocate temporary buffers
         free(ps);

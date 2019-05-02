@@ -1,4 +1,5 @@
 #include "cpu_kernels.h"
+#include <limits>
 
 #include <cmath>
 void clear(float* buffer, const int n_s){
@@ -296,24 +297,38 @@ void compute_flows( float* g, const float* u, const float* ps, const float* pt, 
         }
     }
     
-    for(int x = 0, s = 0, cs = 0; x < n_x; x++)
+    for(int x = 0, cs = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++)
-    for(int z = 0; z < n_z; z++, s++){
+    for(int z = 0; z < n_z; z++){
         for(int c = 0; c < n_c; c++, cs++){
             div[cs] = -px[cs]-py[cs]-pz[cs];
             if (x < n_x-1) {
                 int sxm = idxc(x+1,n_x,y,n_y,z,n_z,c,n_c);
                 div[cs] += px[sxm];
             }
-            if (y != 0){
+            if (y < n_y-1){
                 int sym = idxc(x,n_x,y+1,n_y,z,n_z,c,n_c);
                 div[cs] += py[sym];
             }
-            if (z != 0){
+            if (z < n_z-1){
                 int szm = idxc(x,n_x,y,n_y,z+1,n_z,c,n_c);
                 div[cs] += pz[szm];
             }
         }
+    }
+            
+}
+
+void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s){
+    for(int s = 0, cs = 0; s < n_s; s++){
+        float min_d = -std::numeric_limits<float>::infinity();
+        for(int c = 0; c < n_c; c++, cs++)
+            if( min_d < -d[cs] )
+                min_d = -d[cs];
+        cs -= n_c;
+        ps[s] = min_d;
+        for(int c = 0; c < n_c; c++, cs++)
+            pt[cs] = min_d;
     }
             
 }
