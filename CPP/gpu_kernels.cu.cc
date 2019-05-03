@@ -8,7 +8,7 @@
 #include "gpu_kernels.h"
 
 #define NUM_THREADS 256
-#define epsilon 0.0001f
+#define epsilon 0.00001f
 
 #define CHECK_ERRORS false
 
@@ -224,6 +224,40 @@ __global__ void calc_divergence_kernel(float* div, const float* px, const float*
         div[i] = div_t;
 }
 
+__global__ void calc_divergence_kernel(float* div, const float* px, const float* py, const int n_x, const int n_y, const int n_s) {
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x; i_temp /= n_x;
+    
+    //do y dimension (add n_z)
+    float div_t = -py[i];
+    float more_flow = py[i+1];
+    div_t += (y < n_y-1) ? more_flow : 0.0f;
+    
+    //do x dimension (add n_z*n_y)
+    div_t -= px[i];
+    more_flow = px[i+n_y];
+    div_t += (x < n_x-1) ? more_flow : 0.0f;
+    
+    if(i < n_s)
+        div[i] = div_t;
+}
+
+__global__ void calc_divergence_kernel(float* div, const float* px, const int n_x, const int n_s) {
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int x = i_temp % n_x; i_temp /= n_x;
+    
+    //do x dimension (add 1)
+    float div_t = -px[i];
+    float more_flow = px[i+1];
+    div_t += (x < n_x-1) ? more_flow : 0.0f;
+    
+    if(i < n_s)
+        div[i] = div_t;
+}
+
 __global__ void abs_constrain_kernel(float* b, const float* r, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
@@ -252,20 +286,53 @@ __global__ void update_flows_kernel(const float* g, float* px, float* py, float*
     int x = i_temp % n_x; i_temp /= n_x;
     
     //for z
-    float capacity = g[i]-g[i-1];
+    float g_t = g[i];
+    float capacity = g_t-g[i-1];
     float newflow = (z > 0) ? pz[i] + capacity : 0.0f;
     if(i < n_s)
         pz[i] = newflow;
     
     //for y
-    capacity = g[i]-g[i-n_y];
+    capacity = g_t-g[i-n_y];
     newflow = (y > 0) ? py[i] + capacity : 0.0f;
     if(i < n_s)
         py[i] = newflow;
     
     //for x
-    capacity = g[i]-g[i-n_y*n_z];
+    capacity = g_t-g[i-n_y*n_z];
     newflow = (x > 0) ? px[i] + capacity : 0.0f;
+    if(i < n_s)
+        px[i] = newflow;
+}
+
+__global__ void update_flows_kernel(const float* g, float* px, float* py, const int n_x, const int n_y, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x; i_temp /= n_x;
+    
+    //for y
+    float g_t = g[i];
+    float capacity = g_t-g[i-1];
+    float newflow = (y > 0) ? py[i] + capacity : 0.0f;
+    if(i < n_s)
+        py[i] = newflow;
+    
+    //for x
+    capacity = g_t-g[i-n_y];
+    newflow = (x > 0) ? px[i] + capacity : 0.0f;
+    if(i < n_s)
+        px[i] = newflow;
+}
+
+__global__ void update_flows_kernel(const float* g, float* px, const int n_x, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int x = i_temp % n_x; i_temp /= n_x;
+    
+    //for x
+    float capacity = g[i]-g[i-1];
+    float newflow = (x > 0) ? px[i] + capacity : 0.0f;
     if(i < n_s)
         px[i] = newflow;
 }
@@ -280,7 +347,19 @@ void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* di
     calc_divergence_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(div, px, py, pz, n_x, n_y, n_z, n_t);
     if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
 }
-
+void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_t){
+    update_flows_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, px, py, n_x, n_y, n_t);
+    abs_constrain_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(px, rx, n_t);
+    abs_constrain_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(py, ry, n_t);
+    calc_divergence_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(div, px, py, n_x, n_y, n_t);
+    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
+}
+void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, const float* rx, const int n_x, const int n_t){
+    update_flows_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, px, n_x, n_t);
+    abs_constrain_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(px, rx, n_t);
+    calc_divergence_kernel<<<((n_t+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(div, px, n_x, n_t);
+    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
+}
 
 __global__ void calc_capacity_kernel(float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
@@ -303,7 +382,7 @@ __global__ void log_buffer_kernel(const float* in, float* out, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
     float value = in[i];
-    value = log(value + 0.00001f);
+    value = log(value + epsilon);
     
     if(i < n_s)
         out[i] = value;

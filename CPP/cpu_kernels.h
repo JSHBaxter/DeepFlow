@@ -30,7 +30,10 @@ void compute_source_flow( const float* u, float* ps, const float* pt, const floa
 void compute_sink_flow( const float* u, const float* ps, float* pt, const float* div, const float* d, const float icc, const int n_c, const int n_s);
 void compute_multipliers( float* erru, float* u, const float* ps, const float* pt, const float* div, const float cc, const int n_c, const int n_s);
 void compute_source_sink_multipliers( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_c, const int n_s);
-void compute_flows( float* g, const float* u, const float* ps, const float* pt, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const float tau, const float icc, const int n_c, const int n_x, const int n_y, const int n_z);
+void compute_capacity_potts(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc);
+void compute_flows(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z);
+void compute_flows(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y);
+void compute_flows(const float* g, float* div, float* px, const float* rx, const int n_c, const int n_x);
 void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s);
 
 //Functions specifically for the mean field forward calculation

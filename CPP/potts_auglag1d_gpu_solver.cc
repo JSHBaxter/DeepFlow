@@ -13,15 +13,13 @@
 #include <thread>
 
 template <>
-struct PottsAuglag3dFunctor<GPUDevice>{
+struct PottsAuglag1dFunctor<GPUDevice>{
     
     void operator()(
             const GPUDevice& d,
             int sizes[5],
             const float* data_cost,
             const float* rx_cost,
-            const float* ry_cost,
-            const float* rz_cost,
             float* u,
             float** buffers_full,
             float** buffers_img){
@@ -32,17 +30,13 @@ struct PottsAuglag3dFunctor<GPUDevice>{
         int n_bat = sizes[0];
         int n_c = sizes[1];
         int n_x = sizes[2];
-        int n_y = sizes[3];
-        int n_z = sizes[4];
-        int n_s = n_x*n_y*n_z;
+        int n_s = n_x;
 
         float* ps = buffers_img[0];
         float* pt = buffers_full[0];
         float* g = buffers_full[1];
         float* div = buffers_full[2];
         float* px = buffers_full[3];
-        float* py = buffers_full[4];
-        float* pz = buffers_full[5];
 
         // optimization constants
         const float beta = 0.01f;
@@ -55,16 +49,12 @@ struct PottsAuglag3dFunctor<GPUDevice>{
 
             const float* data_b = data_cost + b*n_s*n_c;
             const float* rx_b = rx_cost + b*n_s*n_c;
-            const float* ry_b = ry_cost + b*n_s*n_c;
-            const float* rz_b = rz_cost + b*n_s*n_c;
             float* u_b = u + b*n_s*n_c;
 
             //initialize variables
             //softmax(d, data_b, NULL, u_b, n_s, n_c);
             clear_buffer(d, u_b, n_s*n_c);
             clear_buffer(d, px, n_s*n_c);
-            clear_buffer(d, py, n_s*n_c);
-            clear_buffer(d, pz, n_s*n_c);
             clear_buffer(d, div, n_s*n_c);
             clear_buffer(d, g, n_s*n_c);
             //clear_buffer(d, ps, n_s);
@@ -76,10 +66,6 @@ struct PottsAuglag3dFunctor<GPUDevice>{
             int min_iter = 10;
             if (n_x > min_iter)
                 min_iter = n_x;
-            if (n_y > min_iter)
-                min_iter = n_y;
-            if (n_z > min_iter)
-                min_iter = n_z;
             int max_loop = 200;
             for(int i = 0; i < max_loop; i++) {
 
@@ -89,16 +75,9 @@ struct PottsAuglag3dFunctor<GPUDevice>{
                 // - updating the multipliers, saving the change in a seperate buffer
                 for(int iter = 0; iter < min_iter; iter++){
                     calc_capacity_potts(d, g, div, ps, pt, u_b, n_s, n_c, icc, tau);
-                    update_spatial_flows(d, g, div, px, py, pz, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_s*n_c);
-                    //abs_constrain(d, px, rx_b, n_s*n_c);
-                    //abs_constrain(d, py, ry_b, n_s*n_c);
-                    //abs_constrain(d, pz, rz_b, n_s*n_c);
-                    //calc_divergence(d, div, px, py, pz, n_x, n_y, n_z, n_c);
+                    update_spatial_flows(d, g, div, px, rx_b, n_x, n_s*n_c);
                     
                     update_source_sink_multiplier_potts(d, ps, pt, div, u_b, g, data_b, cc, icc, n_c, n_s);
-                    //update_source_flows(d, ps, pt, div, u_b, icc, n_c, n_s);
-                    //update_sink_flows(d, ps, pt, div, u_b, data_b, icc, n_c, n_s);
-                    //update_multiplier(d, ps, pt, div, u_b, g, cc, n_c, n_s);
                     
                     //get the max change
                     float max_change = max_of_buffer(d, g, n_c*n_s);
@@ -117,16 +96,9 @@ struct PottsAuglag3dFunctor<GPUDevice>{
             //extra block for good measure
             for(int iter = 0; iter < min_iter; iter++){
                 calc_capacity_potts(d, g, div, ps, pt, u_b, n_s, n_c, icc, tau);
-                update_spatial_flows(d, g, div, px, py, pz, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_s*n_c);
-                //abs_constrain(d, px, rx_b, n_s*n_c);
-                //abs_constrain(d, py, ry_b, n_s*n_c);
-                //abs_constrain(d, pz, rz_b, n_s*n_c);
-                //calc_divergence(d, div, px, py, pz, n_x, n_y, n_z, n_c);
+                update_spatial_flows(d, g, div, px, rx_b, n_x, n_s*n_c);
 
                 update_source_sink_multiplier_potts(d, ps, pt, div, u_b, g, data_b, cc, icc, n_c, n_s);
-                //update_source_flows(d, ps, pt, div, u_b, icc, n_c, n_s);
-                //update_sink_flows(d, ps, pt, div, u_b, data_b, icc, n_c, n_s);
-                //update_multiplier(d, ps, pt, div, u_b, g, cc, n_c, n_s);
             }
 
             //do logarithm on u
@@ -136,7 +108,7 @@ struct PottsAuglag3dFunctor<GPUDevice>{
     }    
     
     
-    int num_buffers_full(){ return 6; }
+    int num_buffers_full(){ return 4; }
     int num_buffers_images(){ return 1; }
 
 };

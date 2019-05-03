@@ -5,40 +5,30 @@
 
 #include "cpu_kernels.h"
 
-class PottsAuglag3dFunctor_SolverBatchThreadChannelsLast
+class PottsAuglag1dFunctor_SolverBatchThreadChannelsLast
 {
 private:
     const int b;
     const int n_x;
-    const int n_y;
-    const int n_z;
     const int n_c;
     const int n_s;
     const float* data;
     const float* rx;
-    const float* ry;
-    const float* rz;
     float* u;
     
 public:
-    PottsAuglag3dFunctor_SolverBatchThreadChannelsLast(
+    PottsAuglag1dFunctor_SolverBatchThreadChannelsLast(
         const int batch,
         const int sizes[5],
         const float* data_cost,
         const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
         float* u ) :
     b(batch),
     n_x(sizes[1]),
-    n_y(sizes[2]),
-    n_z(sizes[3]),
-    n_c(sizes[4]),
-    n_s(sizes[1]*sizes[2]*sizes[3]),
+    n_c(sizes[2]),
+    n_s(sizes[1]),
     data(data_cost),
     rx(rx_cost),
-    ry(ry_cost),
-    rz(rz_cost),
     u(u)
     {}
     
@@ -53,8 +43,6 @@ public:
         //buffers shifted to correct batch
         const float* data_b = data + b*n_s*n_c;
         const float* rx_b = rx + b*n_s*n_c;
-        const float* ry_b = ry + b*n_s*n_c;
-        const float* rz_b = rz + b*n_s*n_c;
         float* u_b = u + b*n_s*n_c;
         
         // allocate intermediate variables
@@ -64,14 +52,12 @@ public:
         float* g = new float[n_s*n_c];
         float* div = new float[n_s*n_c];
         float* px = new float[n_s*n_c];
-        float* py = new float[n_s*n_c];
-        float* pz = new float[n_s*n_c];
 
         //initialize variables
         clear(u_b, n_c*n_s);
         //softmax(data_b, u_b, n_s, n_c);
         clear(g, div, n_c*n_s);
-        clear(px, py, pz, n_c*n_s);
+        clear(px, n_c*n_s);
         //clear(ps, n_s);
         //clear(pt, n_s*n_c);
         init_flows(data_b,ps,pt,n_s,n_c);
@@ -80,20 +66,16 @@ public:
         int min_iter = 10;
         if (n_x > min_iter)
             min_iter = n_x;
-        if (n_y > min_iter)
-            min_iter = n_y;
-        if (n_z > min_iter)
-            min_iter = n_z;
         int max_loop = 200;
         for(int i = 0; i < max_loop; i++){    
 
             //run the solver a set block of iterations
             for (int iter = 0; iter < min_iter; iter++){
                 compute_capacity_potts(g, u_b, ps, pt, div, n_s, n_c, tau, icc);
-                compute_flows(g, div, px, py, pz, rx_b, ry_b, rz_b, n_c, n_x, n_y, n_z);
+                compute_flows( g, div, px, rx_b, n_c, n_x);
                 compute_source_sink_multipliers( g, u_b, ps, pt, div, data_b, cc, icc, n_c, n_s);
                 max_change = maxabs(g, n_c*n_s);
-                std::cout << "Thread #:" << b << "\tIter #: " << iter << " \tMax change: " << max_change << std::endl;
+                std::cout << "Iter #: " << iter << " Max change: " << max_change << std::endl;
             }
 
             max_change = maxabs(g, n_c*n_s);
@@ -104,7 +86,7 @@ public:
         //run one last block, just to be safe
         for (int iter = 0; iter < min_iter; iter++){
             compute_capacity_potts(g, u_b, ps, pt, div, n_s, n_c, tau, icc);
-            compute_flows(g, div, px, py, pz, rx_b, ry_b, rz_b, n_c, n_x, n_y, n_z);
+            compute_flows( g, div, px, rx_b, n_c, n_x);
             compute_source_sink_multipliers( g, u_b, ps, pt, div, data_b, cc, icc, n_c, n_s);
         }
         
@@ -117,8 +99,6 @@ public:
         free(pt);
         free(div);
         free(px);
-        free(py);
-        free(pz);
     
     }
 };
@@ -126,14 +106,12 @@ public:
 
 
 template <>
-struct PottsAuglag3dFunctor<CPUDevice> {
+struct PottsAuglag1dFunctor<CPUDevice> {
   void operator()(
       const CPUDevice& d,
       int sizes[5],
       const float* data_cost,
       const float* rx_cost,
-      const float* ry_cost,
-      const float* rz_cost,
       float* u,
       float** /*unused full buffers*/,
       float** /*unused image buffers*/){
@@ -142,7 +120,7 @@ struct PottsAuglag3dFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(PottsAuglag3dFunctor_SolverBatchThreadChannelsLast(b, sizes, data_cost, rx_cost, ry_cost, rz_cost, u));
+        threads[b] = new std::thread(PottsAuglag1dFunctor_SolverBatchThreadChannelsLast(b, sizes, data_cost, rx_cost, u));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)

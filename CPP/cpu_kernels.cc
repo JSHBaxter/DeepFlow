@@ -1,6 +1,8 @@
 #include "cpu_kernels.h"
 #include <limits>
 
+#define epsilon 0.00001f
+
 #include <cmath>
 void clear(float* buffer, const int n_s){
     for(int i = 0; i < n_s; i++)
@@ -32,7 +34,7 @@ void inc(const float* inc, float* acc, const float alpha, const int n_s){
 
 void log_buffer(float* buffer, const int n_s){
     for(int i = 0; i < n_s; i++)
-        buffer[i] = log(buffer[i]+0.000001f);
+        buffer[i] = log(buffer[i]+epsilon);
 }
 
 float maxabs(const float* buffer, const int n_s){
@@ -261,46 +263,52 @@ void compute_source_sink_multipliers( float* erru, float* u, float* ps, float* p
     
 }
 
+void compute_capacity_potts(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc){
+    for(int s = 0, cs = 0; s < n_s; s++)
+        for(int c = 0; c < n_c; c++, cs++)
+            g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
+}
 
-void compute_flows( float* g, const float* u, const float* ps, const float* pt, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const float tau, const float icc, const int n_c, const int n_x, const int n_y, const int n_z){
+void compute_flows(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z){
     const int n_s = n_x*n_y*n_z;
     
-    for(int x = 0, s = 0, cs = 0; x < n_x; x++)
+    for(int x = 0, s = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++)
     for(int z = 0; z < n_z; z++, s++){
-        for(int c = 0; c < n_c; c++, cs++){
-            g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(x,n_x,y,n_y,z,n_z,c,n_c);
             if (x != 0) {
                 int sxm = idxc(x-1,n_x,y,n_y,z,n_z,c,n_c);
                 px[cs] += g[cs] - g[sxm];
-                if (px[cs] > rx[sxm])
-                    px[cs] = rx[sxm];
-                if (px[cs] < -rx[sxm])
-                    px[cs] = -rx[sxm];
+                if (px[cs] > rx[cs])
+                    px[cs] = rx[cs];
+                if (px[cs] < -rx[cs])
+                    px[cs] = -rx[cs];
             }
             if (y != 0){
                 int sym = idxc(x,n_x,y-1,n_y,z,n_z,c,n_c);
                 py[cs] += g[cs] - g[sym];
-                if (py[cs] > ry[sym])
-                    py[cs] = ry[sym];
-                if (py[cs] < -ry[sym])
-                    py[cs] = -ry[sym];
+                if (py[cs] > ry[cs])
+                    py[cs] = ry[cs];
+                if (py[cs] < -ry[cs])
+                    py[cs] = -ry[cs];
             }
             if (z != 0){
                 int szm = idxc(x,n_x,y,n_y,z-1,n_z,c,n_c);
                 pz[cs] += g[cs] - g[szm];
-                if (pz[cs] > rz[szm])
-                    pz[cs] = rz[szm];
-                if (pz[cs] < -rz[szm])
-                    pz[cs] = -rz[szm];
+                if (pz[cs] > rz[cs])
+                    pz[cs] = rz[cs];
+                if (pz[cs] < -rz[cs])
+                    pz[cs] = -rz[cs];
             }
         }
     }
     
-    for(int x = 0, cs = 0; x < n_x; x++)
+    for(int x = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++)
     for(int z = 0; z < n_z; z++){
-        for(int c = 0; c < n_c; c++, cs++){
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(x,n_x,y,n_y,z,n_z,c,n_c);
             div[cs] = -px[cs]-py[cs]-pz[cs];
             if (x < n_x-1) {
                 int sxm = idxc(x+1,n_x,y,n_y,z,n_z,c,n_c);
@@ -319,16 +327,95 @@ void compute_flows( float* g, const float* u, const float* ps, const float* pt, 
             
 }
 
+
+void compute_flows(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y){
+    const int n_s = n_x*n_y;
+    
+    for(int x = 0, s = 0; x < n_x; x++)
+    for(int y = 0; y < n_y; y++,s++){
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(x,n_x,y,n_y,c,n_c);
+            if (x != 0) {
+                int sxm = idxc(x-1,n_x,y,n_y,c,n_c);
+                px[cs] += g[cs] - g[sxm];
+                if (px[cs] > rx[cs])
+                    px[cs] = rx[cs];
+                if (px[cs] < -rx[cs])
+                    px[cs] = -rx[cs];
+            }
+            if (y != 0){
+                int sym = idxc(x,n_x,y-1,n_y,c,n_c);
+                py[cs] += g[cs] - g[sym];
+                if (py[cs] > ry[cs])
+                    py[cs] = ry[cs];
+                if (py[cs] < -ry[cs])
+                    py[cs] = -ry[cs];
+            }
+        }
+    }
+    
+    for(int x = 0; x < n_x; x++)
+    for(int y = 0; y < n_y; y++){
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(x,n_x,y,n_y,c,n_c);
+            div[cs] = -px[cs]-py[cs];
+            if (x < n_x-1) {
+                int sxm = idxc(x+1,n_x,y,n_y,c,n_c);
+                div[cs] += px[sxm];
+            }
+            if (y < n_y-1){
+                int sym = idxc(x,n_x,y+1,n_y,c,n_c);
+                div[cs] += py[sym];
+            }
+        }
+    }
+            
+}
+
+void compute_flows(const float* g, float* div, float* px, const float* rx, const int n_c, const int n_x){
+    const int n_s = n_x;
+    
+    for(int x = 0, s = 0; x < n_x; x++, s++){
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(x,n_x,c,n_c);
+            if (x != 0) {
+                int sxm = idxc(x-1,n_x,c,n_c);
+                px[cs] += g[cs] - g[sxm];
+                if (px[cs] > rx[cs])
+                    px[cs] = rx[cs];
+                if (px[cs] < -rx[cs])
+                    px[cs] = -rx[cs];
+            }
+        }
+    }
+    
+    for(int x = 0; x < n_x; x++){
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(x,n_x,c,n_c);
+            div[cs] = -px[cs];
+            if (x < n_x-1) {
+                int sxm = idxc(x+1,n_x,c,n_c);
+                div[cs] += px[sxm];
+            }
+        }
+    }
+            
+}
+
 void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s){
-    for(int s = 0, cs = 0; s < n_s; s++){
-        float min_d = -std::numeric_limits<float>::infinity();
-        for(int c = 0; c < n_c; c++, cs++)
-            if( min_d < -d[cs] )
-                min_d = -d[cs];
-        cs -= n_c;
-        ps[s] = min_d;
-        for(int c = 0; c < n_c; c++, cs++)
-            pt[cs] = min_d;
+    for(int s = 0; s < n_s; s++){
+        float max_d = -std::numeric_limits<float>::infinity();
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(s,n_s,c,n_c);
+            if( max_d < d[cs] )
+                max_d = d[cs];
+        }
+        //cs -= n_c;
+        ps[s] = -max_d;
+        for(int c = 0; c < n_c; c++){
+            int cs = idxc(s,n_s,c,n_c);
+            pt[cs] = -max_d;
+        }
     }
             
 }

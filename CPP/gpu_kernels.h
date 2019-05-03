@@ -52,6 +52,8 @@ void find_min_constraint(const Eigen::GpuDevice& dev, float* output, const float
 
 void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_t);
+void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_t);
+void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, const float* rx, const int n_x, const int n_t);
 void abs_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s);
 void binary_constrain(const Eigen::GpuDevice& dev, float* buffer, const int n_s);
 
