@@ -17,6 +17,11 @@ void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, s
     cudaMemcpy(dest,source,amount,cudaMemcpyDeviceToHost);
 }
 
+void send_to_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount){
+    cudaStreamSynchronize(dev.stream());
+    cudaMemcpy(dest,source,amount,cudaMemcpyHostToDevice);
+}
+
 void check_error(const Eigen::GpuDevice& dev, const char* string){
     cudaError_t cudaerr = cudaStreamSynchronize(dev.stream());
     if (cudaerr != cudaSuccess){
@@ -375,7 +380,6 @@ __global__ void calc_capacity_kernel(float* g, const float* div, const float* ps
 void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
     calc_capacity_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, div, ps, pt, u, n_s, n_c, icc, tau);
     if(CHECK_ERRORS) check_error(dev, "calc_capacity_potts launch failed with error");
-    
 }
 
 __global__ void log_buffer_kernel(const float* in, float* out, const int n_s){
@@ -434,18 +438,14 @@ __global__ void maxreduce(float* buffer, int j, int n) {
 
 
 float max_of_buffer(const Eigen::GpuDevice& dev, float* buffer, const int n_s){
-    abs_buffer_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, n_s);
-    int n = n_s;
-    while(n > 1){
-        int j = (n+1)/2;
-        maxreduce<<<((n-j+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, j, n);
-        n = j;
+    float* buffer_c = (float*) malloc(n_s*sizeof(float));
+    get_from_gpu(dev,buffer,buffer_c,n_s*sizeof(float));
+    float max_value = 0;
+    for(int s = 0; s < n_s; s++){
+        if( max_value < buffer_c[s] )
+            max_value = buffer_c[s];
     }
-    float max_value = 0.0f;
-    cudaStreamSynchronize(dev.stream());
-    cudaMemcpy(&max_value,(float*)buffer,sizeof(float),cudaMemcpyDeviceToHost);
-    if( max_value < 0.0f)
-        max_value = -max_value;
+    free(buffer_c);
     return max_value;
 }
 

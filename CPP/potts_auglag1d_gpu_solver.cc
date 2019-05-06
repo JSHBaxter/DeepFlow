@@ -57,10 +57,10 @@ struct PottsAuglag1dFunctor<GPUDevice>{
             clear_buffer(d, px, n_s*n_c);
             clear_buffer(d, div, n_s*n_c);
             clear_buffer(d, g, n_s*n_c);
-            //clear_buffer(d, ps, n_s);
-            //clear_buffer(d, pt, n_s*n_c);
-            find_min_constraint(d, ps, data_b, n_c, n_s);
-            rep_buffer(d, ps, pt, n_c, n_s);
+            clear_buffer(d, ps, n_s);
+            clear_buffer(d, pt, n_s*n_c);
+            //find_min_constraint(d, ps, data_b, n_c, n_s);
+            //rep_buffer(d, ps, pt, n_c, n_s);
 
             // iterate in blocks
             int min_iter = 10;
@@ -76,8 +76,8 @@ struct PottsAuglag1dFunctor<GPUDevice>{
                 for(int iter = 0; iter < min_iter; iter++){
                     calc_capacity_potts(d, g, div, ps, pt, u_b, n_s, n_c, icc, tau);
                     update_spatial_flows(d, g, div, px, rx_b, n_x, n_s*n_c);
-                    
                     update_source_sink_multiplier_potts(d, ps, pt, div, u_b, g, data_b, cc, icc, n_c, n_s);
+                    
                     
                     //get the max change
                     float max_change = max_of_buffer(d, g, n_c*n_s);
@@ -97,7 +97,6 @@ struct PottsAuglag1dFunctor<GPUDevice>{
             for(int iter = 0; iter < min_iter; iter++){
                 calc_capacity_potts(d, g, div, ps, pt, u_b, n_s, n_c, icc, tau);
                 update_spatial_flows(d, g, div, px, rx_b, n_x, n_s*n_c);
-
                 update_source_sink_multiplier_potts(d, ps, pt, div, u_b, g, data_b, cc, icc, n_c, n_s);
             }
 

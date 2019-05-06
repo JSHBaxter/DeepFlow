@@ -58,9 +58,9 @@ public:
         //softmax(data_b, u_b, n_s, n_c);
         clear(g, div, n_c*n_s);
         clear(px, n_c*n_s);
-        //clear(ps, n_s);
-        //clear(pt, n_s*n_c);
-        init_flows(data_b,ps,pt,n_s,n_c);
+        clear(ps, n_s);
+        clear(pt, n_s*n_c);
+        //init_flows(data_b,ps,pt,n_s,n_c);
 
         // iterate in blocks
         int min_iter = 10;

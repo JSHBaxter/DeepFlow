@@ -67,10 +67,10 @@ struct PottsAuglag3dFunctor<GPUDevice>{
             clear_buffer(d, pz, n_s*n_c);
             clear_buffer(d, div, n_s*n_c);
             clear_buffer(d, g, n_s*n_c);
-            //clear_buffer(d, ps, n_s);
-            //clear_buffer(d, pt, n_s*n_c);
-            find_min_constraint(d, ps, data_b, n_c, n_s);
-            rep_buffer(d, ps, pt, n_c, n_s);
+            clear_buffer(d, ps, n_s);
+            clear_buffer(d, pt, n_s*n_c);
+            //find_min_constraint(d, ps, data_b, n_c, n_s);
+            //rep_buffer(d, ps, pt, n_c, n_s);
 
             // iterate in blocks
             int min_iter = 10;

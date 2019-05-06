@@ -81,9 +81,8 @@ public:
         int num_intermediates_full = PottsAuglag2dFunctor<Device>().num_buffers_full();
         int num_intermediates_images = PottsAuglag2dFunctor<Device>().num_buffers_images();
         float** buffers_full = NULL;
-        get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, data_cost);
         float** buffers_imgs = NULL;
-        get_temporary_buffers(context, buffers_imgs, n_i, num_intermediates_images, data_cost);
+        get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, buffers_imgs, n_i, num_intermediates_images, data_cost);
         
         // call function
         PottsAuglag2dFunctor<Device>()(
