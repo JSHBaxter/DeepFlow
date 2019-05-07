@@ -1,6 +1,6 @@
 // kernel_example.h
-#ifndef HMF_MEANPASS3D_H_
-#define HMF_MEANPASS3D_H_
+#ifndef HMF_MEANPASS1D_H_
+#define HMF_MEANPASS1D_H_
 
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
@@ -11,16 +11,14 @@
 #include "hmf_trees.h"
 
 template <typename Device>
-struct HmfMeanpass3dFunctor {
+struct HmfMeanpass1dFunctor {
   void operator()(
       const Device& d,
-      int size[7],
+      int size[6],
       const int* parentage,
       const int* data_index,
       const float* data_cost,
       const float* rx_cost,
-      const float* ry_cost,
-      const float* rz_cost,
       float* out,
       float** buffers_full,
       float** buffers_images);
@@ -31,22 +29,18 @@ struct HmfMeanpass3dFunctor {
 };
 
 template <typename Device>
-struct HmfMeanpass3dGradFunctor {
+struct HmfMeanpass1dGradFunctor {
   void operator()(
       const Device& d,
-      int size[7],
+      int size[6],
       const int* parentage,
       const int* data_index,
       const float* data_cost,
       const float* rx_cost,
-      const float* ry_cost,
-      const float* rz_cost,
       const float* u,
       const float* g,
       float* g_data,
       float* g_rx,
-      float* g_ry,
-      float* g_rz,
       int* g_par,
       int* g_didx,
       float** buffers_full,
@@ -57,4 +51,4 @@ struct HmfMeanpass3dGradFunctor {
     int num_buffers_images();
 };
 
-#endif // HMF_MEANPASS3D_H_
+#endif // HMF_MEANPASS1D_H_

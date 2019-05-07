@@ -58,4 +58,30 @@ def _hmf_meanpass3d_grad_cc(op, grad):
     gradient = module.hmf_meanpass3d_grad(grad, op.inputs[0], op.inputs[1], op.inputs[2], op.inputs[3], op.inputs[4], op.inputs[5], op.outputs[0])
     return gradient
 
+@ops.RegisterGradient("HmfMeanpass2d")
+def _hmf_meanpass2d_grad_cc(op, grad):
+    """
+    The gradient for `hmf_meanpass2d` using the operation implemented in C++.
+
+    :param op: `hmf_meanpass2d` `Operation` that we are differentiating, which we can use
+        to find the inputs and outputs of the original op.
+    :param grad: gradient with respect to the output of the `hmf_meanpass2d` op.
+    :return: gradients with respect to the input of `hmf_meanpass2d`.
+    """
+    gradient = module.hmf_meanpass3d_grad(grad, op.inputs[0], op.inputs[1], op.inputs[2], op.inputs[3], op.inputs[4], op.outputs[0])
+    return gradient
+
+@ops.RegisterGradient("HmfMeanpass1d")
+def _hmf_meanpass1d_grad_cc(op, grad):
+    """
+    The gradient for `hmf_meanpass3d` using the operation implemented in C++.
+
+    :param op: `hmf_meanpass1d` `Operation` that we are differentiating, which we can use
+        to find the inputs and outputs of the original op.
+    :param grad: gradient with respect to the output of the `hmf_meanpass1d` op.
+    :return: gradients with respect to the input of `hmf_meanpass1d`.
+    """
+    gradient = module.hmf_meanpass3d_grad(grad, op.inputs[0], op.inputs[1], op.inputs[2], op.inputs[3], op.outputs[0])
+    return gradient
+
 

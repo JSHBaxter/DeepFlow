@@ -13,7 +13,7 @@
 #include "hmf_trees.h"
 #include "gpu_kernels.h"
 
-namespace HMF_GPU {
+namespace HMF1DMP_GPU {
     
 class SolverBatchThreadChannelsFirst
 {
@@ -22,15 +22,11 @@ private:
     TreeNode const* const* bottom_up_list;
     const int b;
     const int n_x;
-    const int n_y;
-    const int n_z;
     const int n_c;
     const int n_r;
     const int n_s;
     const float* data_b;
     const float* rx_b;
-    const float* ry_b;
-    const float* rz_b;
     float* u_b;
     float* temp;
     const float tau = 0.5f;
@@ -40,11 +36,9 @@ public:
         const GPUDevice & dev,
         TreeNode** bottom_up_list,
         const int batch,
-        const int sizes[7],
+        const int sizes[5],
         const float* data_cost,
         const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
         float* u,
         float** full_buff,
         float** img_buff) :
@@ -52,16 +46,12 @@ public:
     bottom_up_list(bottom_up_list),
     b(batch),
     n_x(sizes[2]),
-    n_y(sizes[3]),
-    n_z(sizes[4]),
     n_c(sizes[1]),
-    n_r(sizes[5]),
-    n_s(sizes[2]*sizes[3]*sizes[4]),
-    data_b(data_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[1]),
-    rx_b(rx_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[5]),
-    ry_b(ry_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[5]),
-    rz_b(rz_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[5]),
-    u_b(u+batch*sizes[2]*sizes[3]*sizes[4]*sizes[1]),
+    n_r(sizes[3]),
+    n_s(sizes[2]),
+    data_b(data_cost+batch*sizes[2]*sizes[1]),
+    rx_b(rx_cost+batch*sizes[2]*sizes[3]),
+    u_b(u+batch*sizes[2]*sizes[1]),
     temp(full_buff[0])
     {}
     
@@ -77,7 +67,7 @@ public:
         }
 
         //calculate the effective regularization (overwrites own temp)
-        get_effective_reg(dev, temp, temp, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_r);
+        get_effective_reg(dev, temp, temp, rx_b, n_x, n_r);
 
         //calculate the aggregate effective regularization (overwrites own temp)
         for (int l = n_r-1; l >= n_c; l--) {
@@ -106,10 +96,6 @@ public:
         int min_iter = 10;
         if (n_x > min_iter)
             min_iter = n_x;
-        if (n_y > min_iter)
-            min_iter = n_y;
-        if (n_z > min_iter)
-            min_iter = n_z;
         int max_loop = 200;
         
         for(int i = 0; i < max_loop; i++){    
@@ -138,7 +124,7 @@ public:
         }
 
         //calculate the effective regularization
-        get_effective_reg(dev, temp, temp, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_r);
+        get_effective_reg(dev, temp, temp, rx_b, n_x, n_r);
 
         //calculate the aggregate effective regularization
         for (int l = n_r-1; l >= n_c; l--) {
@@ -163,18 +149,12 @@ private:
     TreeNode const* const* bottom_up_list;
     const int batch;
     const int n_x;
-    const int n_y;
-    const int n_z;
     const int n_c;
     const int n_r;
     const int n_s;
     const float* rx_cost;
-    const float* ry_cost;
-    const float* rz_cost;
     float* g_data;
     float* g_rx;
-    float* g_ry;
-    float* g_rz;
     const float* u;
     const float* grad;
     float* du_i;
@@ -187,33 +167,23 @@ public:
         const GPUDevice & dev,
         TreeNode** bottom_up_list,
         const int batch,
-        const int sizes[7],
+        const int sizes[5],
         const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
         const float* u,
         const float* g,
         float* g_d,
         float* g_rx,
-        float* g_ry,
-        float* g_rz,
         float** full_buff) :
     dev(dev),
     bottom_up_list(bottom_up_list),
     batch(batch),
     n_x(sizes[2]),
-    n_y(sizes[3]),
-    n_z(sizes[4]),
     n_c(sizes[1]),
-    n_r(sizes[5]),
-    n_s(sizes[2]*sizes[3]*sizes[4]),
+    n_r(sizes[3]),
+    n_s(sizes[2]),
     g_data(g_d),
     g_rx(g_rx),
-    g_ry(g_ry),
-    g_rz(g_rz),
     rx_cost(rx_cost),
-    ry_cost(ry_cost),
-    rz_cost(rz_cost),
     u(u),
     grad(g),
     u_tmp(full_buff[0]),
@@ -228,11 +198,7 @@ public:
         int b = this->batch;
         float* g_d_b = g_data + b*n_s*n_c;
         float* g_rx_b = g_rx + b*n_s*n_r;
-        float* g_ry_b = g_ry + b*n_s*n_r;
-        float* g_rz_b = g_rz + b*n_s*n_r;
         const float* rx_b = rx_cost + b*n_s*n_r;
-        const float* ry_b = ry_cost + b*n_s*n_r;
-        const float* rz_b = rz_cost + b*n_s*n_r;
         const float* g_b = grad + b*n_s*n_c;
         const float* u_b = u + b*n_s*n_c;
 
@@ -243,10 +209,6 @@ public:
         int min_iter = 10;
         if (n_x > min_iter)
             min_iter = n_x;
-        if (n_y > min_iter)
-            min_iter = n_y;
-        if (n_z > min_iter)
-            min_iter = n_z;
         int max_loop = 200;
         
         //calculate the aggregate probabilities
@@ -271,10 +233,10 @@ public:
         copy_buffer(dev, dy, g_d_b, n_s*n_c);
         
         //and calculate gradients for the rest
-        populate_reg_mean_gradients(dev, dy, u_tmp, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_r);
+        populate_reg_mean_gradients(dev, dy, u_tmp, g_rx_b, n_x, n_r);
         
         //get gradients for u terms (without diminish from last iteration - save to du_i)
-        get_gradient_for_u(dev, dy, du_i, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_r);
+        get_gradient_for_u(dev, dy, du_i, rx_b, n_x, n_r);
 
         //collapse back down to leaves
         for (int l = n_r-1; l >= n_c; l--) {
@@ -300,10 +262,10 @@ public:
                 inc_buffer(dev, dy, g_d_b, n_s*n_c);
 
                 //get gradients for the regularization terms
-                populate_reg_mean_gradients_and_add(dev, dy, u_tmp, g_rx_b, g_ry_b, g_rz_b, n_x, n_y, n_z, n_r);
+                populate_reg_mean_gradients_and_add(dev, dy, u_tmp, g_rx_b, n_x, n_r);
 
                 //get gradients for u terms (without diminish from last iteration - save to dy)
-                get_gradient_for_u(dev, dy, tmp, rx_b, ry_b, rz_b, n_x, n_y, n_z, n_r);
+                get_gradient_for_u(dev, dy, tmp, rx_b, n_x, n_r);
 
                 //collapse back down to leaves
                 for (int l = n_r-1; l >= n_c; l--) {
@@ -331,16 +293,14 @@ public:
 }
 
 template <>
-struct HmfMeanpass3dFunctor<GPUDevice> {
+struct HmfMeanpass1dFunctor<GPUDevice> {
     void operator()(
         const GPUDevice& d,
-        int sizes[7],
+        int sizes[5],
         const int* parentage_g,
         const int* data_index_g,
         const float* data_cost,
         const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
         float* u,
         float** full_buff,
         float** img_buff){
@@ -350,11 +310,11 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
         TreeNode** children = NULL;
         TreeNode** bottom_up_list = NULL;
         TreeNode** top_down_list = NULL;
-        int* parentage = new int[sizes[5]];
-        int* data_index = new int[sizes[5]];
-        get_from_gpu(d, parentage_g, parentage, sizes[5]*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, sizes[5]*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[5], sizes[1]);
+        int* parentage = new int[sizes[3]];
+        int* data_index = new int[sizes[3]];
+        get_from_gpu(d, parentage_g, parentage, sizes[4]*sizeof(int));
+        get_from_gpu(d, data_index_g, data_index, sizes[4]*sizeof(int));
+        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[3], sizes[1]);
         free(parentage);
         free(data_index);
         //node->print_tree();
@@ -362,7 +322,7 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
 
         int n_batches = sizes[0];
         for(int b = 0; b < n_batches; b++)
-            HMF_GPU::SolverBatchThreadChannelsFirst(d, bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, rz_cost, u, full_buff, img_buff)();
+            HMF1DMP_GPU::SolverBatchThreadChannelsFirst(d, bottom_up_list, b, sizes, data_cost, rx_cost, u, full_buff, img_buff)();
 
         TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
 
@@ -375,47 +335,43 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
 };
 
 template <>
-struct HmfMeanpass3dGradFunctor<GPUDevice>{
+struct HmfMeanpass1dGradFunctor<GPUDevice>{
     void operator()(
         const GPUDevice& d,
-        int sizes[7],
+        int sizes[5],
         const int* parentage_g,
         const int* data_index_g,
         const float* data_cost,
         const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
         const float* u,
         const float* g,
         float* g_data,
         float* g_rx,
-        float* g_ry,
-        float* g_rz,
         int* g_par,
         int* g_didx,
         float** full_buff,
         float** img_buff){
 
         //clear unusable derviative
-        clear_buffer(d, g_par, sizes[5]);
-        clear_buffer(d, g_didx, sizes[5]);
+        clear_buffer(d, g_par, sizes[3]);
+        clear_buffer(d, g_didx, sizes[3]);
 
         //build the tree
         TreeNode* node = NULL;
         TreeNode** children = NULL;
         TreeNode** bottom_up_list = NULL;
         TreeNode** top_down_list = NULL;
-        int* parentage = new int[sizes[5]];
-        int* data_index = new int[sizes[5]];
-        get_from_gpu(d, parentage_g, parentage, sizes[5]*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, sizes[5]*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[5], sizes[1]);
+        int* parentage = new int[sizes[3]];
+        int* data_index = new int[sizes[3]];
+        get_from_gpu(d, parentage_g, parentage, sizes[3]*sizeof(int));
+        get_from_gpu(d, data_index_g, data_index, sizes[3]*sizeof(int));
+        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[3], sizes[1]);
         free(parentage);
         free(data_index);
 
         int n_batches = sizes[0];
         for(int b = 0; b < n_batches; b++)
-            HMF_GPU::GradientBatchThreadChannelsFirst(d, bottom_up_list, b, sizes, rx_cost, ry_cost, rz_cost, u, g, g_data, g_rx, g_ry, g_rz, full_buff)();
+            HMF1DMP_GPU::GradientBatchThreadChannelsFirst(d, bottom_up_list, b, sizes, rx_cost, u, g, g_data, g_rx, full_buff)();
 
         TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
 
