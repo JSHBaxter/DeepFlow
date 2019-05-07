@@ -19,6 +19,32 @@ def _potts_meanpass3d_grad_cc(op, grad):
 
     return module.potts_meanpass3d_grad(grad, op.inputs[0], op.inputs[1], op.inputs[2], op.inputs[3], op.outputs[0])    
 
+@ops.RegisterGradient("PottsMeanpass2d")
+def _potts_meanpass2d_grad_cc(op, grad):
+    """
+    The gradient for `potts_meanpass2d` using the operation implemented in C++.
+
+    :param op: `potts_meanpass2d` `Operation` that we are differentiating, which we can use
+        to find the inputs and outputs of the original op.
+    :param grad: gradient with respect to the output of the `potts_meanpass2d` op.
+    :return: gradients with respect to the input of `potts_meanpass2d`.
+    """
+
+    return module.potts_meanpass2d_grad(grad, op.inputs[0], op.inputs[1], op.inputs[2], op.outputs[0])    
+
+@ops.RegisterGradient("PottsMeanpass1d")
+def _potts_meanpass1d_grad_cc(op, grad):
+    """
+    The gradient for `potts_meanpass1d` using the operation implemented in C++.
+
+    :param op: `potts_meanpass1d` `Operation` that we are differentiating, which we can use
+        to find the inputs and outputs of the original op.
+    :param grad: gradient with respect to the output of the `potts_meanpass1d` op.
+    :return: gradients with respect to the input of `potts_meanpass1d`.
+    """
+
+    return module.potts_meanpass1d_grad(grad, op.inputs[0], op.inputs[1], op.outputs[0])    
+
 @ops.RegisterGradient("HmfMeanpass3d")
 def _hmf_meanpass3d_grad_cc(op, grad):
     """
