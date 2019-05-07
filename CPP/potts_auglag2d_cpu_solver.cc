@@ -5,7 +5,7 @@
 
 #include "cpu_kernels.h"
 
-class PottsAuglag2dFunctor_SolverBatchThreadChannelsLast
+class PottsAuglag2d_SolverBatchThreadChannelsLast
 {
 private:
     const int b;
@@ -19,7 +19,7 @@ private:
     float* u;
     
 public:
-    PottsAuglag2dFunctor_SolverBatchThreadChannelsLast(
+    PottsAuglag2d_SolverBatchThreadChannelsLast(
         const int batch,
         const int sizes[4],
         const float* data_cost,
@@ -132,7 +132,7 @@ struct PottsAuglag2dFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(PottsAuglag2dFunctor_SolverBatchThreadChannelsLast(b, sizes, data_cost, rx_cost, ry_cost, u));
+        threads[b] = new std::thread(PottsAuglag2d_SolverBatchThreadChannelsLast(b, sizes, data_cost, rx_cost, ry_cost, u));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)

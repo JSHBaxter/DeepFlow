@@ -784,13 +784,60 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
         if(i < n_s)
             g_rx[c*n_s+i] = 0.5f * derivative;
     }
-    
+}
+
+__global__ void populate_reg_mean_gradients_kernel(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x; i_temp /= n_x;
+    int n_s = n_x*n_y;
+    for(int c = 0; c < n_c; c++){
+        //for y
+        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
+        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float derivative = (y < n_y-1) ? up_contra + dn_contra : 0.0f;
+        if(i < n_s)
+            g_ry[c*n_s+i] = 0.5f * derivative;
+        
+        //for x
+        up_contra = u[c*n_s+i+n_y] * g[c*n_s+i];
+        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_y];
+        derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
+        if(i < n_s)
+            g_rx[c*n_s+i] = 0.5f * derivative;
+    }
+}
+
+__global__ void populate_reg_mean_gradients_kernel(const float* g, const float* u, float* g_rx, const int n_x, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int x = i_temp % n_x; i_temp /= n_x;
+    int n_s = n_x;
+    for(int c = 0; c < n_c; c++){
+        //for x
+        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
+        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
+        if(i < n_s)
+            g_rx[c*n_s+i] = 0.5f * derivative;
+    }
 }
 
 
 void populate_reg_mean_gradients(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int n_s = n_x*n_y*n_z;
     populate_reg_mean_gradients_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_c);
+    if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
+}
+void populate_reg_mean_gradients(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c){
+    int n_s = n_x*n_y;
+    populate_reg_mean_gradients_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, u, g_rx, g_ry, n_x, n_y, n_c);
+    if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
+}
+void populate_reg_mean_gradients(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, const int n_x, const int n_c){
+    int n_s = n_x;
+    populate_reg_mean_gradients_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, u, g_rx, n_x, n_c);
     if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
 }
 
@@ -826,11 +873,60 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     }
     
 }
+__global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x; i_temp /= n_x;
+    int n_s = n_x*n_y;
+    for(int c = 0; c < n_c; c++){
+        
+        //for y
+        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
+        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float derivative = g_ry[c*n_s+i] + 0.5f*( (y < n_y-1) ? up_contra + dn_contra : 0.0f);
+        if(i < n_s)
+            g_ry[c*n_s+i] = derivative;
+        
+        //for x
+        up_contra = u[c*n_s+i+n_y] * g[c*n_s+i];
+        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_y];
+        derivative = g_rx[c*n_s+i] + 0.5f*( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
+        if(i < n_s)
+            g_rx[c*n_s+i] = derivative;
+    }
+    
+}
+__global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const float* u, float* g_rx, const int n_x, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int x = i_temp % n_x; i_temp /= n_x;
+    int n_s = n_x;
+    for(int c = 0; c < n_c; c++){
+        //for x
+        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
+        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float derivative = g_rx[c*n_s+i] + 0.5f*( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
+        if(i < n_s)
+            g_rx[c*n_s+i] = derivative;
+    }
+    
+}
 
 
 void populate_reg_mean_gradients_and_add(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int n_s = n_x*n_y*n_z;
     populate_reg_mean_gradients_and_add_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_c);
+    if(CHECK_ERRORS) check_error(dev, "populate_reg_mean_gradients_and_add launch failed with error");
+}
+void populate_reg_mean_gradients_and_add(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c){
+    int n_s = n_x*n_y;
+    populate_reg_mean_gradients_and_add_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, u, g_rx, g_ry, n_x, n_y, n_c);
+    if(CHECK_ERRORS) check_error(dev, "populate_reg_mean_gradients_and_add launch failed with error");
+}
+void populate_reg_mean_gradients_and_add(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, const int n_x, const int n_c){
+    int n_s = n_x;
+    populate_reg_mean_gradients_and_add_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, u, g_rx, n_x, n_c);
     if(CHECK_ERRORS) check_error(dev, "populate_reg_mean_gradients_and_add launch failed with error");
 }
 
