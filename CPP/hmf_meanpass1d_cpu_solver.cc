@@ -6,7 +6,7 @@
 #include "hmf_trees.h"
 
 
-namespace HMF1DMP_GPU {
+namespace HMF1DMP_CPU {
     
 class SolverBatchThreadChannelsLast
 {
@@ -244,7 +244,7 @@ struct HmfMeanpass1dFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(HMF1DMP_GPU::SolverBatchThreadChannelsLast(bottom_up_list, b, sizes, data_cost, rx_cost, u));
+        threads[b] = new std::thread(HMF1DMP_CPU::SolverBatchThreadChannelsLast(bottom_up_list, b, sizes, data_cost, rx_cost, u));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)
@@ -292,7 +292,7 @@ struct HmfMeanpass1dGradFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(HMF1DMP_GPU::GradientBatchThreadChannelsLast(bottom_up_list, b, sizes, u, g, g_data, g_rx));
+        threads[b] = new std::thread(HMF1DMP_CPU::GradientBatchThreadChannelsLast(bottom_up_list, b, sizes, u, g, g_data, g_rx));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)

@@ -45,7 +45,7 @@ struct PottsAuglag3dFunctor<GPUDevice>{
         float* pz = buffers_full[5];
 
         // optimization constants
-        const float beta = 0.01f;
+        const float beta = 0.05f;
         const float tau = 0.1f;
         const float cc = 0.125;
         const float icc = 1.0f / cc;
@@ -67,10 +67,10 @@ struct PottsAuglag3dFunctor<GPUDevice>{
             clear_buffer(d, pz, n_s*n_c);
             clear_buffer(d, div, n_s*n_c);
             clear_buffer(d, g, n_s*n_c);
-            clear_buffer(d, ps, n_s);
-            clear_buffer(d, pt, n_s*n_c);
-            //find_min_constraint(d, ps, data_b, n_c, n_s);
-            //rep_buffer(d, ps, pt, n_c, n_s);
+            //clear_buffer(d, ps, n_s);
+            //clear_buffer(d, pt, n_s*n_c);
+            find_min_constraint(d, ps, data_b, n_c, n_s);
+            rep_buffer(d, ps, pt, n_c, n_s);
 
             // iterate in blocks
             int min_iter = 10;
@@ -99,11 +99,8 @@ struct PottsAuglag3dFunctor<GPUDevice>{
                     //update_source_flows(d, ps, pt, div, u_b, icc, n_c, n_s);
                     //update_sink_flows(d, ps, pt, div, u_b, data_b, icc, n_c, n_s);
                     //update_multiplier(d, ps, pt, div, u_b, g, cc, n_c, n_s);
-                    
-                    //get the max change
-                    float max_change = max_of_buffer(d, g, n_c*n_s);
 
-                    std::cout << "Iter # : " << iter << " Max change: " << max_change << std::endl;
+                    //std::cout << "Iter # : " << iter << " Max change: " << max_change << std::endl;
 
                 }
 

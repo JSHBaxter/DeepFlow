@@ -32,10 +32,7 @@ public:
     u(u)
     {}
     
-    void operator()(){}
-    void operator[](int s){
-            
-        std::cout << "Inner part" << std::endl;
+    void operator()(){
     
         // optimization constants
         const float beta = 0.01f;
@@ -66,10 +63,12 @@ public:
                 calculate_r_eff(r_eff, rx_b, u_b, n_x, n_c);
                 for(int i = 0; i < n_s*n_c; i++)
                     r_eff[i] = data_b[i]+r_eff[i];
-                max_change = softmax_with_convergence(r_eff, u_b, n_s, n_c, tau);
+                if(iter == min_iter -1)
+                    max_change = softmax_with_convergence(r_eff, u_b, n_s, n_c, tau);
+                else
+                    softmax_update(r_eff, u_b, n_s, n_c, tau);
             }
 
-            //std::cout << "Thread #:" << b << "\tIter #: " << iter << " \tMax change: " << max_change << std::endl;
             if (max_change < tau*beta)
                 break;
         }
@@ -79,7 +78,10 @@ public:
             calculate_r_eff(r_eff, rx_b, u_b, n_x, n_c);
             for(int i = 0; i < n_s*n_c; i++)
                 r_eff[i] = data_b[i]+r_eff[i];
-            max_change = softmax_with_convergence(r_eff, u_b, n_s, n_c, tau);
+            if(iter == min_iter -1)
+                max_change = softmax_with_convergence(r_eff, u_b, n_s, n_c, tau);
+            else
+                softmax_update(r_eff, u_b, n_s, n_c, tau);
         }
 
         //calculate the effective regularization

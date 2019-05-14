@@ -45,7 +45,7 @@ public:
     void operator()(){
     
         // optimization constants
-        const float beta = 0.01f;
+        const float beta = 0.05f;
         const float tau = 0.1f;
         const float cc = 0.125;
         const float icc = 1.0f / cc;
@@ -72,9 +72,9 @@ public:
         //softmax(data_b, u_b, n_s, n_c);
         clear(g, div, n_c*n_s);
         clear(px, py, pz, n_c*n_s);
-        clear(ps, n_s);
-        clear(pt, n_s*n_c);
-        //init_flows(data_b,ps,pt,n_s,n_c);
+        //clear(ps, n_s);
+        //clear(pt, n_s*n_c);
+        init_flows(data_b,ps,pt,n_s,n_c);
 
         // iterate in blocks
         int min_iter = 10;
@@ -92,8 +92,7 @@ public:
                 compute_capacity_potts(g, u_b, ps, pt, div, n_s, n_c, tau, icc);
                 compute_flows(g, div, px, py, pz, rx_b, ry_b, rz_b, n_c, n_x, n_y, n_z);
                 compute_source_sink_multipliers( g, u_b, ps, pt, div, data_b, cc, icc, n_c, n_s);
-                max_change = maxabs(g, n_c*n_s);
-                std::cout << "Thread #:" << b << "\tIter #: " << iter << " \tMax change: " << max_change << std::endl;
+                //std::cout << "Thread #:" << b << "\tIter #: " << iter << " \tMax change: " << max_change << std::endl;
             }
 
             max_change = maxabs(g, n_c*n_s);

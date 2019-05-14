@@ -20,6 +20,7 @@ void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, s
 
 void clear_buffer(const Eigen::GpuDevice& dev, float* buffer, const int size);
 void clear_buffer(const Eigen::GpuDevice& dev, int* buffer, const int size);
+void set_buffer(const Eigen::GpuDevice& dev, float* buffer, const float number, const int size);
 
 void copy_buffer(const Eigen::GpuDevice& dev, const float* source, float* dest, const int n_s);
 void copy_buffer_clean(const Eigen::GpuDevice& dev, const float* source, float* dest, const int n_s);
@@ -27,9 +28,11 @@ void copy_buffer_clip(const Eigen::GpuDevice& dev, const float* source, float* d
 void rep_buffer(const Eigen::GpuDevice& dev, const float* input, float* output, const int n_c, const int n_s);
 
 void inc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const int n_s);
+void ninc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const int n_s);
 void inc_mult_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const int n_s, const float multi);
 void inc2_mult_buffer(const Eigen::GpuDevice& dev, const float* inc_m1, const float* inc_m2, float* acc, const int n_s, const float multi);
 
+void div_buffer(const Eigen::GpuDevice& dev, const float number, float* res, const int n_s);
 void div_buffer(const Eigen::GpuDevice& dev, const float* div, float* res, const int n_s);
 void mult_buffer(const Eigen::GpuDevice& dev, const float mult, float* res, const int n_s);
 void log_buffer(const Eigen::GpuDevice& dev, const float* in, float* out, const int n_s);
@@ -55,6 +58,7 @@ void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* di
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_t);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, const float* rx, const int n_x, const int n_t);
 void abs_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s);
+void max_neg_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s);
 void binary_constrain(const Eigen::GpuDevice& dev, float* buffer, const int n_s);
 
 

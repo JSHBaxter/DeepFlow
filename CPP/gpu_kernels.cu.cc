@@ -38,6 +38,9 @@ void clear_buffer(const Eigen::GpuDevice& dev, float* buffer, const int size){
 void clear_buffer(const Eigen::GpuDevice& dev, int* buffer, const int size){
     cudaMemsetAsync(buffer, 0, size*sizeof(int),dev.stream());
 }
+void set_buffer(const Eigen::GpuDevice& dev, float* buffer, const float number, const int size){
+    cudaMemsetAsync(buffer, number, size*sizeof(float),dev.stream());
+}
 
 // update the source flow
 __global__ void update_source_sink_multiplier_potts_kernel(float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_c, const int n_s){
@@ -280,6 +283,24 @@ __global__ void abs_constrain_kernel(float* b, const float* r, const int n_s){
 void abs_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s){
     abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, constrain, n_s);
     if(CHECK_ERRORS) check_error(dev, "abs_constrain launch failed with error");
+}
+
+__global__ void max_neg_constrain_kernel(float* b, const float* r, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    float value = b[i];
+    float constraint = r[i];
+    value = (value > -constraint) ? -constraint: value;
+    
+    if(i < n_s)
+        b[i] = value;
+    
+}
+
+
+void max_neg_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s){
+    max_neg_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, constrain, n_s);
+    if(CHECK_ERRORS) check_error(dev, "max_constrain launch failed with error");
 }
 
 
@@ -608,6 +629,20 @@ void inc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const
     if(CHECK_ERRORS) check_error(dev, "inc_buffer launch failed with error");
 }
 
+__global__ void ninc_kernel(const float* inc, float* acc, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    float val = acc[i];
+    float increment = inc[i];
+    val -= increment;
+    if(i < n_s)
+        acc[i] = val;
+}
+
+void ninc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const int n_s){
+    ninc_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(inc, acc, n_s);
+    if(CHECK_ERRORS) check_error(dev, "ninc_buffer launch failed with error");
+}
+
 __global__ void inc_mult_kernel(const float* inc, float* acc, const int n_s, const float multi){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float val = acc[i];
@@ -648,6 +683,19 @@ __global__ void div_kernel(const float* div, float* res, const int n_s){
 
 void div_buffer(const Eigen::GpuDevice& dev, const float* div, float* res, const int n_s){
     div_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(div, res, n_s);
+    if(CHECK_ERRORS) check_error(dev, "div_buffer launch failed with error");
+}
+
+__global__ void div_kernel(const float divisor, float* res, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    float val = res[i];
+    val /= divisor;
+    if(i < n_s)
+        res[i] = val;
+}
+
+void div_buffer(const Eigen::GpuDevice& dev, const float divisor, float* res, const int n_s){
+    div_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(divisor, res, n_s);
     if(CHECK_ERRORS) check_error(dev, "div_buffer launch failed with error");
 }
 

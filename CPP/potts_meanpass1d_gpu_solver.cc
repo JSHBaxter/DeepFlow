@@ -40,7 +40,6 @@ struct PottsMeanpass1dFunctor<GPUDevice>{
         const float epsilon = 10e-5f;
 
         for(int b = 0; b < n_bat; b++){
-            //std::cout << "Batch: " << b << std::endl;
 
             const float* data_b = data_cost + b*n_s*n_c;
             const float* rx_b = rx_cost + b*n_s*n_c;
@@ -68,8 +67,6 @@ struct PottsMeanpass1dFunctor<GPUDevice>{
 
                 //get the max change
                 float max_change = max_of_buffer(d, temp, n_c*n_s);
-
-                //std::cout << "Iter #: " << iter << " Max change: " << max_change << std::endl;
                 if (max_change < tau*beta)
                     break;
 
