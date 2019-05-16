@@ -18,7 +18,7 @@ endif
 potts_mean_pass = potts_meanpass3d.cc potts_meanpass2d.cc potts_meanpass1d.cc
 potts_aug_lag = potts_auglag3d.cc potts_auglag2d.cc potts_auglag1d.cc
 hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc
-hmf_aug_lag = hmf_auglag1d.cc
+hmf_aug_lag = hmf_auglag2d.cc hmf_auglag1d.cc
 helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc
 
 ifneq (,$(CUDAFLAG))

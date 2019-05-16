@@ -1,6 +1,6 @@
 // kernel_example.h
-#ifndef HMF_AUGLAG1D_H_
-#define HMF_AUGLAG1D_H_
+#ifndef HMF_AUGLAG2D_H_
+#define HMF_AUGLAG2D_H_
 
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/op_kernel.h"
@@ -11,14 +11,15 @@
 #include "hmf_trees.h"
 
 template <typename Device>
-struct HmfAuglag1dFunctor {
+struct HmfAuglag2dFunctor {
   void operator()(
       const Device& d,
-      int size[5],
+      int size[6],
       const int* parentage,
       const int* data_index,
       const float* data_cost,
       const float* rx_cost,
+      const float* ry_cost,
       float* out,
       float** buffers_full,
       float** buffers_images);
@@ -28,4 +29,4 @@ struct HmfAuglag1dFunctor {
     int num_buffers_images();
 };
 
-#endif // HMF_AUGLAG1D_H_
+#endif // HMF_AUGLAG2D_H_

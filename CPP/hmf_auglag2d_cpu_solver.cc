@@ -6,7 +6,7 @@
 #include "hmf_trees.h"
 
 
-namespace HMF1DAL_CPU {
+namespace HMF2DAL_CPU {
     
 class SolverBatchThreadChannelsLast
 {
@@ -14,24 +14,28 @@ private:
     TreeNode const* const* bottom_up_list;
     const int b;
     const int n_x;
+    const int n_y;
     const int n_c;
     const int n_r;
     const int n_s;
     const float* const data;
     const float* const rx;
+    const float* const ry;
     float* const ps;
     float* const pt;
     float* const px;
+    float* const py;
     float* const u_tmp;
     float* const div;
     float* const g;
     float* const u;
     float* const data_b;
     float* const rx_b;
+    float* const ry_b;
     
     // optimization constants
     const float tau = 0.1f;
-    const float beta = 0.01f;
+    const float beta = 0.005f;
     const float epsilon = 10e-5f;
     const float cc;
     const float icc;
@@ -40,27 +44,32 @@ public:
     SolverBatchThreadChannelsLast(
         TreeNode** bottom_up_list,
         const int batch,
-        const int sizes[5],
+        const int sizes[6],
         const float* data_cost,
         const float* rx_cost,
+        const float* ry_cost,
         float* u ) :
     bottom_up_list(bottom_up_list),
     b(batch),
     n_x(sizes[1]),
-    n_c(sizes[2]),
-    n_r(sizes[4]),
-    n_s(sizes[1]),
+    n_y(sizes[2]),
+    n_c(sizes[3]),
+    n_r(sizes[5]),
+    n_s(n_x*n_y),
     data(data_cost),
     rx(rx_cost),
-    ps(new float[sizes[1]]),
-    u_tmp(new float[sizes[4]*sizes[1]]),
-    pt(new float[sizes[4]*sizes[1]]),
-    px(new float[sizes[4]*sizes[1]]),
-    div(new float[sizes[4]*sizes[1]]),
-    g(new float[sizes[4]*sizes[1]]),
-    rx_b(new float[sizes[4]*sizes[1]]),
-    data_b(new float[sizes[2]*sizes[1]]),
-    cc(1.0f / max_diff(data_cost,sizes[2],sizes[1])),
+    ry(ry_cost),
+    ps(new float[n_s]),
+    u_tmp(new float[n_s*n_r]),
+    pt(new float[n_s*n_r]),
+    px(new float[n_s*n_r]),
+    py(new float[n_s*n_r]),
+    div(new float[n_s*n_r]),
+    g(new float[n_s*n_r]),
+    rx_b(new float[n_s*n_r]),
+    ry_b(new float[n_s*n_r]),
+    data_b(new float[n_s*n_r]),
+    cc(1.0f / max_diff(data_cost,n_c,n_s)),
     icc(1.0f/cc),
     u(u)
     { }
@@ -91,7 +100,7 @@ public:
                 compute_capacity_potts(g+r*n_s, u_tmp+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, div+r*n_s, n_s, 1, tau, icc);
         }
         //std::cout << "\tUpdate flow" << std::endl;
-        compute_flows_channels_first(g, div, px, rx_b, n_r, n_x);
+        compute_flows_channels_first(g, div, px, py, rx_b, ry_b, n_r, n_x, n_y);
         
         //update source and sink multipliers top down
         //std::cout << "\tUpdate source/sink flows" << std::endl;
@@ -187,13 +196,15 @@ public:
                 data_b[c*n_s+s] = -(data + b*n_s*n_c)[s*n_c+c];
             for(int r = 0; r < n_r; r++)
                 rx_b[r*n_s+s] = (rx + b*n_s*n_r)[s*n_r+r];
+            for(int r = 0; r < n_r; r++)
+                ry_b[r*n_s+s] = (ry + b*n_s*n_r)[s*n_r+r];
         }
         
         //initialize variables
         std::cout << "Init variables" << std::endl;
         std::cout << n_r << std::endl;
         clear(g, div, u_tmp, n_r*n_s);
-        clear(px, pt, n_r*n_s);
+        clear(px, py, pt, n_r*n_s);
         clear(ps, n_s);
         init_flows_channels_first(data_b, ps, n_c, n_s);
         for(int i = 0; i < n_r; i++)
@@ -201,8 +212,8 @@ public:
         
         // iterate in blocks
         int min_iter = 10;
-        if (n_x > min_iter)
-            min_iter = n_x;
+        if (n_x+n_y > min_iter)
+            min_iter = n_x+n_y;
         int max_loop = 200;
         for(int i = 0; i < max_loop; i++){
             
@@ -237,8 +248,10 @@ public:
         //deallocate temporary buffers
         free(u_tmp);
         free(rx_b);
+        free(ry_b);
         free(pt);
         free(px);
+        free(py);
         free(ps);
         free(g);
         free(div);
@@ -249,14 +262,15 @@ public:
 }
 
 template <>
-struct HmfAuglag1dFunctor<CPUDevice> {
+struct HmfAuglag2dFunctor<CPUDevice> {
   void operator()(
       const CPUDevice& d,
-      int sizes[5],
+      int sizes[6],
       const int* parentage,
       const int* data_index,
       const float* data_cost,
       const float* rx_cost,
+      const float* ry_cost,
       float* u,
       float** /*unused full buffers*/,
       float** /*unused image buffers*/){
@@ -266,7 +280,7 @@ struct HmfAuglag1dFunctor<CPUDevice> {
     TreeNode** children = NULL;
     TreeNode** bottom_up_list = NULL;
     TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[4], sizes[2]);
+    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[5], sizes[3]);
     //node->print_tree();
     //TreeNode::print_list(bottom_up_list, sizes[6]+1);
     //std::cout << "Tree built" << std::endl;
@@ -274,7 +288,7 @@ struct HmfAuglag1dFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(HMF1DAL_CPU::SolverBatchThreadChannelsLast(bottom_up_list, b, sizes, data_cost, rx_cost, u));
+        threads[b] = new std::thread(HMF2DAL_CPU::SolverBatchThreadChannelsLast(bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, u));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)
