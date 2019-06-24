@@ -27,9 +27,13 @@ float max_diff(const float* buffer, const int n_c, const int n_s);
 void log_buffer(float* buffer, const int n_s);
 void div_buffer(float* buffer, const float number, const int n_s);
 void mult_buffer(float* buffer, const float number, const int n_s);
+void unfold_buffer(float* buffer, const int n_s, const int n_c, const int n_r);
+void refold_buffer(float* buffer, const int n_s, const int n_c, const int n_r);
 
 //Tree iteration
 void aggregate_bottom_up(const float* bufferin, float* bufferout, const int n_s, const int n_c, const int n_r, const TreeNode* const* bottom_up_list);
+void aggregate_bottom_up(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list);
+void aggregate_top_down(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list);
 
 //Functions speficially for augmented lagrangian
 void compute_source_flow( const float* u, float* ps, const float* pt, const float* div, const float icc, const int n_c, const int n_s);
@@ -56,5 +60,13 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* u, const int n_x, const int n_y, const int n_c);
 void calculate_r_eff(float* r_eff, const float* rx, const float* u, const int n_x, const int n_c);
 
+//Functions for mean field backward calculation
+void untangle_softmax(const float* g, const float* u, float* dy, const int n_s, const int n_c);
+void get_gradient_for_u(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
+void get_gradient_for_u(const float* dy, const float* rx, const float* ry, float* du, const int n_x, const int n_y, const int n_c, const float tau);
+void get_gradient_for_u(const float* dy, const float* rxs, float* du, const int n_x, const int n_c, const float tau);
+void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
+void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c, const float tau);
+void get_reg_gradients(const float* g, const float* u, float* g_rx, const int n_x, const int n_c, const float tau);
 
 #endif //CPU_KERNELS

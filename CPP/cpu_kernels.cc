@@ -86,6 +86,21 @@ float max_diff(const float* buffer, const int n_c, const int n_s){
     return avg_all_diff;
 }
 
+void unfold_buffer(float* buffer, const int n_s, const int n_c, const int n_r){
+	for(int s = n_s-1; s >= 0; s--){
+		for(int c = n_c-1; c >= 0; c--)
+			buffer[n_r*s+c] = buffer[n_c*s+c];
+		for(int c = n_c; c < n_r; c++)
+			buffer[n_r*s+c] = 0.0f;
+	}
+}
+
+void refold_buffer(float* buffer, const int n_s, const int n_c, const int n_r){
+	for(int s = 0; s < n_s; s++)
+	for(int c = 0; c < n_c; c++)
+		buffer[n_c*s+c] = buffer[n_r*s+c];
+}
+
 inline int idx(const int x, const int n_x, const int y, const int n_y){
     return y + n_y*x;
 }
@@ -183,29 +198,29 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float
 
         //in z+
         if(z < n_z-1)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (2.0*u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]-1.0);
 
         //in z-
         if(z > 0)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)] * u[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)] * (2.0*u[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)]-1.0);
 
         //in y+
         if(y < n_y-1)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (2.0*u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]-1.0);
 
         //in y-
         if(y > 0)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)] * u[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)] * (2.0*u[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)]-1.0);
 
         //in x+
         if(x < n_x-1)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (2.0*u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]-1.0);
 
         //in x-
         if(x > 0)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)] * u[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)] * (2.0*u[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]-1.0);
 
-        r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] *= 0.5f;
+        //r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] *= 0.5f;
     }
 }
 
@@ -218,21 +233,21 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float
         
         //in y+
         if(y < n_y-1)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y,n_y,c,n_c)] * u[idxc(x,n_x,y+1,n_y,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y,n_y,c,n_c)] * (2.0*u[idxc(x,n_x,y+1,n_y,c,n_c)]-1.0);
 
         //in y-
         if(y > 0)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,c,n_c)] * u[idxc(x,n_x,y-1,n_y,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,c,n_c)] * (2.0*u[idxc(x,n_x,y-1,n_y,c,n_c)]-1.0);
 
         //in x+
         if(x < n_x-1)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x,n_x,y,n_y,c,n_c)] * u[idxc(x+1,n_x,y,n_y,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x,n_x,y,n_y,c,n_c)] * (2.0*u[idxc(x+1,n_x,y,n_y,c,n_c)]-1.0);
 
         //in x-
         if(x > 0)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,c,n_c)] * u[idxc(x-1,n_x,y,n_y,c,n_c)];
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,c,n_c)] * (2.0*u[idxc(x-1,n_x,y,n_y,c,n_c)]-1.0);
 
-        r_eff[idxc(x,n_x,y,n_y,c,n_c)] *= 0.5f;
+        //r_eff[idxc(x,n_x,y,n_y,c,n_c)] *= 0.5f;
     }
 }
 
@@ -244,16 +259,29 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* u, const int n_
 
         //in x+
         if(x < n_x-1)
-            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x,n_x,c,n_c)] * u[idxc(x+1,n_x,c,n_c)];
+            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x,n_x,c,n_c)] * (2.0*u[idxc(x+1,n_x,c,n_c)]-1.0);
 
         //in x-
         if(x > 0)
-            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x-1,n_x,c,n_c)] * u[idxc(x-1,n_x,c,n_c)];
+            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x-1,n_x,c,n_c)] * (2.0*u[idxc(x-1,n_x,c,n_c)]-1.0);
 
         r_eff[idxc(x,n_x,c,n_c)] *= 0.5f;
     }
 }
 
+
+void aggregate_bottom_up(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list){
+    for (int s = 0; s < n_s; s++)
+        for (int l = 0; l < n_r; l++) {
+            const TreeNode* n = bottom_up_list[l];
+            if(n->d == -1){
+                for(int c = 0; c < n->c; c++)
+                    buffer[idxc(s,n_s,n->r,n_r)] += buffer[idxc(s,n_s,n->children[c]->r,n_r)];
+            }else{
+                buffer[idxc(s,n_s,n->r,n_r)] = buffer[idxc(s,n_s,n->d,n_r)];
+            }
+        }
+}
 
 void aggregate_bottom_up(const float* bufferin, float* bufferout, const int n_s, const int n_c, const int n_r, const TreeNode* const* bottom_up_list){
     for (int s = 0; s < n_s; s++)
@@ -269,6 +297,173 @@ void aggregate_bottom_up(const float* bufferin, float* bufferout, const int n_s,
         }
 }
 
+void aggregate_top_down(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list){
+	for(int s = 0; s < n_s; s++)
+        for (int l = n_r; l >= 0; l--) {
+            const TreeNode* n = bottom_up_list[l];
+			for(int c = 0; c < n->c; c++)
+				buffer[idxc(s,n_s,n->children[c]->r,n_r)] += buffer[idxc(s,n_s,n->r,n_r)];
+		}
+}
+
+void untangle_softmax(const float* g, const float* u, float* dy, const int n_s, const int n_c){
+	for(int s = 0; s < n_s; s++)
+		for (int c = 0; c < n_c; c++){
+			float new_grad = 0.0f;
+			float uc = u[idxc(s,n_s,c,n_c)];
+			for(int a = 0; a < n_c; a++){
+				float da = g[idxc(s,n_s,a,n_c)];
+				if(c == a)
+					new_grad += da*(1.0f-uc);
+				else
+					new_grad -= da*u[idxc(s,n_s,a,n_c)];
+			}
+			dy[idxc(s,n_s,c,n_c)] = new_grad*uc;
+		}
+}
+
+void get_gradient_for_u(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau){
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int z = 0; z < n_z; z++)
+	for(int c = 0; c < n_c; c++){
+		float grad_val = 0.0f;
+
+		//z down
+		if( z > 0 )
+			grad_val += 2.0f*dy[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)]*rz[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)];
+
+		//y down
+		if( y > 0 )
+			grad_val += 2.0f*dy[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)]*rz[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)];
+
+		//x down
+		if( x > 0 )
+			grad_val += 2.0f*dy[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]*ry[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)];
+
+		//z up
+		if( z < n_z - 1)
+			grad_val += 2.0f*dy[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]*ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+
+		//y up
+		if ( y < n_y - 1)
+			grad_val += 2.0f*dy[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]*rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+
+		//x up
+		if ( x < n_x - 1)
+			grad_val += 2.0f*dy[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]*rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+
+		du[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] = tau*grad_val + (1.0f-tau)*du[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+	}
+}
+
+void get_gradient_for_u(const float* dy, const float* rx, const float* ry, float* du, const int n_x, const int n_y, const int n_c, const float tau){
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int c = 0; c < n_c; c++){
+		float grad_val = 0.0f;
+		//y down
+		if( y > 0 )
+			grad_val += 2.0f*dy[idxc(x,n_x,y-1,n_y,c,n_c)]*ry[idxc(x,n_x,y-1,n_y,c,n_c)];
+
+		//x down
+		if( x > 0 )
+			grad_val += 2.0f*dy[idxc(x-1,n_x,y,n_y,c,n_c)]*ry[idxc(x-1,n_x,y,n_y,c,n_c)];
+		
+		//y up
+		if ( y < n_y - 1)
+			grad_val += 2.0f*dy[idxc(x,n_x,y+1,n_y,c,n_c)]*rx[idxc(x,n_x,y,n_y,c,n_c)];
+
+		//x up
+		if ( x < n_x - 1)
+			grad_val += 2.0f*dy[idxc(x+1,n_x,y,n_y,c,n_c)]*rx[idxc(x,n_x,y,n_y,c,n_c)];
+
+		du[idxc(x,n_x,y,n_y,c,n_c)] = tau*grad_val + (1.0f-tau)*du[idxc(x,n_x,y,n_y,c,n_c)];
+	}
+}
+
+void get_gradient_for_u(const float* dy, const float* rx, float* du, const int n_x, const int n_c, const float tau){
+	for(int x = 0; x < n_x; x++)
+	for(int c = 0; c < n_c; c++){
+		float grad_val = 0.0f;
+		//x down
+		if( x > 0 )
+			grad_val += 2.0f*dy[idxc(x-1,n_x,c,n_c)]*rx[idxc(x-1,n_x,c,n_c)];
+		
+		//x up
+		if ( x < n_x - 1)
+			grad_val += 2.0f*dy[idxc(x+1,n_x,c,n_c)]*rx[idxc(x,n_x,c,n_c)];
+
+		du[idxc(x,n_x,c,n_c)] = tau*grad_val + (1.0f-tau)*du[idxc(x,n_x,c,n_c)];
+	}
+}
+
+void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c, const float tau){
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int z = 0; z < n_z; z++)
+	for(int c = 0; c < n_c; c++){
+		
+		//for z
+		if( z < n_z - 1 ){
+			float up_contra = (2.0f*u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			float dn_contra = (2.0f*u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)];
+			g_rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += tau * (up_contra + dn_contra);
+		}
+
+		//for y
+		if( y < n_y - 1 ){
+			float up_contra = (2.0f*u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			float dn_contra = (2.0f*u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)];
+			g_ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += tau * (up_contra + dn_contra);
+		}
+
+		//for x
+		if( x < n_x - 1){
+			float up_contra = (2.0f*u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			float dn_contra = (2.0f*u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)];
+			g_rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += tau * (up_contra + dn_contra);
+		}
+	}
+
+}
+
+void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c, const float tau){
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int c = 0; c < n_c; c++){
+
+		//for y
+		if( y < n_y - 1 ){
+			float up_contra = (2.0f*u[idxc(x,n_x,y+1,n_y,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,c,n_c)];
+			float dn_contra = (2.0f*u[idxc(x,n_x,y,n_y,c,n_c)]-1.0f) * g[idxc(x,n_x,y+1,n_y,c,n_c)];
+			g_ry[idxc(x,n_x,y,n_y,c,n_c)] += tau * (up_contra + dn_contra);
+		}
+
+		//for x
+		if( x < n_x - 1){
+			float up_contra = (2.0f*u[idxc(x+1,n_x,y,n_y,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,c,n_c)];
+			float dn_contra = (2.0f*u[idxc(x,n_x,y,n_y,c,n_c)]-1.0f) * g[idxc(x+1,n_x,y,n_y,c,n_c)];
+			g_rx[idxc(x,n_x,y,n_y,c,n_c)] += tau * (up_contra + dn_contra);
+		}
+	}
+
+}
+
+void get_reg_gradients(const float* g, const float* u, float* g_rx, const int n_x, const int n_c, const float tau){
+	for(int x = 0; x < n_x; x++)
+	for(int c = 0; c < n_c; c++){
+
+		//for x
+		if( x < n_x - 1){
+			float up_contra = (2.0f*u[idxc(x+1,n_x,c,n_c)]-1.0f) * g[idxc(x,n_x,c,n_c)];
+			float dn_contra = (2.0f*u[idxc(x,n_x,c,n_c)]-1.0f) * g[idxc(x+1,n_x,c,n_c)];
+			g_rx[idxc(x,n_x,c,n_c)] += tau * (up_contra + dn_contra);
+		}
+	}
+
+}
+	
 
 void compute_source_flow( const float* u, float* ps, const float* pt, const float* div, const float icc, const int n_c, const int n_s){
     for(int s = 0; s < n_s; s++){

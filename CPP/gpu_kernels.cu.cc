@@ -812,25 +812,25 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
     int n_s = n_x*n_y*n_z;
     for(int c = 0; c < n_c; c++){
         //for z
-        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
-        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
+        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
         float derivative = (z < n_z-1) ? up_contra + dn_contra : 0.0f;
         if(i < n_s)
-            g_rz[c*n_s+i] = 0.5f * derivative;
+            g_rz[c*n_s+i] = derivative;
         
         //for y
-        up_contra = u[c*n_s+i+n_z] * g[c*n_s+i];
-        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_z];
+        up_contra = (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i];
+        dn_contra = (2.0f*u[c*n_s+i] -1.0f)* g[c*n_s+i+n_z];
         derivative = (y < n_y-1) ? up_contra + dn_contra : 0.0f;
         if(i < n_s)
-            g_ry[c*n_s+i] = 0.5f * derivative;
+            g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = u[c*n_s+i+n_z*n_y] * g[c*n_s+i];
-        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_z*n_y];
+        up_contra = (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i];
+        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y];
         derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
         if(i < n_s)
-            g_rx[c*n_s+i] = 0.5f * derivative;
+            g_rx[c*n_s+i] = derivative;
     }
 }
 
@@ -842,18 +842,18 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
     int n_s = n_x*n_y;
     for(int c = 0; c < n_c; c++){
         //for y
-        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
-        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
+        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
         float derivative = (y < n_y-1) ? up_contra + dn_contra : 0.0f;
         if(i < n_s)
-            g_ry[c*n_s+i] = 0.5f * derivative;
+            g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = u[c*n_s+i+n_y] * g[c*n_s+i];
-        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_y];
+        up_contra = (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i];
+        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y];
         derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
         if(i < n_s)
-            g_rx[c*n_s+i] = 0.5f * derivative;
+            g_rx[c*n_s+i] = derivative;
     }
 }
 
@@ -864,11 +864,11 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
     int n_s = n_x;
     for(int c = 0; c < n_c; c++){
         //for x
-        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
-        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
+        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
+        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
         float derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
         if(i < n_s)
-            g_rx[c*n_s+i] = 0.5f * derivative;
+            g_rx[c*n_s+i] = derivative;
     }
 }
 
@@ -899,23 +899,23 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     int n_s = n_x*n_y*n_z;
     for(int c = 0; c < n_c; c++){
         //for z
-        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
-        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
-        float derivative = g_rz[c*n_s+i] + 0.5f*( (z < n_z-1) ? up_contra + dn_contra : 0.0f);
+        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
+        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
+        float derivative = g_rz[c*n_s+i] + ( (z < n_z-1) ? up_contra + dn_contra : 0.0f);
         if(i < n_s)
             g_rz[c*n_s+i] = derivative;
         
         //for y
-        up_contra = u[c*n_s+i+n_z] * g[c*n_s+i];
-        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_z];
-        derivative = g_ry[c*n_s+i] + 0.5f*( (y < n_y-1) ? up_contra + dn_contra : 0.0f);
+        up_contra = (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i];
+        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z];
+        derivative = g_ry[c*n_s+i] + ( (y < n_y-1) ? up_contra + dn_contra : 0.0f);
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = u[c*n_s+i+n_z*n_y] * g[c*n_s+i];
-        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_z*n_y];
-        derivative = g_rx[c*n_s+i] + 0.5f*( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
+        up_contra = (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i];
+        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y];
+        derivative = g_rx[c*n_s+i] + ( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
     }
@@ -930,16 +930,16 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     for(int c = 0; c < n_c; c++){
         
         //for y
-        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
-        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
-        float derivative = g_ry[c*n_s+i] + 0.5f*( (y < n_y-1) ? up_contra + dn_contra : 0.0f);
+        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
+        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
+        float derivative = g_ry[c*n_s+i] + ( (y < n_y-1) ? up_contra + dn_contra : 0.0f);
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = u[c*n_s+i+n_y] * g[c*n_s+i];
-        dn_contra = u[c*n_s+i] * g[c*n_s+i+n_y];
-        derivative = g_rx[c*n_s+i] + 0.5f*( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
+        up_contra = (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i];
+        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y];
+        derivative = g_rx[c*n_s+i] + ( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
     }
@@ -952,9 +952,9 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     int n_s = n_x;
     for(int c = 0; c < n_c; c++){
         //for x
-        float up_contra = u[c*n_s+i+1] * g[c*n_s+i];
-        float dn_contra = u[c*n_s+i] * g[c*n_s+i+1];
-        float derivative = g_rx[c*n_s+i] + 0.5f*( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
+        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
+        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
+        float derivative = g_rx[c*n_s+i] + ( (x < n_x-1) ? up_contra + dn_contra: 0.0f);
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
     }
@@ -996,12 +996,12 @@ void change_to_diff(const Eigen::GpuDevice& dev, float* transfer, float* diff, c
 }
 
 __device__ float get_effective_reg_kernel_up(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){
-        float ut = u[c*n_s+i+a];
+        float ut = 2.0f*u[c*n_s+i+a]-1.0f;
         float rt = r[c*n_s+i];
         return (d < n_d-1) ? ut*rt : 0.0f;
 }
 __device__ float get_effective_reg_kernel_dn(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d){
-        float ut = u[c*n_s+i-a];
+        float ut = 2.0f*u[c*n_s+i-a]-1.0f;
         float rt = r[c*n_s+i-a];
         return (d > 0) ? ut*rt : 0.0f;
 }
@@ -1029,7 +1029,6 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
         reg_tot += get_effective_reg_kernel_up(u, rx, c, n_s, i, n_z*n_y, x, n_x);
         reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_s, i, n_z*n_y, x);
         
-        reg_tot *= 0.5f;
         if(i < n_s)
             r_eff[c*n_s+i] = reg_tot;
     }
@@ -1053,7 +1052,6 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
         reg_tot += get_effective_reg_kernel_up(u, rx, c, n_s, i, n_y, x, n_x);
         reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_s, i, n_y, x);
         
-        reg_tot *= 0.5f;
         if(i < n_s)
             r_eff[c*n_s+i] = reg_tot;
     }
@@ -1069,7 +1067,6 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
         reg_tot += get_effective_reg_kernel_up(u, rx, c, n_x, i, 1, i, n_x);
         reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_x, i, 1, i);
         
-        reg_tot *= 0.5f;
         if(i < n_x)
             r_eff[c*n_x+i] = reg_tot;
     }
@@ -1148,12 +1145,12 @@ void process_grad_potts(const Eigen::GpuDevice& dev, const float* du_i, const fl
 
 __device__ float get_gradient_for_u_kernel_dn(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d){
     float multiplier = dy[c*n_s+i-a];
-    float inc = multiplier*r[c*n_s+i-a];
+    float inc = 2.0f*multiplier*r[c*n_s+i-a];
     return (d > 0) ? inc: 0.0f;
 }
 __device__ float get_gradient_for_u_kernel_up(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){
     float multiplier = dy[c*n_s+i+a];
-    float inc = multiplier*r[c*n_s+i+a];
+    float inc = 2.0f*multiplier*r[c*n_s+i+a];
     return (d < n_d-1) ? inc: 0.0f;
 }
 
