@@ -246,7 +246,7 @@ struct HmfMeanpass1dFunctor<CPUDevice> {
 
     int n_batches = sizes[0];
 	int n_s = sizes[1];
-	int n_c = sizes[3];
+	int n_c = sizes[2];
 	int n_r = sizes[4];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
@@ -299,7 +299,7 @@ struct HmfMeanpass1dGradFunctor<CPUDevice> {
       
     int n_batches = sizes[0];
 	int n_s = sizes[1];
-	int n_c = sizes[3];
+	int n_c = sizes[2];
 	int n_r = sizes[4];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
