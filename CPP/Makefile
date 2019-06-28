@@ -19,17 +19,19 @@ LFLAGS := $(CUDA_L) $(TF_LFLAGS)
 potts_mean_pass = potts_meanpass3d.cc potts_meanpass2d.cc potts_meanpass1d.cc
 potts_aug_lag = potts_auglag3d.cc potts_auglag2d.cc potts_auglag1d.cc
 hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc
-hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc
+hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc hmf_auglag_cpu_solver.cc
 
 ifneq (,$(CUDAFLAG))
-	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc kernels.o
+	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc kernels.o hmf_auglag_gpu_solver.cc
 else
 	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc
 endif
 
 ifneq (,$(CUDAFLAG))
+
 kernels.o : gpu_kernels.cu.cc
 	$(NVCC) $(CUFLAGS) -o kernels.o gpu_kernels.cu.cc
+    
 endif
 
 

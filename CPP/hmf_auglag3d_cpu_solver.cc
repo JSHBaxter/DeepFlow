@@ -2,50 +2,52 @@
 #include <thread>
 #include <iostream>
 #include <limits>
+#include "hmf_auglag_cpu_solver.h"
 #include "cpu_kernels.h"
 #include "hmf_trees.h"
 
 
-namespace HMF3DAL_CPU {
-    
-class SolverBatchThreadChannelsLast
+class HMF_AUGLAG_CPU_SOLVER_3D : public HMF_AUGLAG_CPU_SOLVER_BASE
 {
 private:
-    TreeNode const* const* bottom_up_list;
-    const int b;
     const int n_x;
     const int n_y;
     const int n_z;
-    const int n_c;
-    const int n_r;
-    const int n_s;
-    const float* const data;
     const float* const rx;
     const float* const ry;
     const float* const rz;
-    float* const ps;
-    float* const pt;
     float* const px;
     float* const py;
     float* const pz;
-    float* const u_tmp;
-    float* const div;
-    float* const g;
-    float* const u;
-    float* const data_b;
     float* const rx_b;
     float* const ry_b;
     float* const rz_b;
+
+protected:
+
+    int min_iter_calc(){
+        return n_x + n_y + n_z;
+    }
     
-    // optimization constants
-    const float tau = 0.1f;
-    const float beta = 0.005f;
-    const float epsilon = 10e-5f;
-    const float cc;
-    const float icc;
+    virtual void clear_spatial_flows(){
+        clear(px, py, pz, n_r*n_s);
+        
+        for(int s = 0; s < n_s; s++){
+            for(int r = 0; r < n_r; r++)
+                rx_b[r*n_s+s] = rx[s*n_r+r];
+            for(int r = 0; r < n_r; r++)
+                ry_b[r*n_s+s] = ry[s*n_r+r];
+            for(int r = 0; r < n_r; r++)
+                rz_b[r*n_s+s] = rz[s*n_r+r];
+        }
+            
+    }
+    virtual void update_spatial_flow_calc(){
+        compute_flows_channels_first(g, div, px, py, pz, rx_b, ry_b, rz_b, n_r, n_x, n_y, n_z);
+    }
     
 public:
-    SolverBatchThreadChannelsLast(
+    HMF_AUGLAG_CPU_SOLVER_3D(
         TreeNode** bottom_up_list,
         const int batch,
         const int sizes[7],
@@ -54,226 +56,44 @@ public:
         const float* ry_cost,
         const float* rz_cost,
         float* u ) :
-    bottom_up_list(bottom_up_list),
-    b(batch),
+    HMF_AUGLAG_CPU_SOLVER_BASE(bottom_up_list,
+                               batch,
+                               sizes[1]*sizes[2]*sizes[3],
+                               sizes[4],
+                               sizes[6],
+                               data_cost,
+                               u),
     n_x(sizes[1]),
     n_y(sizes[2]),
     n_z(sizes[3]),
-    n_c(sizes[4]),
-    n_r(sizes[6]),
-    n_s(n_x*n_y*n_z),
-    data(data_cost),
-    rx(rx_cost),
-    ry(ry_cost),
-    rz(rz_cost),
-    ps(new float[n_s]),
-    u_tmp(new float[n_s*n_r]),
-    pt(new float[n_s*n_r]),
+    rx(rx_cost+batch*n_s*n_r),
+    ry(ry_cost+batch*n_s*n_r),
+    rz(rz_cost+batch*n_s*n_r),
     px(new float[n_s*n_r]),
     py(new float[n_s*n_r]),
     pz(new float[n_s*n_r]),
-    div(new float[n_s*n_r]),
-    g(new float[n_s*n_r]),
     rx_b(new float[n_s*n_r]),
     ry_b(new float[n_s*n_r]),
-    rz_b(new float[n_s*n_r]),
-    data_b(new float[n_s*n_r]),
-    cc(1.0f / max_diff(data_cost,n_c,n_s)),
-    icc(1.0f/cc),
-    u(u)
-    { }
-    
-    //perform one iteration of the algorithm
-    void block_iter(){
-                
-        /*for(int s = 0; s < n_s; s++)
-            std::cout << ps[s] <<  " ";
-        std::cout << std::endl;
-        for(int c = 0; c < n_r; c++)
-        for(int s = 0; s < n_s; s++)
-            std::cout << pt[c*n_s+s] <<  " ";
-        std::cout << std::endl;
-        for(int c = 0; c < n_r; c++)
-        for(int s = 0; s < n_s; s++)
-            std::cout << u_tmp[c*n_s+s] <<  " ";
-        std::cout << std::endl;*/
-
-        //calculate the capacity and then update flows
-        //std::cout << "\tUpdate capacities" << std::endl;
-        for(int n_n = 0; n_n < n_r; n_n++){
-            const TreeNode* n = bottom_up_list[n_n];
-            int r = n->r;
-            if( n->parent->parent == NULL )
-                compute_capacity_potts(g+r*n_s, u_tmp+r*n_s, ps, pt+r*n_s, div+r*n_s, n_s, 1, tau, icc);
-            else
-                compute_capacity_potts(g+r*n_s, u_tmp+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, div+r*n_s, n_s, 1, tau, icc);
-        }
-        //std::cout << "\tUpdate flow" << std::endl;
-        compute_flows_channels_first(g, div, px, py, pz, rx_b, ry_b, rz_b, n_r, n_x, n_y, n_z);
-        
-        //update source and sink multipliers top down
-        //std::cout << "\tUpdate source/sink flows" << std::endl;
-        for(int n_n = 0; n_n < n_r+1; n_n++){
-            const TreeNode* n = bottom_up_list[n_r-n_n];
-            float* n_pt_buf = pt+n->r*n_s;
-            float* n_g_buf = g+n->r*n_s;
-            float* n_div_buf = div+n->r*n_s;
-            float* n_u_buf = u_tmp+n->r*n_s;
-            float* n_d_buf = data_b+n->r*n_s;
-
-            //if we are the source node
-            if(n->r == -1){
-                //std::cout << "\t\tSource" << std::endl;
-                set(ps, icc, n_s);
-                for(int c = 0; c < n->c; c++){
-                    const TreeNode* nc = n->children[c];
-                    float* c_pt_buf = pt+nc->r*n_s;
-                    float* c_div_buf = div+nc->r*n_s;
-                    float* c_u_buf = u_tmp+nc->r*n_s;
-                    inc(c_pt_buf, ps, n_s);
-                    inc(c_div_buf, ps, n_s);
-                    inc(c_u_buf, ps, -icc, n_s);
-                }
-                mult_buffer(ps, 1.0f / (float) n->c, n_s);
-            }
-
-            //if we are a branch node
-            else if(n->c > 0){
-                //std::cout << "\t\tBranch" << std::endl;
-                const TreeNode* p = n->parent;
-                float* p_pt_buf = pt+p->r*n_s;
-                if( p->r == -1 )
-                    p_pt_buf = ps;
-                copy(p_pt_buf,n_pt_buf,n_s);
-                ninc(n_div_buf, n_pt_buf, n_s);
-                inc(n_u_buf, n_pt_buf, icc, n_s);
-                for(int c = 0; c < n->c; c++){
-                    const TreeNode* nc = n->children[c];
-                    float* c_pt_buf = pt+nc->r*n_s;
-                    float* c_div_buf = div+nc->r*n_s;
-                    float* c_u_buf = u_tmp+nc->r*n_s;
-                    inc(c_pt_buf, n_pt_buf, n_s);
-                    inc(c_div_buf, n_pt_buf, n_s);
-                    inc(c_u_buf, n_pt_buf, -icc, n_s);
-                }
-                mult_buffer(n_pt_buf, 1.0f / (float) (n->c+1), n_s);
-
-            }
-
-            //if we are a leaf node
-            else{
-                //std::cout << "\t\tLeaf" << std::endl;
-                const TreeNode* p = n->parent;
-                float* p_pt_buf = pt+p->r*n_s;
-                if( p->r == -1 )
-                    p_pt_buf = ps;
-                copy(p_pt_buf,n_pt_buf,n_s);
-                ninc(n_div_buf, n_pt_buf, n_s);
-                inc(n_u_buf, n_pt_buf, icc, n_s);
-                constrain(n_pt_buf,n_d_buf,n_s);
-
-            }
-        }
-
-        //update multipliers
-        //std::cout << "\tUpdate multipliers" << std::endl;
-        for(int n_n = 0; n_n < n_r; n_n++){
-            const TreeNode* n = bottom_up_list[n_n];
-            const TreeNode* p = n->parent;
-            float* n_pt_buf = pt+n->r*n_s;
-            float* n_g_buf = g+n->r*n_s;
-            float* n_div_buf = div+n->r*n_s;
-            float* n_u_buf = u_tmp+n->r*n_s;
-            float* p_pt_buf = pt+p->r*n_s;
-            if( p->r == -1 )
-                p_pt_buf = ps;
-            copy(n_pt_buf,n_g_buf,n_s);
-            inc(n_div_buf,n_g_buf,n_s);
-            ninc(p_pt_buf,n_g_buf,n_s);
-            mult_buffer(n_g_buf, cc, n_s);
-            ninc(n_g_buf,n_u_buf,n_s);
-        }
+    rz_b(new float[n_s*n_r])
+    {
+        std::cout << "Derived class:" << std::endl;
+        std::cout << "\t" << px << std::endl;
+        std::cout << "\t" << py << std::endl;
+        std::cout << "\t" << pz << std::endl;
+        std::cout << "\t" << rx_b << std::endl;
+        std::cout << "\t" << ry_b << std::endl;
+        std::cout << "\t" << rz_b << std::endl;
     }
     
-    void operator()(){
-        
-        std::cout << cc << std::endl;
-        
-        // transpose input data (makes everything easier)
-        for(int s = 0; s < n_s; s++){
-            for(int c = 0; c < n_c; c++)
-                data_b[c*n_s+s] = -(data + b*n_s*n_c)[s*n_c+c];
-            for(int r = 0; r < n_r; r++)
-                rx_b[r*n_s+s] = (rx + b*n_s*n_r)[s*n_r+r];
-            for(int r = 0; r < n_r; r++)
-                ry_b[r*n_s+s] = (ry + b*n_s*n_r)[s*n_r+r];
-            for(int r = 0; r < n_r; r++)
-                rz_b[r*n_s+s] = (rz + b*n_s*n_r)[s*n_r+r];
-        }
-        
-        //initialize variables
-        std::cout << "Init variables" << std::endl;
-        std::cout << n_r << std::endl;
-        clear(g, div, u_tmp, n_r*n_s);
-        clear(px, py, pz, n_r*n_s);
-		clear(pt, n_r*n_s);
-        clear(ps, n_s);
-        init_flows_channels_first(data_b, ps, n_c, n_s);
-        for(int i = 0; i < n_r; i++)
-            copy(ps,pt+i*n_s,n_s);
-        
-        // iterate in blocks
-        int min_iter = 10;
-        if (n_x+n_y+n_z > min_iter)
-            min_iter = n_x+n_y+n_z;
-        int max_loop = 200;
-        for(int i = 0; i < max_loop; i++){
-            
-            //run the solver a set block of iterations
-            for (int iter = 0; iter < min_iter; iter++){
-                
-                std::cout << "Iter " << i << " - " << iter << std::endl;
-                block_iter();
-                
-                
-            }
-
-            float max_change = maxabs(g,n_s*n_r);
-            std::cout << "Calculate max change: " << max_change << std::endl;
-            if (max_change < beta)
-                break;
-        }
-
-        //run one last block, just to be safe
-        for (int iter = 0; iter < min_iter; iter++){
-            std::cout << "Iter " << "LAST - " << iter << std::endl;
-            block_iter();
-        }
-
-        //log output and transpose output back into proper buffer
-        //log_buffer(u_tmp, n_s*n_c);
-        float* u_b = u + b*n_s*n_c;
-        for(int s = 0; s < n_s; s++)
-            for(int c = 0; c < n_c; c++)
-                u_b[s*n_c+c] = u_tmp[c*n_s+s];
-        
-        //deallocate temporary buffers
-        free(u_tmp);
-        free(rx_b);
-        free(ry_b);
-        free(rz_b);
-        free(pt);
-        free(px);
-        free(py);
-        free(pz);
-        free(ps);
-        free(g);
-        free(div);
-        free(data_b);
+    ~HMF_AUGLAG_CPU_SOLVER_3D(){
+        //free(px);
+        //free(py);
+        //free(pz);
+        //free(rx_b);
+        //free(ry_b);
+        //free(rz_b);
     }
 };
-
-}
 
 template <>
 struct HmfAuglag3dFunctor<CPUDevice> {
@@ -299,16 +119,27 @@ struct HmfAuglag3dFunctor<CPUDevice> {
     //node->print_tree();
     //TreeNode::print_list(bottom_up_list, sizes[7]+1);
     //std::cout << "Tree built" << std::endl;
-
+      
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
+    std::cout << threads << std::endl;
+    HMF_AUGLAG_CPU_SOLVER_3D** solvers = new HMF_AUGLAG_CPU_SOLVER_3D* [n_batches];
+    std::cout << solvers << std::endl;
+    for(int b = 0; b < n_batches; b++){
+        solvers[b] = new HMF_AUGLAG_CPU_SOLVER_3D(bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, rz_cost, u);
+        std::cout << solvers[b] << std::endl;
+        threads[b] = new std::thread(*(solvers[b]));
+        std::cout << threads[b] << std::endl;
+    }
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(HMF3DAL_CPU::SolverBatchThreadChannelsLast(bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, rz_cost, u));
-    for(int b = 0; b < n_batches; b++)
+        //(*(solvers[b]))();
         threads[b]->join();
-    for(int b = 0; b < n_batches; b++)
-        delete threads[b];
+    for(int b = 0; b < n_batches; b++){
+        //delete threads[b];
+        delete solvers[b];
+    }
     delete threads;
+    delete solvers;
       
     TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
       

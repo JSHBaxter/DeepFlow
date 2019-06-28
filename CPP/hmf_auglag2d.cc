@@ -17,11 +17,11 @@ using namespace tensorflow;
 
 // Load the CPU kernels
 using CPUDevice = Eigen::ThreadPoolDevice;
-using GPUDevice = Eigen::GpuDevice;
 #include "hmf_auglag2d_cpu_solver.cc"
 
 // If we are using CUDA, include the GPU kernels
 #if GOOGLE_CUDA
+using GPUDevice = Eigen::GpuDevice;
 #include "hmf_auglag2d_gpu_solver.cc"
 #endif
 
