@@ -13,7 +13,7 @@
 #include "hmf_trees.h"
 #include "gpu_kernels.h"
 
-namespace HMF1DAL_GPU {
+namespace HMF2DAL_GPU {
     
 class SolverBatchThreadChannelsFirst
 {
@@ -22,15 +22,18 @@ private:
     TreeNode const* const* bottom_up_list;
     const int b;
     const int n_x;
+    const int n_y;
     const int n_c;
     const int n_r;
     const int n_s;
     const float* data_b;
     const float* rx_b;
+    const float* ry_b;
     float* u_b;
     float* ps;
     float* pt;
     float* px;
+    float* py;
     float* u_tmp;
     float* div;
     float* g;
@@ -47,9 +50,10 @@ public:
         const GPUDevice & dev,
         TreeNode** bottom_up_list,
         const int batch,
-        const int sizes[5],
+        const int sizes[6],
         const float* data_cost,
         const float* rx_cost,
+        const float* ry_cost,
         float* u,
         float** full_buff,
         float** img_buff) :
@@ -57,17 +61,20 @@ public:
     bottom_up_list(bottom_up_list),
     b(batch),
     n_x(sizes[2]),
+    n_y(sizes[3]),
     n_c(sizes[1]),
-    n_r(sizes[3]),
-    n_s(sizes[2]),
-    data_b(data_cost+batch*sizes[2]*sizes[1]),
-    rx_b(rx_cost+batch*sizes[2]*sizes[3]),
-    u_b(u+batch*sizes[2]*sizes[1]),
+    n_r(sizes[4]),
+    n_s(sizes[2]*sizes[3]),
+    data_b(data_cost+batch*sizes[2]*sizes[3]*sizes[1]),
+    rx_b(rx_cost+batch*sizes[2]*sizes[3]*sizes[4]),
+    ry_b(rx_cost+batch*sizes[2]*sizes[3]*sizes[4]),
+    u_b(u+batch*sizes[2]*sizes[3]*sizes[1]),
     pt(full_buff[0]),
     px(full_buff[1]),
-    u_tmp(full_buff[2]),
-    div(full_buff[3]),
-    g(full_buff[4]),
+    py(full_buff[2]),
+    u_tmp(full_buff[3]),
+    div(full_buff[4]),
+    g(full_buff[5]),
     ps(img_buff[0])
     {}
     
@@ -83,7 +90,7 @@ public:
                 calc_capacity_potts(dev, g+r*n_s, div+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, u_tmp+r*n_s, n_s, 1, icc, tau);
         }
         std::cout << "\tUpdate flow" << std::endl;
-        update_spatial_flows(dev, g, div, px, rx_b, n_x, n_r*n_s);
+        update_spatial_flows(dev, g, div, px, py, rx_b, ry_b, n_x, n_y, n_r*n_s);
 
         std::cout << "\tUpdate source/sink flows" << std::endl;
         //update source and sink multipliers top down
@@ -157,6 +164,7 @@ public:
         //initialize variables
         clear_buffer(dev, u_tmp, n_s*n_r);
         clear_buffer(dev, px, n_s*n_r);
+        clear_buffer(dev, py, n_s*n_r);
         clear_buffer(dev, div, n_s*n_r);
         clear_buffer(dev, pt, n_s*n_r);
         find_min_constraint(dev, ps, data_b, n_c, n_s);
@@ -164,8 +172,8 @@ public:
 
         // iterate in blocks
         int min_iter = 10;
-        if (n_x > min_iter)
-            min_iter = n_x;
+        if (n_x+n_y > min_iter)
+            min_iter = n_x+n_y;
         int max_loop = 200;
         
         for(int i = 0; i < max_loop; i++){    
@@ -198,14 +206,15 @@ public:
 }
 
 template <>
-struct HmfAuglag1dFunctor<GPUDevice> {
+struct HmfAuglag2dFunctor<GPUDevice> {
     void operator()(
         const GPUDevice& d,
-        int sizes[5],
+        int sizes[6],
         const int* parentage_g,
         const int* data_index_g,
         const float* data_cost,
         const float* rx_cost,
+        const float* ry_cost,
         float* u,
         float** full_buff,
         float** img_buff){
@@ -215,11 +224,11 @@ struct HmfAuglag1dFunctor<GPUDevice> {
         TreeNode** children = NULL;
         TreeNode** bottom_up_list = NULL;
         TreeNode** top_down_list = NULL;
-        int* parentage = new int[sizes[3]];
-        int* data_index = new int[sizes[3]];
-        get_from_gpu(d, parentage_g, parentage, sizes[3]*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, sizes[3]*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[3], sizes[1]);
+        int* parentage = new int[sizes[4]];
+        int* data_index = new int[sizes[4]];
+        get_from_gpu(d, parentage_g, parentage, sizes[4]*sizeof(int));
+        get_from_gpu(d, data_index_g, data_index, sizes[4]*sizeof(int));
+        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[4], sizes[1]);
         free(parentage);
         free(data_index);
         //node->print_tree();
@@ -227,13 +236,13 @@ struct HmfAuglag1dFunctor<GPUDevice> {
 
         int n_batches = sizes[0];
         for(int b = 0; b < n_batches; b++)
-            HMF1DAL_GPU::SolverBatchThreadChannelsFirst(d, bottom_up_list, b, sizes, data_cost, rx_cost, u, full_buff, img_buff)();
+            HMF2DAL_GPU::SolverBatchThreadChannelsFirst(d, bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, u, full_buff, img_buff)();
 
         TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
 
     }
 
-    int num_buffers_full(){ return 5; }
+    int num_buffers_full(){ return 6; }
     int num_buffers_images(){ return 1; }
     int num_buffers_branch(){ return 0; }
     int num_buffers_data(){ return 0; }
