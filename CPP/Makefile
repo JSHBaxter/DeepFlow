@@ -2,23 +2,24 @@
 
 PYTHON=python3
 CC=g++
+C=gcc
 NVCC=nvcc
 
 CUDAFLAG = -DGOOGLE_CUDA
 CUDA_I = -I/usr/local/cuda/include
-CUDA_L = /usr/local/cuda-10.0/lib64/libcudart.so.10.0 /usr/local/cuda/lib64/libcublas.so.10.0
+CUDA_L = /usr/local/cuda/lib64/libcudart.so /usr/local/cuda/lib64/libcublas.so
 
 TF_CFLAGS := $(shell ${PYTHON} -c 'import tensorflow as tf; [print(i) for i in tf.sysconfig.get_compile_flags()]') 
 TF_LFLAGS := $(shell ${PYTHON} -c 'import tensorflow as tf; [print(i) for i in tf.sysconfig.get_link_flags()]')
 
 CFLAGS := -std=c++11 $(CUDA_I) $(TF_CFLAGS) $(CUDAFLAG) -fPIC -shared 
-CUFLAGS = -std=c++11 -c $(TF_CFLAGS) $(CUDAFLAG) --expt-relaxed-constexpr -x cu -Xcompiler -fPIC -ccbin gcc-7 -DNDEBUG
+CUFLAGS = -std=c++11 -c $(TF_CFLAGS) $(CUDAFLAG) --expt-relaxed-constexpr -x cu -Xcompiler -fPIC -ccbin $(C) -DNDEBUG
 LFLAGS := $(CUDA_L) $(TF_LFLAGS)
 
 potts_mean_pass = potts_meanpass3d.cc potts_meanpass2d.cc potts_meanpass1d.cc
 potts_aug_lag = potts_auglag3d.cc potts_auglag2d.cc potts_auglag1d.cc
 hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc
-hmf_aug_lag = hmf_auglag1d.cc
+hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc
 
 ifneq (,$(CUDAFLAG))
 	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc kernels.o
