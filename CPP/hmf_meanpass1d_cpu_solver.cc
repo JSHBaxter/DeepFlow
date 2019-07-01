@@ -4,222 +4,81 @@
 #include <limits>
 #include "cpu_kernels.h"
 #include "hmf_trees.h"
+#include "hmf_meanpass_cpu_solver.h"
 
-
-namespace HMF1DMP_CPU {
-    
-class SolverBatchThreadChannelsLast
+class HMF_MEANPASS_CPU_SOLVER_1D : public HMF_MEANPASS_CPU_SOLVER_BASE
 {
 private:
-    TreeNode const* const* bottom_up_list;
-    const int b;
     const int n_x;
-    const int n_c;
-    const int n_r;
-    const int n_s;
-    const float* data;
-    const float* rx;
-    float* u;
-	float* u_tmp;
-	float* r_eff;
+    const float* const rx;
 
-	// optimization constants
-	const float tau = 0.5f;
-	const float beta = 0.02f;
-	const float epsilon = 10e-5f;
+protected:
+    int min_iter_calc(){
+        return n_x;
+    }
+    
+    void update_spatial_flow_calc(){
+        calculate_r_eff(r_eff, rx, u_tmp, n_x, n_r);
+    }
     
 public:
-    SolverBatchThreadChannelsLast(
+    HMF_MEANPASS_CPU_SOLVER_1D(
         TreeNode** bottom_up_list,
         const int batch,
         const int sizes[5],
         const float* data_cost,
         const float* rx_cost,
         float* u ) :
-    bottom_up_list(bottom_up_list),
-    b(batch),
+    HMF_MEANPASS_CPU_SOLVER_BASE(bottom_up_list,batch,
+                                 sizes[1],
+                                 sizes[2],
+                                 sizes[4],
+                                 data_cost,
+                                 u),
     n_x(sizes[1]),
-    n_c(sizes[2]),
-    n_r(sizes[4]),
-    n_s(sizes[1]),
-    data(data_cost),
-    rx(rx_cost),
-    u(u)
+    rx(rx_cost)
     {}
-    
-	float run_block(int iter, int min_iter){
-		float max_change = 0.0f;
-		aggregate_bottom_up(u, u_tmp, n_s, n_c, n_r, bottom_up_list);
-		calculate_r_eff(r_eff, rx, u_tmp, n_x, n_r);
-		aggregate_top_down(r_eff, n_s, n_r, bottom_up_list);
-		for(int s = 0, i = 0; s < n_s; s++)
-			for(int c = 0; c < n_c; c++, i++)
-				r_eff[i] = data[i]+r_eff[n_r*s+c];
-		if( iter == min_iter-1)
-			max_change = softmax_with_convergence(r_eff, u, n_s, n_c, tau);
-		else
-			softmax_update(r_eff, u, n_s, n_c, tau);
-		return max_change;
-	}
-    
-    void operator()(){
-        
-        // allocate intermediate variables
-        float max_change = 0.0f;
-        u_tmp = new float[n_s*n_r];
-        r_eff = new float[n_s*n_r];
-
-        //initialize variables
-        softmax(data, u, n_s, n_c);
-        
-        // iterate in blocks
-        int min_iter = 10;
-        if (n_x > min_iter)
-            min_iter = n_x;
-        int max_loop = 200;
-        for(int i = 0; i < max_loop; i++){
-            
-            //run the solver a set block of iterations
-            for (int iter = 0; iter < min_iter; iter++)
-				max_change = run_block(iter, min_iter);
-
-            if (max_change < beta)
-                break;
-        }
-
-        //run one last block, just to be safe
-        for (int iter = 0; iter < min_iter; iter++)
-			run_block(iter, 0);
-        
-        //perform majority of last iteration
-        aggregate_bottom_up(u, u_tmp, n_s, n_c, n_r, bottom_up_list);
-        calculate_r_eff(r_eff, rx, u_tmp, n_x, n_r);
-		aggregate_top_down(r_eff, n_s, n_r, bottom_up_list);
-
-        //get final output
-        for(int s = 0; s < n_s; s++)
-            for(int c = 0; c < n_c; c++)
-                u[n_c*s+c] = data[n_c*s+c]+r_eff[n_r*s+c];
-        
-        //deallocate temporary buffers
-        free(u_tmp);
-        free(r_eff);
-    
-    }
 };
 
-
-class GradientBatchThreadChannelsLast
+class HMF_MEANPASS_CPU_GRADIENT_1D : public HMF_MEANPASS_CPU_GRADIENT_BASE
 {
 private:
-    TreeNode const* const* bottom_up_list;
-    const int b;
     const int n_x;
-    const int n_c;
-    const int n_r;
-    const int n_s;
-    float* g_data;
     float* g_rx;
-    const float* logits;
-    const float* grad;
 	const float* rx;
-	
-	const float epsilon = 0.00001;
-	const float beta = 1e-20;
-	const float tau = 0.5;
+
+protected:
+    int min_iter_calc(){
+        return n_x;
+    }
+    
+    void update_spatial_flow_calc(bool use_tau){
+        get_reg_gradients(dy, u, g_rx, n_x, n_r, use_tau ? tau : 1.0f);
+        get_gradient_for_u(dy, rx, g_u, n_x, n_r, use_tau ? tau : 1.0f);
+    }
     
 public:
-    GradientBatchThreadChannelsLast(
+    HMF_MEANPASS_CPU_GRADIENT_1D(
         TreeNode** bottom_up_list,
         const int batch,
         const int sizes[5],
         const float* u,
         const float* g,
-		const float* rx_cost,
         float* g_d,
+		const float* rx_cost,
         float* g_rx ) :
-    bottom_up_list(bottom_up_list),
-    b(batch),
+    HMF_MEANPASS_CPU_GRADIENT_BASE(bottom_up_list,batch,
+                                 sizes[1],
+                                 sizes[2],
+                                 sizes[4],
+                                 u,
+                                 g,
+                                 g_d),
     n_x(sizes[1]),
-    n_c(sizes[3]),
-    n_r(sizes[4]),
-    n_s(sizes[1]),
-    g_data(g_d),
-	rx(rx_cost),
-    g_rx(g_rx),
-    logits(u),
-    grad(g)
+    rx(rx_cost),
+    g_rx(g_rx)
     {}
-    
-    void operator()(){
-
-        int max_loops = n_x;
-        const int min_iters = 10;
-		
-        //allocate temporary variables
-        float* u = new float[n_s*n_r];
-        float* u_small = new float[n_s*n_c];
-        float* dy = new float[n_s*n_r];
-        float* g_u = new float[n_s*n_r];
-        
-        //transformat logits into labelling and unroll up through hierarchy
-		clear(u, n_s*n_r);
-        softmax(logits, u_small, n_s, n_c);
-		copy(u_small, u, n_s*n_c);
-        unfold_buffer(u, n_s, n_c, n_r);
-		aggregate_bottom_up(u, n_s, n_r, bottom_up_list);
-
-        //get initial gradient for the data terms and regularization terms
-        copy(grad, g_data, n_s*n_c);
-        copy(grad, dy, n_s*n_c);
-        unfold_buffer(dy, n_s, n_c, n_r);
-        get_reg_gradients(dy, u, g_rx, n_x, n_r, 1.0f);
-         
-        //push gradient through energy equation
-        get_gradient_for_u(dy, rx, g_u, n_x, n_r, 1);
-        
-		//collapse down to leaves
-		aggregate_top_down(g_u, n_s, n_r, bottom_up_list);
-		refold_buffer(g_u, n_s, n_c, n_r);
-		
-        for(int i = 0; i < max_loops; i++){
-            for(int iter = 0; iter < min_iters; iter++){
-                //untangle softmax
-                untangle_softmax(g_u, u_small, dy, n_s, n_c);
-                
-                // populate data gradient
-                inc(dy, g_data, tau, n_s*n_c);
-
-                // unfold gradient to full hierarchy
-				unfold_buffer(dy, n_s, n_c, n_r);
-				
-				//get gradient for regularization
-                get_reg_gradients(dy, u, g_rx, n_x, n_r, tau);
-
-                //push gradient through energy equation
-				get_gradient_for_u(dy, rx, g_u, n_x, n_r, tau);
-        
-				//collapse down to leaves
-				aggregate_top_down(g_u, n_s, n_r, bottom_up_list);
-				refold_buffer(g_u, n_s, n_c, n_r);
-            }
-            
-            //get max of gu and break if converged
-            float gu_max = maxabs(g_u, n_s*n_c);
-            if( gu_max < beta )
-                break;
-        }
-        
-        delete u;
-        delete u_small;
-        delete dy;
-        delete g_u;
-        
-    }
 };
-
-
-}
 
 template <>
 struct HmfMeanpass1dFunctor<CPUDevice> {
@@ -250,9 +109,9 @@ struct HmfMeanpass1dFunctor<CPUDevice> {
 	int n_r = sizes[4];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(HMF1DMP_CPU::SolverBatchThreadChannelsLast(bottom_up_list, b, sizes, data_cost + b*n_s*n_c,
-																																															    rx_cost + b*n_s*n_r,
-																																																u + b*n_s*n_c));
+        threads[b] = new std::thread(HMF_MEANPASS_CPU_SOLVER_1D(bottom_up_list, b, sizes, data_cost + b*n_s*n_c,
+                                                                rx_cost + b*n_s*n_r,
+                                                                u + b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)
@@ -303,11 +162,11 @@ struct HmfMeanpass1dGradFunctor<CPUDevice> {
 	int n_r = sizes[4];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(HMF1DMP_CPU::GradientBatchThreadChannelsLast(bottom_up_list, b, sizes, u + b*n_s*n_c,
-																																																   g + b*n_s*n_c,
-																																																   rx_cost + b*n_s*n_r,
-																																																   g_data + b*n_s*n_c,
-																																																   g_rx + b*n_s*n_r));
+        threads[b] = new std::thread(HMF_MEANPASS_CPU_GRADIENT_1D(bottom_up_list, b, sizes, u + b*n_s*n_c,
+                                                                  g + b*n_s*n_c,
+                                                                  g_data + b*n_s*n_c,
+                                                                  rx_cost + b*n_s*n_r,
+                                                                  g_rx + b*n_s*n_r));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)

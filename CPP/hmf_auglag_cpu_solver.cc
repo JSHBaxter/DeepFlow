@@ -20,12 +20,12 @@ n_c(n_c),
 n_r(n_r),
 n_s(n_s),
 data(data_cost),
-ps(new float[n_s]),
-u_tmp(new float[n_s*n_r]),
-pt(new float[n_s*n_r]),
-div(new float[n_s*n_r]),
-g(new float[n_s*n_r]),
-data_b(new float[n_s*n_r]),
+ps(0),
+u_tmp(0),
+pt(0),
+div(0),
+g(0),
+data_b(0),
 u(u)
 {
     std::cout << "Base class:" << std::endl;
@@ -139,7 +139,13 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 
 void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
 
-    std::cout << cc << std::endl;
+    //store intermediate information
+    ps = new float[n_s];
+    u_tmp = new float[n_s*n_r];
+    pt = new float[n_s*n_r];
+    div = new float[n_s*n_r];
+    g = new float[n_s*n_r];
+    data_b = new float[n_s*n_r];
 
     // transpose input data (makes everything easier)
     for(int s = 0; s < n_s; s++)
@@ -188,14 +194,16 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
     for(int s = 0; s < n_s; s++)
         for(int c = 0; c < n_c; c++)
             u_b[s*n_c+c] = u_tmp[c*n_s+s];
+        
+    //deallocate temporary buffers
+    delete u_tmp; u_tmp = 0;
+    delete pt; pt = 0;
+    delete ps; ps = 0;
+    delete g; g = 0;
+    delete div; div = 0;
+    delete data_b; data_b = 0;
+    clean_up();
 }
 
 HMF_AUGLAG_CPU_SOLVER_BASE::~HMF_AUGLAG_CPU_SOLVER_BASE(){
-    //deallocate temporary buffers
-    //free(u_tmp);
-    //free(pt);
-    //free(ps);
-    //free(g);
-    //free(div);
-    //free(data_b);
 }

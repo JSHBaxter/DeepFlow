@@ -16,12 +16,12 @@ private:
     const float* const rx;
     const float* const ry;
     const float* const rz;
-    float* const px;
-    float* const py;
-    float* const pz;
-    float* const rx_b;
-    float* const ry_b;
-    float* const rz_b;
+    float* px;
+    float* py;
+    float* pz;
+    float* rx_b;
+    float* ry_b;
+    float* rz_b;
 
 protected:
 
@@ -30,8 +30,14 @@ protected:
     }
     
     virtual void clear_spatial_flows(){
+        if( !px ) px = new float [n_s*n_r];
+        if( !py ) py = new float [n_s*n_r];
+        if( !pz ) pz = new float [n_s*n_r];
         clear(px, py, pz, n_r*n_s);
         
+        if( !rx_b ) rx_b = new float [n_s*n_r];
+        if( !ry_b ) ry_b = new float [n_s*n_r];
+        if( !rz_b ) rz_b = new float [n_s*n_r];
         for(int s = 0; s < n_s; s++){
             for(int r = 0; r < n_r; r++)
                 rx_b[r*n_s+s] = rx[s*n_r+r];
@@ -69,12 +75,12 @@ public:
     rx(rx_cost+batch*n_s*n_r),
     ry(ry_cost+batch*n_s*n_r),
     rz(rz_cost+batch*n_s*n_r),
-    px(new float[n_s*n_r]),
-    py(new float[n_s*n_r]),
-    pz(new float[n_s*n_r]),
-    rx_b(new float[n_s*n_r]),
-    ry_b(new float[n_s*n_r]),
-    rz_b(new float[n_s*n_r])
+    px(0),
+    py(0),
+    pz(0),
+    rx_b(0),
+    ry_b(0),
+    rz_b(0)
     {
         std::cout << "Derived class:" << std::endl;
         std::cout << "\t" << px << std::endl;
@@ -85,13 +91,13 @@ public:
         std::cout << "\t" << rz_b << std::endl;
     }
     
-    ~HMF_AUGLAG_CPU_SOLVER_3D(){
-        //free(px);
-        //free(py);
-        //free(pz);
-        //free(rx_b);
-        //free(ry_b);
-        //free(rz_b);
+    void clean_up(){
+        if( px ) delete px; px = 0;
+        if( py ) delete py; py = 0;
+        if( pz ) delete pz; pz = 0;
+        if( rx_b ) delete rx_b; rx_b = 0;
+        if( ry_b ) delete ry_b; ry_b = 0;
+        if( rz_b ) delete rz_b; rz_b = 0;
     }
 };
 
@@ -135,7 +141,7 @@ struct HmfAuglag3dFunctor<CPUDevice> {
         //(*(solvers[b]))();
         threads[b]->join();
     for(int b = 0; b < n_batches; b++){
-        //delete threads[b];
+        delete threads[b];
         delete solvers[b];
     }
     delete threads;

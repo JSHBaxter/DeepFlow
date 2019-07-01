@@ -12,8 +12,8 @@ class HMF_AUGLAG_CPU_SOLVER_1D : public HMF_AUGLAG_CPU_SOLVER_BASE
 private:
     const int n_x;
     const float* const rx;
-    float* const px;
-    float* const rx_b;
+    float* px;
+    float* rx_b;
 
 protected:
 
@@ -22,8 +22,10 @@ protected:
     }
     
     virtual void clear_spatial_flows(){
+        if( !px ) px = new float [n_s*n_r];
         clear(px, n_r*n_s);
         
+        if( !rx_b ) rx_b = new float [n_s*n_r];
         for(int s = 0; s < n_s; s++)
             for(int r = 0; r < n_r; r++)
                 rx_b[r*n_s+s] = rx[s*n_r+r];
@@ -50,17 +52,17 @@ public:
                                u),
     n_x(sizes[1]),
     rx(rx_cost+batch*n_s*n_r),
-    px(new float[n_s*n_r]),
-    rx_b(new float[n_s*n_r])
+    px(0),
+    rx_b(0)
     {
         std::cout << "Derived class:" << std::endl;
         std::cout << "\t" << px << std::endl;
         std::cout << "\t" << rx_b << std::endl;
     }
     
-    ~HMF_AUGLAG_CPU_SOLVER_1D(){
-        //free(px);
-        //free(rx_b);
+    void clean_up(){
+        if( px ) delete px; px = 0;
+        if( rx_b ) delete rx_b; rx_b = 0;
     }
 };
 
@@ -102,7 +104,7 @@ struct HmfAuglag1dFunctor<CPUDevice> {
         //(*(solvers[b]))();
         threads[b]->join();
     for(int b = 0; b < n_batches; b++){
-        //delete threads[b];
+        delete threads[b];
         delete solvers[b];
     }
     delete threads;

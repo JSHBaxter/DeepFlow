@@ -18,9 +18,9 @@
 class HMF_AUGLAG_GPU_SOLVER_1D : public HMF_AUGLAG_GPU_SOLVER_BASE
 {
 private:
+    const int n_x;
     const float* rx_b;
     float* px;
-    const int n_x;
 
 protected:
     int min_iter_calc() {

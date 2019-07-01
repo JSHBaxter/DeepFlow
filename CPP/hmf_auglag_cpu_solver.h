@@ -20,13 +20,13 @@ protected:
     const int n_r;
     const int n_s;
     const float* const data;
-    float* const ps;
-    float* const pt;
-    float* const u_tmp;
-    float* const div;
-    float* const g;
     float* const u;
-    float* const data_b;
+    float* ps;
+    float* pt;
+    float* u_tmp;
+    float* div;
+    float* g;
+    float* data_b;
     
     // optimization constants
     const float tau = 0.1f;
@@ -38,6 +38,7 @@ protected:
     virtual int min_iter_calc() = 0;
     virtual void clear_spatial_flows() = 0;
     virtual void update_spatial_flow_calc() = 0;
+    virtual void clean_up() = 0;
     void block_iter();
     
 public:
