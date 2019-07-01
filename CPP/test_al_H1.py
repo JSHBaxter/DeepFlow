@@ -14,9 +14,9 @@ class InnerProductOpTest(unittest.TestCase):
     def test_runAndPrintOutput(self):
         
         b = 1
-        c = 4
+        c = 8
         r = 2*c-2;
-        x = 100
+        x = 5
 
         parentage_list = []
         for i in range(r):
@@ -28,8 +28,8 @@ class InnerProductOpTest(unittest.TestCase):
         data_index = tf.convert_to_tensor(data_index_list, dtype=tf.int32)
         
         for i in range(1):
-            input_d = 0.1*np.random.rand(b,c,x)
-            input_rx = 20*np.ones((b,r,x))
+            input_d = 10*np.random.rand(b,c,x)
+            input_rx = 0.5*np.ones((b,r,x))
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
             #input_rx[:,:,:,:,4] *= 0
@@ -73,7 +73,7 @@ class InnerProductOpTest(unittest.TestCase):
 
                 print( input_d.shape )
                 for i in range(c):
-                    print( (np.round(input_d[0,i,:]*100)).astype(int) )
+                    print( (np.round(input_d[0,i,:]*10000)).astype(int) )
 
                 print( '\n' )
 

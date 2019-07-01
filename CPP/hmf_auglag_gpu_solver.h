@@ -53,9 +53,7 @@ public:
         const float* data_cost,
         float* u,
         float** full_buff,
-        float** img_buff) ;
-        
-    ~HMF_AUGLAG_GPU_SOLVER_BASE();
+        float** img_buff);
     
     void operator()();
 };
