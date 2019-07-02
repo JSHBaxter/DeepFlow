@@ -59,6 +59,7 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
         if(n->r == -1){
             //std::cout << "\t\tSource" << std::endl;
             set_buffer(dev, ps, icc, n_s);
+            std::cout << icc << std::endl;
             for(int c = 0; c < n->c; c++){
                 const TreeNode* nc = n->children[c];
                 float* c_pt_buf = pt+nc->r*n_s;
@@ -67,6 +68,23 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
                 inc_buffer(dev, c_pt_buf, ps, n_s);
                 inc_buffer(dev, c_div_buf, ps, n_s);
                 inc_mult_buffer(dev, c_u_buf, ps, n_s, -icc);
+                
+                float test[n_s*n_r];
+                get_from_gpu(dev, ps, test, n_s*sizeof(float));
+                for( int i = 0; i < n_s; i++)
+                    std::cout << test[i] << " ";
+                get_from_gpu(dev, c_pt_buf, test, n_s*sizeof(float));
+                for( int i = 0; i < n_s; i++)
+                    std::cout << test[i] << " ";
+                std::cout << std::endl;
+                get_from_gpu(dev, c_div_buf, test, n_s*sizeof(float));
+                for( int i = 0; i < n_s; i++)
+                    std::cout << test[i] << " ";
+                std::cout << std::endl;
+                get_from_gpu(dev, c_u_buf, test, n_s*sizeof(float));
+                for( int i = 0; i < n_s; i++)
+                    std::cout << test[i] << " ";
+                std::cout << std::endl;
             }
             mult_buffer(dev, 1.0f / (float) n->c, ps, n_s);
         }
@@ -109,10 +127,14 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
     }
     
     //constrain leaf sink flows
-    max_neg_constrain(dev, pt, data, n_s*n_r);
+    //max_neg_constrain(dev, pt, data, n_s*n_r);
     
     
     float test[n_s*n_r];
+    get_from_gpu(dev, ps, test, n_s*sizeof(float));
+    for( int i = 0; i < n_s; i++)
+        std::cout << test[i] << " ";
+    std::cout << std::endl;
     get_from_gpu(dev, pt, test, n_s*n_r*sizeof(float));
     for( int i = 0; i < n_s*n_r; i++)
         std::cout << test[i] << " ";
@@ -165,7 +187,7 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
     if( min_iter < 10 )
         min_iter = 10;
     min_iter = 1;
-    int max_loop = 1;
+    int max_loop = 0;
 
     for(int i = 0; i < max_loop; i++){    
         //run the solver a set block of iterations

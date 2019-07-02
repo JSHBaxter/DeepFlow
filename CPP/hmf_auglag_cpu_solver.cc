@@ -104,11 +104,14 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
             copy(p_pt_buf,n_pt_buf,n_s);
             ninc(n_div_buf, n_pt_buf, n_s);
             inc(n_u_buf, n_pt_buf, icc, n_s);
-            constrain(n_pt_buf,n_d_buf,n_s);
+            //constrain(n_pt_buf,n_d_buf,n_s);
 
         }
     }
     
+    for( int i = 0; i < n_s; i++)
+        std::cout << ps[i] << " ";
+    std::cout << std::endl;
     for( int i = 0; i < n_s*n_r; i++)
         std::cout << pt[i] << " ";
     std::cout << std::endl;
@@ -161,7 +164,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
         copy(ps,pt+i*n_s,n_s);
     
     for( int i = 0; i < n_s*n_c; i++)
-        std::cout << data_b[i] << " ";
+        std::cout << -data_b[i] << " ";
     std::cout << std::endl;
     for( int i = 0; i < n_s*n_r; i++)
         std::cout << pt[i] << " ";
@@ -172,7 +175,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
     if (min_iter < 10)
         min_iter = 10;
     min_iter = 1;
-    int max_loop = 1;
+    int max_loop = 0;
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations

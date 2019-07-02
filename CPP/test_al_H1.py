@@ -28,7 +28,7 @@ class InnerProductOpTest(unittest.TestCase):
         data_index = tf.convert_to_tensor(data_index_list, dtype=tf.int32)
         
         for i in range(1):
-            input_d = 0.001*np.random.rand(b,c,x)
+            input_d = 0.01*np.random.rand(b,c,x)
             input_rx = 0*np.ones((b,r,x))
             input_rx[:,0:(c-1),:] = 0
             #input_rx[:,:,:,:,2] *= 0

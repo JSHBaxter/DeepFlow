@@ -33,13 +33,23 @@ void check_error(const Eigen::GpuDevice& dev, const char* string){
 // Sets variables to 0.0f
 
 void clear_buffer(const Eigen::GpuDevice& dev, float* buffer, const int size){
-    cudaMemsetAsync(buffer, 0.0f, size*sizeof(float),dev.stream());
+    set_buffer(dev, buffer, 0.0f, size);
 }
+
 void clear_buffer(const Eigen::GpuDevice& dev, int* buffer, const int size){
     cudaMemsetAsync(buffer, 0, size*sizeof(int),dev.stream());
 }
-void set_buffer(const Eigen::GpuDevice& dev, float* buffer, const float number, const int size){
-    cudaMemsetAsync(buffer, number, size*sizeof(float),dev.stream());
+
+__global__ void set_kernel(float* buffer, const float number, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    if( i < n_s )
+        buffer[i] = number;
+}
+    
+
+void set_buffer(const Eigen::GpuDevice& dev, float* buffer, const float number, const int n_s){
+    set_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, number, n_s);
+    if(CHECK_ERRORS) check_error(dev, "set_buffer launch failed with error");
 }
 
 // update the source flow
