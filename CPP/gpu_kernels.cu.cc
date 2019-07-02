@@ -10,7 +10,7 @@
 #define NUM_THREADS 256
 #define epsilon 0.00001f
 
-#define CHECK_ERRORS false
+#define CHECK_ERRORS true
 
 void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount){
     cudaStreamSynchronize(dev.stream());
@@ -403,6 +403,21 @@ void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div
     if(CHECK_ERRORS) check_error(dev, "calc_capacity_potts launch failed with error");
 }
 
+__global__ void calc_capacity_potts_source_separate_kernel(float* g, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    for(int c = 0; c < n_c; c++){
+        float g_t = div[i+c*n_s] + pt[i+c*n_s] - icc * u[i+c*n_s];
+        g_t *= tau;
+        if(i < n_s)
+            g[i+c*n_s] = g_t;
+    }
+}
+
+void calc_capacity_potts_source_separate(const Eigen::GpuDevice& dev, float* g, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
+    calc_capacity_potts_source_separate_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, div, pt, u, n_s, n_c, icc, tau);
+    if(CHECK_ERRORS) check_error(dev, "calc_capacity_potts_source_separate launch failed with error");
+}
+
 __global__ void log_buffer_kernel(const float* in, float* out, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
@@ -461,10 +476,12 @@ __global__ void maxreduce(float* buffer, int j, int n) {
 float max_of_buffer(const Eigen::GpuDevice& dev, float* buffer, const int n_s){
     float* buffer_c = (float*) malloc(n_s*sizeof(float));
     get_from_gpu(dev,buffer,buffer_c,n_s*sizeof(float));
-    float max_value = 0;
+    float max_value = 0.0f;
     for(int s = 0; s < n_s; s++){
         if( max_value < buffer_c[s] )
             max_value = buffer_c[s];
+        if( max_value < -buffer_c[s] )
+            max_value = -buffer_c[s];
     }
     free(buffer_c);
     return max_value;
@@ -629,6 +646,20 @@ void inc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const
     if(CHECK_ERRORS) check_error(dev, "inc_buffer launch failed with error");
 }
 
+__global__ void inc_inc_minc_kernel(const float* inc1, const float* inc2, const float* minc, const float multi, float* acc, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    float val = acc[i];
+    float increment = inc1[i]+inc2[i] + multi*minc[i];
+    val += increment;
+    if(i < n_s)
+        acc[i] = val;
+}
+
+void inc_inc_minc_buffer(const Eigen::GpuDevice& dev, const float* inc1, const float* inc2, const float* minc, const float multi, float* acc, const int n_s){
+    inc_inc_minc_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(inc1, inc2, minc, multi, acc, n_s);
+    if(CHECK_ERRORS) check_error(dev, "inc_inc_minc_buffer launch failed with error");
+}
+
 __global__ void ninc_kernel(const float* inc, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float val = acc[i];
@@ -708,6 +739,18 @@ __global__ void mult_kernel(const float mult, float* res, const int n_s){
 
 void mult_buffer(const Eigen::GpuDevice& dev, const float mult, float* res, const int n_s){
     mult_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(mult, res, n_s);
+    if(CHECK_ERRORS) check_error(dev, "mult_buffer launch failed with error");
+}
+
+__global__ void mult_kernel2(const float mult, const float* input, float* res, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    float val = input[i]*mult;
+    if(i < n_s)
+        res[i] = val;
+}
+
+void mult_buffer(const Eigen::GpuDevice& dev, const float mult, const float* input, float* res, const int n_s){
+    mult_kernel2<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(mult, input, res, n_s);
     if(CHECK_ERRORS) check_error(dev, "mult_buffer launch failed with error");
 }
 

@@ -51,14 +51,10 @@ public:
                                data_cost,
                                u),
     n_x(sizes[1]),
-    rx(rx_cost+batch*n_s*n_r),
+    rx(rx_cost),
     px(0),
     rx_b(0)
-    {
-        std::cout << "Derived class:" << std::endl;
-        std::cout << "\t" << px << std::endl;
-        std::cout << "\t" << rx_b << std::endl;
-    }
+    {}
     
     void clean_up(){
         if( px ) delete px; px = 0;
@@ -90,12 +86,18 @@ struct HmfAuglag1dFunctor<CPUDevice> {
     //std::cout << "Tree built" << std::endl;
       
     int n_batches = sizes[0];
+    int n_s = sizes[1];
+    int n_c = sizes[2];
+    int n_r = sizes[4];
     std::thread** threads = new std::thread* [n_batches];
     std::cout << threads << std::endl;
     HMF_AUGLAG_CPU_SOLVER_1D** solvers = new HMF_AUGLAG_CPU_SOLVER_1D* [n_batches];
     std::cout << solvers << std::endl;
     for(int b = 0; b < n_batches; b++){
-        solvers[b] = new HMF_AUGLAG_CPU_SOLVER_1D(bottom_up_list, b, sizes, data_cost, rx_cost, u);
+        solvers[b] = new HMF_AUGLAG_CPU_SOLVER_1D(bottom_up_list, b, sizes,
+                                                  data_cost+b*n_s*n_c,
+                                                  rx_cost+b*n_s*n_c,
+                                                  u+b*n_s*n_c);
         std::cout << solvers[b] << std::endl;
         threads[b] = new std::thread(*(solvers[b]));
         std::cout << threads[b] << std::endl;

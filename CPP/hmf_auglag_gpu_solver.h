@@ -22,8 +22,8 @@ protected:
     const int n_c;
     const int n_r;
     const int n_s;
-    const float* data_b;
-    float* u_b;
+    const float* data;
+    float* u;
     float* ps;
     float* pt;
     float* u_tmp;
@@ -32,9 +32,9 @@ protected:
     
     // optimization constants
     const float tau = 0.1f;
-    const float beta = 0.05f;
+    const float beta = 0.005f;
     const float epsilon = 10e-5f;
-    const float cc = 0.1;
+    const float cc = 10.0f;
     const float icc = 1.0f/cc;
     
     virtual int min_iter_calc() = 0;

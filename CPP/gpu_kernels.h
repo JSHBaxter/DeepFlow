@@ -31,10 +31,12 @@ void inc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const
 void ninc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const int n_s);
 void inc_mult_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const int n_s, const float multi);
 void inc2_mult_buffer(const Eigen::GpuDevice& dev, const float* inc_m1, const float* inc_m2, float* acc, const int n_s, const float multi);
+void inc_inc_minc_buffer(const Eigen::GpuDevice& dev, const float* inc1, const float* inc2, const float* minc, const float multi, float* acc, const int n_s);
 
 void div_buffer(const Eigen::GpuDevice& dev, const float number, float* res, const int n_s);
 void div_buffer(const Eigen::GpuDevice& dev, const float* div, float* res, const int n_s);
 void mult_buffer(const Eigen::GpuDevice& dev, const float mult, float* res, const int n_s);
+void mult_buffer(const Eigen::GpuDevice& dev, const float mult, const float* input, float* res, const int n_s);
 void log_buffer(const Eigen::GpuDevice& dev, const float* in, float* out, const int n_s);
     
 void exp_and_inc_buffer(const Eigen::GpuDevice& dev, const float* max, float* cost, float* acc, const int n_s);
@@ -54,6 +56,7 @@ void update_source_sink_multiplier_potts(const Eigen::GpuDevice& dev, float* ps,
 void find_min_constraint(const Eigen::GpuDevice& dev, float* output, const float* neg_constraint, const int n_c, const int n_s);
 
 void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
+void calc_capacity_potts_source_separate(const Eigen::GpuDevice& dev, float* g, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_t);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_t);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, const float* rx, const int n_x, const int n_t);

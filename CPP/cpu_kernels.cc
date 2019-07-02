@@ -809,11 +809,9 @@ void init_flows(const float* d, float* ps, const int n_c, const int n_s){
 }
 void init_flows_channels_first(const float* d, float* ps, const int n_c, const int n_s){
     for(int s = 0; s < n_s; s++)
-        ps[s] = -std::numeric_limits<float>::infinity();
+        ps[s] = std::numeric_limits<float>::infinity();
     for(int c = 0, cs = 0; c < n_c; c++)
         for(int s = 0; s < n_s; s++, cs++)
-            if( ps[s] < d[cs] )
+            if( ps[s] > d[cs] )
                 ps[s] = d[cs];
-    for(int s = 0; s < n_s; s++)
-        ps[s] *= -1;
 }

@@ -1,5 +1,5 @@
 #include "tf_memory_utils.h"
-
+#include <iostream>
 using namespace tensorflow;
 
 #include "tensorflow/core/framework/op_kernel.h"
@@ -37,7 +37,6 @@ void get_temporary_buffers(OpKernelContext* context, float**& buffers1, const in
         buffers1[b] = data_ptr;
     for(int b = 0; b < number2; b++, data_ptr += b*size2)
         buffers2[b] = data_ptr;
-    
 }
 
 void clear_temporary_buffers(OpKernelContext* context, float** buffers, const int size, const int number){

@@ -31,12 +31,12 @@ class InnerProductOpTest(unittest.TestCase):
         
         for i in range(1):
             input_d = 0.1*np.random.rand(b,c,x,y,z)
-            input_rx = 0.1*np.ones((b,r,x,y,z))
-            input_rx[:,0:(c-1),:,:] = 0.1
-            input_ry = 0.1*np.ones((b,r,x,y,z))
-            input_ry[:,0:(c-1),:,:] = 0.1
-            input_rz = 0.1*np.ones((b,r,x,y,z))
-            input_rz[:,0:(c-1),:,:] = 0.1
+            input_rx = 0.0*np.ones((b,r,x,y,z))
+            input_rx[:,0:(c-1),:,:] = 0.0
+            input_ry = 0.0*np.ones((b,r,x,y,z))
+            input_ry[:,0:(c-1),:,:] = 0.0
+            input_rz = 0.0*np.ones((b,r,x,y,z))
+            input_rz[:,0:(c-1),:,:] = 0.0
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
             #input_rx[:,:,:,:,4] *= 0

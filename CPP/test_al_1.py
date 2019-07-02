@@ -26,8 +26,7 @@ class InnerProductOpTest(unittest.TestCase):
             #input_rx[:,:,:,:,5] *= 0
             #input_rx += 0.2*(np.random.rand(b,c,x))
 
-            for devicename in ['CPU']:
-            #for devicename in ['GPU']:
+            for devicename in ['CPU','GPU']:
                 
                 if devicename == 'CPU':
                     config = tf.ConfigProto(log_device_placement=False, device_count = {'GPU': 0})

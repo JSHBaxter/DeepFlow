@@ -27,21 +27,13 @@ div(0),
 g(0),
 data_b(0),
 u(u)
-{
-    std::cout << "Base class:" << std::endl;
-    std::cout << "\t" << ps << std::endl;
-    std::cout << "\t" << u_tmp << std::endl;
-    std::cout << "\t" << pt << std::endl;
-    std::cout << "\t" << div << std::endl;
-    std::cout << "\t" << g << std::endl;
-    std::cout << "\t" << data_b << std::endl;
-}
+{std::cout << n_s << " " << n_c << " " << n_r << std::endl;}
 
 //perform one iteration of the algorithm
 void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
     
     //calculate the capacity and then update flows
-    std::cout << "\tUpdate capacities" << std::endl;
+    //std::cout << "\tUpdate capacities" << std::endl;
     for(int n_n = 0; n_n < n_r; n_n++){
         const TreeNode* n = bottom_up_list[n_n];
         int r = n->r;
@@ -50,18 +42,17 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
         else
             compute_capacity_potts(g+r*n_s, u_tmp+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, div+r*n_s, n_s, 1, tau, icc);
     }
-    std::cout << "\tUpdate flow" << std::endl;
+    //std::cout << "\tUpdate flow" << std::endl;
     update_spatial_flow_calc();
 
     //update source and sink multipliers top down
-    std::cout << "\tUpdate source/sink flows" << std::endl;
+    //std::cout << "\tUpdate source/sink flows" << std::endl;
     for(int n_n = 0; n_n < n_r+1; n_n++){
         const TreeNode* n = bottom_up_list[n_r-n_n];
         float* n_pt_buf = pt+n->r*n_s;
         float* n_g_buf = g+n->r*n_s;
         float* n_div_buf = div+n->r*n_s;
         float* n_u_buf = u_tmp+n->r*n_s;
-        float* n_d_buf = data_b+n->r*n_s;
 
         //if we are the source node
         if(n->r == -1){
@@ -105,6 +96,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
         //if we are a leaf node
         else{
             //std::cout << "\t\tLeaf" << std::endl;
+            const float* n_d_buf = data_b+n->r*n_s;
             const TreeNode* p = n->parent;
             float* p_pt_buf = pt+p->r*n_s;
             if( p->r == -1 )
@@ -116,25 +108,30 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 
         }
     }
-
+    
+    for( int i = 0; i < n_s*n_r; i++)
+        std::cout << pt[i] << " ";
+    std::cout << std::endl;
+    
     //update multipliers
-    std::cout << "\tUpdate multipliers" << std::endl;
+    //std::cout << "\tUpdate multipliers" << std::endl;
+    copy(pt, g, n_s*n_r);
+    inc(div, g, n_s*n_r);
     for(int n_n = 0; n_n < n_r; n_n++){
         const TreeNode* n = bottom_up_list[n_n];
         const TreeNode* p = n->parent;
-        float* n_pt_buf = pt+n->r*n_s;
         float* n_g_buf = g+n->r*n_s;
-        float* n_div_buf = div+n->r*n_s;
-        float* n_u_buf = u_tmp+n->r*n_s;
         float* p_pt_buf = pt+p->r*n_s;
         if( p->r == -1 )
             p_pt_buf = ps;
-        copy(n_pt_buf,n_g_buf,n_s);
-        inc(n_div_buf,n_g_buf,n_s);
         ninc(p_pt_buf,n_g_buf,n_s);
-        mult_buffer(n_g_buf, cc, n_s);
-        ninc(n_g_buf,n_u_buf,n_s);
     }
+    mult_buffer(g, -cc, n_s*n_r);
+    inc(g, u_tmp, n_s*n_r);
+    
+    for( int i = 0; i < n_s*n_r; i++)
+        std::cout << g[i] << " ";
+    std::cout << std::endl;
 }
 
 void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
@@ -150,7 +147,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
     // transpose input data (makes everything easier)
     for(int s = 0; s < n_s; s++)
         for(int c = 0; c < n_c; c++)
-            data_b[c*n_s+s] = -(data + b*n_s*n_c)[s*n_c+c];
+            data_b[c*n_s+s] = -data[s*n_c+c];
 
     //initialize variables
     std::cout << "Init variables" << std::endl;
@@ -162,17 +159,25 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
     init_flows_channels_first(data_b, ps, n_c, n_s);
     for(int i = 0; i < n_r; i++)
         copy(ps,pt+i*n_s,n_s);
+    
+    for( int i = 0; i < n_s*n_c; i++)
+        std::cout << data_b[i] << " ";
+    std::cout << std::endl;
+    for( int i = 0; i < n_s*n_r; i++)
+        std::cout << pt[i] << " ";
+    std::cout << std::endl;
 
     // iterate in blocks
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    min_iter = 1;
+    int max_loop = 1;
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++){
-            std::cout << "Iter " << i << " - " << iter << std::endl;
+            //std::cout << "Iter " << i << " - " << iter << std::endl;
             block_iter();
         }
 
@@ -184,7 +189,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
 
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++){
-        std::cout << "Iter " << "LAST - " << iter << std::endl;
+        //std::cout << "Iter " << "LAST - " << iter << std::endl;
         block_iter();
     }
 
