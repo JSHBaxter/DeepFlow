@@ -69,9 +69,9 @@ public:
     n_x(sizes[2]),
     n_y(sizes[3]),
     n_z(sizes[4]),
-    rx_b(rx_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[5]),
-    ry_b(rx_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[5]),
-    rz_b(rz_cost+batch*sizes[2]*sizes[3]*sizes[4]*sizes[5]),
+    rx_b(rx_cost),
+    ry_b(rx_cost),
+    rz_b(rz_cost),
     px(full_buff[4]),
     py(full_buff[5]),
     pz(full_buff[6])
@@ -93,16 +93,20 @@ struct HmfAuglag3dFunctor<GPUDevice> {
         float** full_buff,
         float** img_buff){
 
+        int n_s = sizes[2]*sizes[3]*sizes[4];
+        int n_c = sizes[1];
+        int n_r = sizes[5];
+
         //build the tree
         TreeNode* node = NULL;
         TreeNode** children = NULL;
         TreeNode** bottom_up_list = NULL;
         TreeNode** top_down_list = NULL;
-        int* parentage = new int[sizes[4]];
-        int* data_index = new int[sizes[4]];
-        get_from_gpu(d, parentage_g, parentage, sizes[5]*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, sizes[5]*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[5], sizes[1]);
+        int* parentage = new int[n_r];
+        int* data_index = new int[n_r];
+        get_from_gpu(d, parentage_g, parentage, n_r*sizeof(int));
+        get_from_gpu(d, data_index_g, data_index, n_r*sizeof(int));
+        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, n_r, n_c);
         free(parentage);
         free(data_index);
         //node->print_tree();
@@ -110,7 +114,13 @@ struct HmfAuglag3dFunctor<GPUDevice> {
 
         int n_batches = sizes[0];
         for(int b = 0; b < n_batches; b++)
-            HMF_AUGLAG_GPU_SOLVER_3D(d, bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, rz_cost, u, full_buff, img_buff)();
+            HMF_AUGLAG_GPU_SOLVER_3D(d, bottom_up_list, b, sizes,
+                                     data_cost + b*n_s*n_c,
+                                     rx_cost + b*n_s*n_r,
+                                     ry_cost + b*n_s*n_r,
+                                     rz_cost + b*n_s*n_r,
+                                     u + b*n_s*n_r,
+                                     full_buff, img_buff)();
 
         TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
 

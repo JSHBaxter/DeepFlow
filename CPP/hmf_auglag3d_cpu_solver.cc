@@ -72,9 +72,9 @@ public:
     n_x(sizes[1]),
     n_y(sizes[2]),
     n_z(sizes[3]),
-    rx(rx_cost+batch*n_s*n_r),
-    ry(ry_cost+batch*n_s*n_r),
-    rz(rz_cost+batch*n_s*n_r),
+    rx(rx_cost),
+    ry(ry_cost),
+    rz(rz_cost),
     px(0),
     py(0),
     pz(0),
@@ -127,12 +127,20 @@ struct HmfAuglag3dFunctor<CPUDevice> {
     //std::cout << "Tree built" << std::endl;
       
     int n_batches = sizes[0];
+    int n_s = sizes[1]*sizes[2]*sizes[3];
+    int n_c = sizes[4];
+    int n_r = sizes[6];
     std::thread** threads = new std::thread* [n_batches];
     std::cout << threads << std::endl;
     HMF_AUGLAG_CPU_SOLVER_3D** solvers = new HMF_AUGLAG_CPU_SOLVER_3D* [n_batches];
     std::cout << solvers << std::endl;
     for(int b = 0; b < n_batches; b++){
-        solvers[b] = new HMF_AUGLAG_CPU_SOLVER_3D(bottom_up_list, b, sizes, data_cost, rx_cost, ry_cost, rz_cost, u);
+        solvers[b] = new HMF_AUGLAG_CPU_SOLVER_3D(bottom_up_list, b, sizes, 
+                                                  data_cost+b*n_s*n_c,
+                                                  rx_cost+b*n_s*n_c,
+												  ry_cost+b*n_s*n_c,
+												  rz_cost+b*n_s*n_c,
+												  u+b*n_s*n_c);
         std::cout << solvers[b] << std::endl;
         threads[b] = new std::thread(*(solvers[b]));
         std::cout << threads[b] << std::endl;

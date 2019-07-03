@@ -17,6 +17,7 @@ Many functions operate point-wise and thus only one signature is needed regardle
 
 //General GPU utilities
 void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount);
+void print_buffer(const Eigen::GpuDevice& dev, const float* buffer, const int n_s);
 
 void clear_buffer(const Eigen::GpuDevice& dev, float* buffer, const int size);
 void clear_buffer(const Eigen::GpuDevice& dev, int* buffer, const int size);

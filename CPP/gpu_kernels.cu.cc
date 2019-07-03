@@ -10,16 +10,26 @@
 #define NUM_THREADS 256
 #define epsilon 0.00001f
 
-#define CHECK_ERRORS true
+#define CHECK_ERRORS false
 
 void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount){
+    cudaMemcpyAsync(dest,source,amount,cudaMemcpyDeviceToHost,dev.stream());
     cudaStreamSynchronize(dev.stream());
-    cudaMemcpy(dest,source,amount,cudaMemcpyDeviceToHost);
+}
+
+void print_buffer(const Eigen::GpuDevice& dev, const float* buffer, const int n_s){
+	float* c_buffer = (float*) malloc(n_s*sizeof(float));
+	get_from_gpu(dev, buffer, c_buffer, n_s*sizeof(float));
+	for(int i = 0; i < n_s; i++)
+		printf("%f ",c_buffer[i]);
+	printf("\n");
+	free(c_buffer);
 }
 
 void send_to_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount){
     cudaStreamSynchronize(dev.stream());
-    cudaMemcpy(dest,source,amount,cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(dest,source,amount,cudaMemcpyHostToDevice,dev.stream());
+    cudaStreamSynchronize(dev.stream());
 }
 
 void check_error(const Eigen::GpuDevice& dev, const char* string){
@@ -659,7 +669,7 @@ void inc_buffer(const Eigen::GpuDevice& dev, const float* inc, float* acc, const
 __global__ void inc_inc_minc_kernel(const float* inc1, const float* inc2, const float* minc, const float multi, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float val = acc[i];
-    float increment = inc1[i]+inc2[i] + multi*minc[i];
+    float increment = inc1[i] + inc2[i] + multi*minc[i];
     val += increment;
     if(i < n_s)
         acc[i] = val;

@@ -14,6 +14,7 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #include "hmf_trees.h"
 //General use
 void clear(float* buffer, const int n_s);
+void print_buffer(float* buffer, const int n_s);
 void set(float* buffer, const float number, const int n_s);
 void clear(float* buffer1, float* buffer2, const int n_s);
 void clear(float* buffer1, float* buffer2, float* buffer3, const int n_s);

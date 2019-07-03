@@ -1,5 +1,6 @@
 #include "cpu_kernels.h"
 #include <limits>
+#include <iostream>
 
 #define epsilon 0.00001f
 
@@ -15,6 +16,12 @@ void clear(float* buffer1, float* buffer2, const int n_s){
 void clear(float* buffer1, float* buffer2, float* buffer3, const int n_s){
     for(int i = 0; i < n_s; i++)
         buffer1[i] = buffer2[i] = buffer3[i] = 0.0f;
+}
+
+void print_buffer(float* buffer, const int n_s){
+	for(int i = 0; i < n_s; i++)
+		std::cout << buffer[i] << " ";
+	std::cout << std::endl;
 }
 void set(float* buffer, const float number, const int n_s){
     for(int i = 0; i < n_s; i++)

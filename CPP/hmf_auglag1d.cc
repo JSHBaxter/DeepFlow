@@ -71,8 +71,8 @@ public:
         OP_REQUIRES_OK(context, context->allocate_output(0, data_shape, &u));
 
         // create intermediate buffers as needed
-        int n_s = size_array[2]*size_array[4];
         int n_i = size_array[2];
+        int n_s = n_i*size_array[3];
         int num_intermediates_full = HmfAuglag1dFunctor<Device>().num_buffers_full();
         int num_intermediates_images = HmfAuglag1dFunctor<Device>().num_buffers_images();
         float** buffers_full = NULL;
