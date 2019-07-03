@@ -182,6 +182,7 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
 
         //Determine if converged
         float max_change = max_of_buffer(dev, g, n_s*n_r);
+		std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

@@ -30,9 +30,9 @@ protected:
     
     // optimization constants
     const float tau = 0.1f;
-    const float beta = 0.000f;
+    const float beta = 0.005f;
     const float epsilon = 10e-5f;
-    const float cc = 10.0f;
+    const float cc = 0.1f;
     const float icc = 1.0f/cc;
     
     virtual int min_iter_calc() = 0;

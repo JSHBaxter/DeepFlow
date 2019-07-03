@@ -33,9 +33,11 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
         for(int c = 0; c < n->c; c++)
             inc_buffer(dev, temp+n->children[c]->r*n_s, temp+n->r*n_s, n_s);
     }
+	//print_buffer(dev, temp, n_s*n_r);
 
     //calculate the effective regularization (overwrites own temp)
     update_spatial_flow_calc();
+	//print_buffer(dev, temp, n_s*n_r);
 
     //calculate the aggregate effective regularization (overwrites own temp)
     for (int l = n_r-1; l >= n_c; l--) {
@@ -43,6 +45,7 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
         for(int c = 0; c < n->c; c++)
             inc_buffer(dev, temp+n->r*n_s, temp+n->children[c]->r*n_s, n_s);
     }
+	//print_buffer(dev, temp, n_s*n_r);
 
     // get new probability estimates, and normalize (store answer in temp)
     softmax(dev, data, temp, temp, n_s, n_c);
@@ -52,10 +55,6 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
 }
 
 void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
-    
-    // optimization constants
-    const float beta = 0.02f;
-    const float epsilon = 10e-5f;
 
     //initialize variables
     softmax(dev, data, NULL, u, n_s, n_c);
@@ -72,8 +71,8 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
             block_iter();
 
         //Determine if converged
-        //std::cout << "Thread #:" << b << "\tIter #: " << iter << " \tMax change: " << max_change << std::endl;
         float max_change = max_of_buffer(dev, temp, n_s*n_c);
+        std::cout << "Iter #" << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

@@ -19,12 +19,15 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
     u(u),
     u_tmp(0),
     r_eff(0)
-    {}
+    {std::cout << n_s << " " << n_c << " " << n_r << std::endl;}
 
 float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(){
     aggregate_bottom_up(u,u_tmp,n_s,n_c,n_r,bottom_up_list);
+	//print_buffer(u_tmp, n_s*n_r);
     update_spatial_flow_calc();
+	//print_buffer(r_eff, n_s*n_r);
     aggregate_top_down(r_eff, n_s, n_r, bottom_up_list);
+	//print_buffer(r_eff, n_s*n_r);
     for(int s = 0, i = 0; s < n_s; s++)
     for(int c = 0; c < n_c; c++, i++)
         r_eff[i] = data[i]+r_eff[n_r*s+c];
@@ -58,7 +61,7 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
             max_change = block_iter();
 
         std::cout << "Iter #" << i << ": " << max_change << std::endl;
-        if (max_change < beta*tau)
+        if (max_change < tau*beta)
             break;
     }
 

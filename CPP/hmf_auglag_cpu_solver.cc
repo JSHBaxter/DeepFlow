@@ -196,7 +196,8 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_r);
-        if (max_change < beta)
+		std::cout << "Iter " << i << ": " << max_change << std::endl;
+        if (max_change < tau*beta)
             break;
     }
 

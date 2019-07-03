@@ -227,7 +227,6 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float
         if(x > 0)
             r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)] * (2.0*u[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]-1.0);
 
-        //r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] *= 0.5f;
     }
 }
 
@@ -254,7 +253,6 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float
         if(x > 0)
             r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,c,n_c)] * (2.0*u[idxc(x-1,n_x,y,n_y,c,n_c)]-1.0);
 
-        //r_eff[idxc(x,n_x,y,n_y,c,n_c)] *= 0.5f;
     }
 }
 
@@ -272,7 +270,6 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* u, const int n_
         if(x > 0)
             r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x-1,n_x,c,n_c)] * (2.0*u[idxc(x-1,n_x,c,n_c)]-1.0);
 
-        r_eff[idxc(x,n_x,c,n_c)] *= 0.5f;
     }
 }
 
@@ -294,7 +291,7 @@ void aggregate_bottom_up(const float* bufferin, float* bufferout, const int n_s,
     for (int s = 0; s < n_s; s++)
         for (int l = 0; l < n_r; l++) {
             const TreeNode* n = bottom_up_list[l];
-            if(n->d == -1){
+            if(n->c > 0){
                 bufferout[idxc(s,n_s,n->r,n_r)] = 0.0f;
                 for(int c = 0; c < n->c; c++)
                     bufferout[idxc(s,n_s,n->r,n_r)] += bufferout[idxc(s,n_s,n->children[c]->r,n_r)];
@@ -306,7 +303,7 @@ void aggregate_bottom_up(const float* bufferin, float* bufferout, const int n_s,
 
 void aggregate_top_down(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list){
 	for(int s = 0; s < n_s; s++)
-        for (int l = n_r; l >= 0; l--) {
+        for (int l = n_r-1; l >= 0; l--) {
             const TreeNode* n = bottom_up_list[l];
 			for(int c = 0; c < n->c; c++)
 				buffer[idxc(s,n_s,n->children[c]->r,n_r)] += buffer[idxc(s,n_s,n->r,n_r)];

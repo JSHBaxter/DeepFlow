@@ -176,7 +176,7 @@ struct HmfMeanpass1dGradFunctor<CPUDevice> {
     TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
       
     //clear unusable derviative
-    for(int i = 0; i < sizes[6]; i++)
+    for(int i = 0; i < sizes[4]; i++)
         g_par[i] = g_didx[i] = 0;
       
   }
