@@ -3,183 +3,75 @@
 #include <iostream>
 #include <limits>
 
+#include "potts_meanpass_cpu_solver.h"
 #include "cpu_kernels.h"
 
-class PottsMeanpass1d_SolverBatchThreadChannelsLast
+class POTTS_MEANPASS_CPU_SOLVER_1D : public POTTS_MEANPASS_CPU_SOLVER_BASE
 {
 private:
-    const int b;
     const int n_x;
-    const int n_c;
-    const int n_s;
-    const float* data;
-    const float* rx;
-    float* u;
-	float* r_eff;
-    
-	// optimization constants
-	const float beta = 0.01f;
-	const float epsilon = 0.01f;
-	const float tau = 0.5f;
-    
+    const float* const rx;
+	
+protected:
+    int min_iter_calc(){
+		return n_x;
+	}
+    void init_vars(){}
+    void calculate_regularization(){
+		calculate_r_eff(r_eff, rx, u, n_x, n_c);
+	}
+    void clean_up(){}
+	
 public:
-    PottsMeanpass1d_SolverBatchThreadChannelsLast(
+	POTTS_MEANPASS_CPU_SOLVER_1D(
         const int batch,
         const int sizes[3],
         const float* data_cost,
         const float* rx_cost,
-        float* u ) :
-    b(batch),
-    n_x(sizes[1]),
-    n_c(sizes[2]),
-    n_s(sizes[1]),
-    data(data_cost),
-    rx(rx_cost),
-    u(u)
-    {}
-    
-	float run_block(int iter, int min_iter){
-		float max_change = 0.0f;
-		calculate_r_eff(r_eff, rx, u, n_x, n_c);
-		for(int i = 0; i < n_s*n_c; i++)
-			r_eff[i] = data[i]+r_eff[i];
-		if(iter == min_iter -1)
-			max_change = softmax_with_convergence(r_eff, u, n_s, n_c, tau);
-		else
-			softmax_update(r_eff, u, n_s, n_c, tau);
-		return max_change;
-	}
-	
-    void operator()(){
-        
-        // allocate intermediate variables
-        float max_change = 0.0f;
-        r_eff = new float[n_s*n_c];
-
-        //initialize variables
-        softmax(data, u, n_s, n_c);
-
-        // iterate in blocks
-        int min_iter = 10;
-        if (n_x > min_iter)
-            min_iter = n_x;
-        int max_loop = 200;
-        for(int i = 0; i < max_loop; i++){    
-
-            //run the solver a set block of iterations
-            for (int iter = 0; iter < min_iter; iter++)
-                max_change = run_block(iter, min_iter);
-
-            if (max_change < tau*beta)
-                break;
-        }
-
-        //run one last block, just to be safe
-        for (int iter = 0; iter < min_iter; iter++)
-            run_block(iter, min_iter);
-
-        //calculate the effective regularization
-        calculate_r_eff(r_eff, rx, u, n_x, n_c);
-        
-        //get final output
-        for(int i = 0; i < n_s*n_c; i++)
-            u[i] = data[i]+r_eff[i];
-        
-        //deallocate temporary buffers
-        free(r_eff);
-    
-    }
+        float* u 
+	):
+	POTTS_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1], sizes[2], data_cost, u),
+	n_x(sizes[1]),
+	rx(rx_cost)
+	{}
 };
 
-
-class PottsMeanpass1d_GradientBatchThreadChannelsLast
+class POTTS_MEANPASS_CPU_GRADIENT_1D : public POTTS_MEANPASS_CPU_GRADIENT_BASE
 {
 private:
-    const int batch;
     const int n_x;
-    const int n_c;
-    const int n_s;
-    float* g_data;
-    float* g_rx;
-    float* g_ry;
-    const float* logits;
-    const float* rx;
-    const float* grad;
+    const float* const rx;
+    float* const g_rx;
 	
-	const float epsilon = 0.00001;
-	const float beta = 1e-20;
-	const float tau = 0.5;
-    
+protected:
+    int min_iter_calc(){
+		return n_x;
+	}
+    void init_vars(){
+		clear(g_rx, n_c*n_s);
+	}
+	void get_reg_gradients_and_push(float tau){
+		get_reg_gradients(d_y, u, g_rx, n_x, n_c, tau);
+		get_gradient_for_u(d_y, rx, g_u, n_x, n_c, tau);
+	}
+    void clean_up(){}
+
 public:
-    PottsMeanpass1d_GradientBatchThreadChannelsLast(
+	POTTS_MEANPASS_CPU_GRADIENT_1D(
         const int batch,
         const int sizes[3],
         const float* u,
         const float* g,
         const float* rx_cost,
         float* g_d,
-        float* g_rx) :
-    batch(batch),
-    n_x(sizes[1]),
-    n_c(sizes[2]),
-    n_s(sizes[1]),
-    g_data(g_d),
-    g_rx(g_rx),
-    rx(rx_cost),
-    logits(u),
-    grad(g)
-    {}
-    
-    void operator()(){
-        
-        int max_loops = n_x;
-        const int min_iters = 10;
-        
-        //allocate temporary variables
-        float* u = new float[n_s*n_c];
-        float* dy = new float[n_s*n_c];
-        float* g_u = new float[n_s*n_c];
-        
-        //transformat logits into labelling
-        softmax(logits, u, n_s, n_c);
-
-        //get initial gradient for the data and regularization terms
-        copy(grad,g_data,n_s*n_c);
-        clear(g_rx,n_s*n_c);
-        get_reg_gradients(grad, u, g_rx, n_x, n_c, 1.0f);
-         
-        //psuh gradient back an iteration
-        get_gradient_for_u(grad, rx, g_u, n_x, n_c, 1);
-        
-        for(int i = 0; i < max_loops; i++){
-            for(int iter = 0; iter < min_iters; iter++){
-                //untangle softmax
-                untangle_softmax(g_u, u, dy, n_s, n_c);
-                
-                // populate data gradient
-                inc(dy, g_data, tau, n_s*n_c);
-
-                // populate effective regularization gradient
-                get_reg_gradients(dy, u, g_rx, n_x, n_c, tau);
-
-                //push back gradient 
-                get_gradient_for_u(dy, rx, g_u, n_x, n_c, tau);
-            }
-            
-            //get max of gu and break if converged
-            float gu_max = maxabs(g_u, n_s*n_c);
-            if( gu_max < beta )
-                break;
-        }
-        
-        delete u;
-        delete dy;
-        delete g_u;
-    }
+        float* g_rx
+	) :
+	POTTS_MEANPASS_CPU_GRADIENT_BASE(batch, sizes[1], sizes[2], u, g, g_d),
+	n_x(sizes[1]),
+	rx(rx_cost),
+	g_rx(g_rx)
+	{}
 };
-
-
-
 
 template <>
 struct PottsMeanpass1dFunctor<CPUDevice> {
@@ -197,9 +89,10 @@ struct PottsMeanpass1dFunctor<CPUDevice> {
 	int n_c = sizes[2];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(PottsMeanpass1d_SolverBatchThreadChannelsLast(b, sizes, data_cost+ b*n_s*n_c,
-																																									  rx_cost+ b*n_s*n_c,
-																																									  u+ b*n_s*n_c));
+        threads[b] = new std::thread(POTTS_MEANPASS_CPU_SOLVER_1D(b, sizes,
+																  data_cost+ b*n_s*n_c,
+																  rx_cost+ b*n_s*n_c,
+																  u+ b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)
@@ -225,19 +118,18 @@ struct PottsMeanpass1dGradFunctor<CPUDevice> {
       float** /*unused full buffers*/,
       float** /*unused image buffers*/
   ){
-      
-      //std::cout << "On CPU" << std::endl;
-
+	  
     int n_batches = sizes[0];
 	int n_s = sizes[1];
 	int n_c = sizes[2];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(PottsMeanpass1d_GradientBatchThreadChannelsLast(b, sizes, u+ b*n_s*n_c,
-																																										 g+ b*n_s*n_c,
-																																										 rx_cost+ b*n_s*n_c,
-																																										 g_data+ b*n_s*n_c,
-																																										 g_rx+ b*n_s*n_c));
+        threads[b] = new std::thread(POTTS_MEANPASS_CPU_GRADIENT_1D(b, sizes,
+																	u+ b*n_s*n_c,
+																	g+ b*n_s*n_c,
+																	rx_cost+ b*n_s*n_c,
+																	g_data+ b*n_s*n_c,
+																	g_rx+ b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
     for(int b = 0; b < n_batches; b++)

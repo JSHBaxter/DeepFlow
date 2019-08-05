@@ -17,7 +17,7 @@ CUFLAGS = -std=c++11 -c $(TF_CFLAGS) $(CUDAFLAG) --expt-relaxed-constexpr -x cu 
 LFLAGS := $(CUDA_L) $(TF_LFLAGS)
 
 potts_mean_pass = potts_meanpass3d.cc potts_meanpass2d.cc potts_meanpass1d.cc
-potts_aug_lag = potts_auglag3d.cc potts_auglag2d.cc potts_auglag1d.cc potts_auglag_cpu_solver.cc
+potts_aug_lag = potts_auglag3d.cc potts_auglag2d.cc potts_auglag1d.cc potts_auglag_cpu_solver.cc potts_meanpass_cpu_solver.cc
 hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc hmf_meanpass_cpu_solver.cc
 hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc hmf_auglag_cpu_solver.cc
 
