@@ -42,6 +42,7 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
     g = new float[n_s*n_c];
 
     //initialize variables
+	softmax(data, u, n_s, n_c);
     clear(g, div, u, n_c*n_s);
     clear_spatial_flows();
     //clear(pt, n_c*n_s);

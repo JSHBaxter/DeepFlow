@@ -15,13 +15,13 @@ class InnerProductOpTest(unittest.TestCase):
         
         b = 1
         c = 4
-        x = 1
+        x = 2
         y = 10
         z = 10
 
         for i in range(1):
             mesh_y, mesh_x, mesh_z = np.meshgrid(np.arange(y),np.arange(x),np.arange(z));
-            input_d = 0.0*np.random.rand(b,c,x,y,z)
+            input_d = 0.1*np.random.rand(b,c,x,y,z)
             #input_d[:,1,:,:] = 0.1*(mesh_y-y//2)+0.1*(np.random.rand(x,y)-0.5)
             input_rx = 0.1*np.ones((b,c,x,y,z))
             #input_rx[:,:,:,:,2] *= 0
@@ -29,7 +29,7 @@ class InnerProductOpTest(unittest.TestCase):
             #input_rx[:,:,:,:,4] *= 0
             #input_rx[:,:,:,:,5] *= 0
             #input_rx += 0.2*(np.random.rand(b,c,x,y,z))
-            input_ry = 0.11*np.ones((b,c,x,y,z))
+            input_ry = 0.1*np.ones((b,c,x,y,z))
             #input_ry[:,:,:,:,2] *= 0
             #input_ry[:,:,:,:,3] *= 0
             #input_ry[:,:,:,:,4] *= 0

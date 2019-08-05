@@ -1,0 +1,1 @@
+import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))

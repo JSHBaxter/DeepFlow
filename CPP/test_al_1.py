@@ -19,7 +19,7 @@ class InnerProductOpTest(unittest.TestCase):
 
         for i in range(1):
             input_d = 1*np.random.rand(b,c,x)
-            input_rx = 1*np.ones((b,c,x))
+            input_rx = 0.001*np.ones((b,c,x))
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
             #input_rx[:,:,:,:,4] *= 0

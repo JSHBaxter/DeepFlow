@@ -1,0 +1,1620 @@
+calling function
+0
+0x7fddcc000e20
+0x7fddcc002ce0
+Base class:
+	0
+	0
+	0
+	0
+	0
+	0
+Derived class:
+	0
+	0
+	0
+	0
+	0
+	0
+0x7fddcc002d00
+0x7fddcc002dd0
+Init variables
+6
+Iter 0 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 0 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.160629
+Iter 1 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 1 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.0910819
+Iter 2 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 2 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.0774242
+Iter 3 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 3 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.0374433
+Iter 4 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 4 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.0498626
+Iter 5 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 5 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.0149585
+Iter 6 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 6 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.00851452
+Iter 7 - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter 7 - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Calculate max change: 0.00352375
+Iter LAST - 0
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 1
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 2
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 3
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 4
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 5
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 6
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 7
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 8
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 9
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 10
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 11
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 12
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 13
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 14
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 15
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 16
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 17
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 18
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 19
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 20
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter LAST - 21
+	Update capacities
+	Update flow
+	Update source/sink flows
+	Update multipliers
+Iter #0: 8.18074e-06
+[-1, -1, 0, 0, 1, 1]
+[-1, -1, 0, 1, 2, 3]
+(1, 4, 2, 10, 10)
+[[[ 7  1  0  8  6  0  2  9  3  8]
+  [ 5  5  1  5  3  0  7  4 10  4]
+  [ 6 10  3  7  7  8  5  4  6  8]
+  [ 1  3  7  8  1  0  5  5  7  3]
+  [ 8  9  2  5  4  6  8  7  2  0]
+  [ 5  7  1  3  4  7  9  1  5  5]
+  [ 2  2  7  6  4  7  2  2  3  7]
+  [ 1  1  8  2  8  0  6  2 10  5]
+  [ 5  9  3  2  0  6  6  4  8  9]
+  [ 9  2  5  4  3  7  7  0  4  7]]
+
+ [[ 4  4  6  7  5 10  8  6  2  8]
+  [ 4  4  7  8 10  5  1  0  6  1]
+  [ 2  7  5  7  4  7  1  3  9 10]
+  [10  5  5  2  5  4  8  7  8  2]
+  [ 6  9  6  3 10 10  0  4  4  8]
+  [ 5  5  4  2  6  7  8  7  1  1]
+  [ 8  2  4  7  9  8  9  8  3  9]
+  [ 4  7  2  6  1  8  2 10  9  1]
+  [ 0  8  1  1  4  5  9 10  8  6]
+  [ 8  7  7  5  8  5  6  3  2  9]]]
+[[[ 7  8  8  0  3  3  6  2  4  2]
+  [ 4  8  3  4  8  1  5  2 10  7]
+  [ 8  4  9  4  3  1  5  4  4  7]
+  [ 5  9  8  7  2  2  4  5  4  3]
+  [ 6  4  8  1 10  3  8  8  4  2]
+  [ 6 10  6  6  2  7  4  2  7  2]
+  [ 3  7  0  2  3  3  9  9  1  3]
+  [ 6  9  3  8  2 10  5  0  9 10]
+  [ 9  3 10  8  1  8  7  5  6  7]
+  [ 3  8  1  0  7  5 10  1  7  2]]
+
+ [[ 8  9  2  4  1  0  2  1  6  2]
+  [ 2  5  9  7  7  4  8  8  0  2]
+  [ 3  3 10  5  7  3  9  5  1  5]
+  [ 5  8  5  9  7  9  1  2  5 10]
+  [ 8  7  6  7  3  1  6  1 10  2]
+  [ 3  1  2  1  8  2  4  2  1  1]
+  [ 4  3  0  5  2  6  5  1  2  8]
+  [ 1  8  4 10  9  9  4  9  7  6]
+  [ 8  3  9  5  9 10  1  8  4  7]
+  [ 4  6  9  3  4  3  2  4  2  9]]]
+[[[ 6 10  8  8  5  8  2 10  1  5]
+  [ 6 10  7  7  3  2  4  6  3  2]
+  [ 5  2  4  7  3  9  5  9  5  1]
+  [ 2 10  2  1  8  1  6  8  2  6]
+  [ 1  6  2 10  4  6  1  3  1  8]
+  [ 2  9  8 10  6 10  2  3  9  9]
+  [ 4  7  2  0  1 10  9  7  1  7]
+  [ 0  1  8  1  0  4  8  6  9  2]
+  [ 2  0  7  4  3  3  6  5  6 10]
+  [ 2  5  7  0  3  1  0  9  9 10]]
+
+ [[ 6  8  4  1  1  7  9  3  6  5]
+  [ 2  8  9  1  1  6  1  6  8  4]
+  [ 6  4  9  6  7  8  0  2  9  3]
+  [ 7  5  7  4 10 10  3  8  6  1]
+  [ 6  4  6  1  7  4  3  8  7  4]
+  [ 4  4  7  1  3  7  6  3  9  4]
+  [ 2  9  9  0  5  4  1  2  6  6]
+  [ 0  1  1  0 10  5 10  6  7  4]
+  [ 6  8  3  8  5  4  5  4  7  5]
+  [10  5  1  4  4  5  2  4  9  2]]]
+[[[ 2  7  5  4  3  1  8  5  8  9]
+  [10  2  1  3  6  8  8  6  5  3]
+  [10  8  5  8  4  1  6  2 10  9]
+  [ 5  2  4  5  9  4  1  5  9  7]
+  [ 8  3  2  4  8  2  1  2  7  3]
+  [ 1  5  9  0  6  9  3  2  9  9]
+  [ 8  1  8  8  7  3  8  8  1  3]
+  [ 4  6  5  8  7  9  6  6  4  0]
+  [ 1  5  9  6  2  8  5  2  9  5]
+  [ 7  2  9  1  2  1  6  1  1  7]]
+
+ [[ 3  7  2  4  3  8  4  9  1  1]
+  [ 5 10  2  2  1  6  7  6  2  2]
+  [ 6  1  2  9  5  6  2  8  6  9]
+  [ 6 10  5  8  1  4  5  9  4  7]
+  [ 5  1  8  2  6  1  7  8  7  5]
+  [ 9  5  5  9  9  1  7  0  1  8]
+  [ 6  0  7  7  9  9  3  2  4  8]
+  [10  4  9  2  6  1  4  4  2  1]
+  [ 4  3  2  5  2  7  8  1  7  6]
+  [ 7  2  2  0  4  6 10  1  8  4]]]
+
+
+[[[100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]]
+
+ [[100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]]]
+[[[0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]]
+
+ [[0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]]]
+[[[0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]]
+
+ [[0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]]]
+[[[0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]]
+
+ [[0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]
+  [0 0 0 0 0 0 0 0 0 0]]]
+
+
+[[[100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]]
+
+ [[100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]
+  [100 100 100 100 100 100 100 100 100 100]]]
+
+
+
+
+[[[25 24 24 26 26 24 24 25 25 26]
+  [25 24 24 25 25 24 25 25 26 25]
+  [25 26 25 25 26 26 25 24 25 25]
+  [25 25 25 26 24 24 25 25 25 24]
+  [26 26 25 25 24 26 26 25 24 24]
+  [25 25 24 24 25 25 26 25 24 24]
+  [25 24 25 25 25 25 24 24 25 26]
+  [25 24 25 24 26 24 25 25 26 25]
+  [25 26 24 24 25 25 25 25 25 25]
+  [26 25 25 26 25 26 25 24 25 25]]
+
+ [[25 24 26 26 26 26 25 25 25 26]
+  [25 24 25 26 27 25 24 24 25 25]
+  [24 26 25 25 25 25 24 24 26 26]
+  [26 25 25 24 25 24 26 25 25 24]
+  [25 26 25 25 26 27 24 25 24 26]
+  [25 25 24 24 25 26 26 26 24 24]
+  [26 25 25 25 26 26 26 26 25 25]
+  [25 25 25 25 24 26 25 26 26 25]
+  [24 26 24 24 25 25 26 26 26 25]
+  [25 26 26 26 26 25 25 25 24 26]]]
+[[[25 25 26 24 25 25 25 24 25 24]
+  [24 25 25 25 26 24 24 24 25 26]
+  [25 25 26 25 25 24 25 25 24 25]
+  [25 26 26 25 24 25 25 25 24 24]
+  [25 25 26 24 25 25 26 26 25 24]
+  [26 26 25 25 24 25 25 25 25 24]
+  [25 26 24 24 25 24 26 25 25 24]
+  [26 26 24 26 25 26 25 24 26 27]
+  [26 25 26 26 25 26 25 25 25 25]
+  [25 26 24 25 26 26 26 25 25 24]]
+
+ [[26 25 25 25 25 23 24 24 25 24]
+  [25 25 26 26 26 25 26 25 24 25]
+  [25 25 26 25 25 24 26 25 23 25]
+  [25 25 25 26 25 26 24 24 25 26]
+  [26 25 25 26 24 24 25 24 25 24]
+  [25 24 24 24 25 24 25 24 24 24]
+  [25 25 24 25 24 25 25 25 25 25]
+  [25 26 25 26 26 26 25 26 26 26]
+  [26 25 27 26 26 26 24 26 25 26]
+  [24 26 26 25 25 25 24 25 24 26]]]
+[[[25 26 26 26 25 26 25 26 24 25]
+  [25 26 26 25 24 25 25 26 24 24]
+  [25 24 25 25 25 26 25 26 25 24]
+  [24 26 24 24 26 25 25 26 24 25]
+  [24 25 25 26 25 25 24 24 25 27]
+  [25 25 26 27 25 26 24 25 26 26]
+  [25 26 25 24 24 26 26 25 25 26]
+  [24 24 25 24 24 24 26 26 25 24]
+  [24 24 25 25 25 24 25 25 25 25]
+  [24 25 25 25 25 24 24 26 26 26]]
+
+ [[25 26 25 24 24 25 26 25 26 25]
+  [25 25 26 24 24 25 24 25 26 25]
+  [25 25 26 25 25 26 24 25 26 24]
+  [25 24 25 24 26 26 25 26 25 24]
+  [25 25 25 25 25 25 25 26 25 25]
+  [25 25 26 25 24 26 25 25 27 25]
+  [24 26 26 24 24 24 24 25 26 25]
+  [24 24 24 24 25 25 26 25 25 25]
+  [25 25 25 26 25 24 25 24 25 25]
+  [25 25 24 25 25 25 24 25 26 24]]]
+[[[24 25 25 25 25 25 26 25 26 26]
+  [26 24 24 24 25 26 26 26 25 25]
+  [26 25 25 25 25 24 25 25 26 26]
+  [25 24 24 25 26 25 24 25 26 26]
+  [25 24 25 25 26 24 24 24 26 25]
+  [25 24 26 24 26 25 25 25 26 26]
+  [26 24 26 26 26 24 25 25 25 25]
+  [25 25 25 26 26 26 25 25 24 24]
+  [24 25 25 25 25 25 25 24 25 24]
+  [25 24 26 25 24 24 25 24 24 25]]
+
+ [[24 25 24 25 25 25 25 26 24 24]
+  [26 26 24 24 24 25 26 26 25 25]
+  [25 24 24 25 25 25 25 26 25 26]
+  [25 25 25 25 24 24 25 26 25 26]
+  [25 24 25 25 25 24 26 26 25 25]
+  [26 25 25 27 26 24 25 24 25 26]
+  [25 24 26 26 26 25 25 25 25 25]
+  [26 25 26 24 25 24 24 24 24 24]
+  [25 24 24 25 24 25 25 24 25 25]
+  [25 24 24 24 24 25 26 24 26 25]]]calling function
+7
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Iter 0
+Calculate max change: 0
+
+
+
+
+
+(1, 4, 2, 10, 10)
+[[[ 7  1  0  8  6  0  2  9  3  8]
+  [ 5  5  1  5  3  0  7  4 10  4]
+  [ 6 10  3  7  7  8  5  4  6  8]
+  [ 1  3  7  8  1  0  5  5  7  3]
+  [ 8  9  2  5  4  6  8  7  2  0]
+  [ 5  7  1  3  4  7  9  1  5  5]
+  [ 2  2  7  6  4  7  2  2  3  7]
+  [ 1  1  8  2  8  0  6  2 10  5]
+  [ 5  9  3  2  0  6  6  4  8  9]
+  [ 9  2  5  4  3  7  7  0  4  7]]
+
+ [[ 4  4  6  7  5 10  8  6  2  8]
+  [ 4  4  7  8 10  5  1  0  6  1]
+  [ 2  7  5  7  4  7  1  3  9 10]
+  [10  5  5  2  5  4  8  7  8  2]
+  [ 6  9  6  3 10 10  0  4  4  8]
+  [ 5  5  4  2  6  7  8  7  1  1]
+  [ 8  2  4  7  9  8  9  8  3  9]
+  [ 4  7  2  6  1  8  2 10  9  1]
+  [ 0  8  1  1  4  5  9 10  8  6]
+  [ 8  7  7  5  8  5  6  3  2  9]]]
+[[[ 7  8  8  0  3  3  6  2  4  2]
+  [ 4  8  3  4  8  1  5  2 10  7]
+  [ 8  4  9  4  3  1  5  4  4  7]
+  [ 5  9  8  7  2  2  4  5  4  3]
+  [ 6  4  8  1 10  3  8  8  4  2]
+  [ 6 10  6  6  2  7  4  2  7  2]
+  [ 3  7  0  2  3  3  9  9  1  3]
+  [ 6  9  3  8  2 10  5  0  9 10]
+  [ 9  3 10  8  1  8  7  5  6  7]
+  [ 3  8  1  0  7  5 10  1  7  2]]
+
+ [[ 8  9  2  4  1  0  2  1  6  2]
+  [ 2  5  9  7  7  4  8  8  0  2]
+  [ 3  3 10  5  7  3  9  5  1  5]
+  [ 5  8  5  9  7  9  1  2  5 10]
+  [ 8  7  6  7  3  1  6  1 10  2]
+  [ 3  1  2  1  8  2  4  2  1  1]
+  [ 4  3  0  5  2  6  5  1  2  8]
+  [ 1  8  4 10  9  9  4  9  7  6]
+  [ 8  3  9  5  9 10  1  8  4  7]
+  [ 4  6  9  3  4  3  2  4  2  9]]]
+[[[ 6 10  8  8  5  8  2 10  1  5]
+  [ 6 10  7  7  3  2  4  6  3  2]
+  [ 5  2  4  7  3  9  5  9  5  1]
+  [ 2 10  2  1  8  1  6  8  2  6]
+  [ 1  6  2 10  4  6  1  3  1  8]
+  [ 2  9  8 10  6 10  2  3  9  9]
+  [ 4  7  2  0  1 10  9  7  1  7]
+  [ 0  1  8  1  0  4  8  6  9  2]
+  [ 2  0  7  4  3  3  6  5  6 10]
+  [ 2  5  7  0  3  1  0  9  9 10]]
+
+ [[ 6  8  4  1  1  7  9  3  6  5]
+  [ 2  8  9  1  1  6  1  6  8  4]
+  [ 6  4  9  6  7  8  0  2  9  3]
+  [ 7  5  7  4 10 10  3  8  6  1]
+  [ 6  4  6  1  7  4  3  8  7  4]
+  [ 4  4  7  1  3  7  6  3  9  4]
+  [ 2  9  9  0  5  4  1  2  6  6]
+  [ 0  1  1  0 10  5 10  6  7  4]
+  [ 6  8  3  8  5  4  5  4  7  5]
+  [10  5  1  4  4  5  2  4  9  2]]]
+[[[ 2  7  5  4  3  1  8  5  8  9]
+  [10  2  1  3  6  8  8  6  5  3]
+  [10  8  5  8  4  1  6  2 10  9]
+  [ 5  2  4  5  9  4  1  5  9  7]
+  [ 8  3  2  4  8  2  1  2  7  3]
+  [ 1  5  9  0  6  9  3  2  9  9]
+  [ 8  1  8  8  7  3  8  8  1  3]
+  [ 4  6  5  8  7  9  6  6  4  0]
+  [ 1  5  9  6  2  8  5  2  9  5]
+  [ 7  2  9  1  2  1  6  1  1  7]]
+
+ [[ 3  7  2  4  3  8  4  9  1  1]
+  [ 5 10  2  2  1  6  7  6  2  2]
+  [ 6  1  2  9  5  6  2  8  6  9]
+  [ 6 10  5  8  1  4  5  9  4  7]
+  [ 5  1  8  2  6  1  7  8  7  5]
+  [ 9  5  5  9  9  1  7  0  1  8]
+  [ 6  0  7  7  9  9  3  2  4  8]
+  [10  4  9  2  6  1  4  4  2  1]
+  [ 4  3  2  5  2  7  8  1  7  6]
+  [ 7  2  2  0  4  6 10  1  8  4]]]
+
+
+[[[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]
+
+ [[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]]
+[[[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]
+
+ [[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]]
+[[[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]
+
+ [[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]]
+[[[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]
+
+ [[-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]
+  [-1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151 -1151]]]
+
+
+[[[-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]]
+
+ [[-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]
+  [-4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605 -4605]]]
+
+
+
+
+[[[25 24 24 26 26 24 24 25 25 26]
+  [25 24 25 25 25 24 25 25 26 25]
+  [25 26 25 25 26 26 25 24 25 25]
+  [25 25 25 26 24 24 25 25 25 24]
+  [26 26 25 25 24 26 26 25 24 24]
+  [25 25 24 24 25 25 26 25 24 24]
+  [25 24 25 25 25 25 24 24 25 26]
+  [25 24 25 24 26 24 25 25 26 25]
+  [25 26 24 24 25 25 25 25 25 25]
+  [26 25 25 26 25 26 25 24 25 25]]
+
+ [[23 23 24 25 25 24 24 24 23 25]
+  [24 23 24 25 25 24 23 22 24 24]
+  [23 25 23 24 23 24 23 23 26 26]
+  [26 25 25 24 25 24 26 25 25 24]
+  [25 26 25 25 26 27 24 25 24 26]
+  [25 25 24 24 25 26 26 26 24 24]
+  [26 25 25 25 26 26 26 26 25 25]
+  [25 25 25 25 24 26 25 26 26 25]
+  [24 26 24 24 25 25 26 26 26 25]
+  [25 26 26 26 26 25 25 25 24 26]]]
+[[[25 25 26 24 25 25 25 24 25 24]
+  [24 25 25 25 26 24 24 24 25 26]
+  [25 25 26 25 25 24 25 25 24 25]
+  [25 26 26 25 24 25 25 25 24 24]
+  [25 25 26 24 25 25 26 26 25 24]
+  [26 26 25 25 24 25 25 25 25 24]
+  [25 26 24 24 25 24 26 25 25 24]
+  [26 26 24 26 25 26 25 24 26 27]
+  [26 25 26 26 25 26 25 25 25 25]
+  [25 26 24 25 26 26 26 25 25 24]]
+
+ [[24 24 24 24 23 22 23 23 24 23]
+  [23 23 24 25 25 23 24 24 23 24]
+  [23 23 25 24 24 23 25 23 23 25]
+  [25 25 25 26 25 26 24 24 25 26]
+  [26 25 25 26 24 24 25 24 25 24]
+  [25 24 24 24 25 24 25 24 24 24]
+  [25 25 24 25 24 25 25 25 25 25]
+  [25 26 25 26 26 26 25 26 26 26]
+  [26 25 27 26 26 26 24 26 25 26]
+  [24 26 26 25 25 25 24 25 24 26]]]
+[[[25 26 26 26 25 26 25 26 24 25]
+  [25 26 26 25 24 25 25 26 24 24]
+  [25 24 25 25 25 26 25 26 25 24]
+  [24 26 24 24 26 25 25 26 24 25]
+  [24 25 25 26 25 25 24 24 25 27]
+  [25 25 26 27 25 26 24 25 26 26]
+  [25 26 25 24 24 26 26 25 25 26]
+  [24 24 25 24 24 24 26 26 25 24]
+  [24 24 25 25 25 24 25 25 25 25]
+  [24 25 25 25 25 24 24 26 26 26]]
+
+ [[26 27 26 25 26 27 27 26 27 27]
+  [26 27 27 25 25 26 25 27 27 27]
+  [27 26 27 26 26 27 26 26 26 24]
+  [25 24 25 24 26 26 25 26 25 24]
+  [25 25 25 25 25 25 25 26 25 25]
+  [25 25 26 25 24 26 25 25 27 25]
+  [24 26 26 24 24 24 24 25 26 25]
+  [24 24 24 24 25 25 26 25 25 25]
+  [25 25 25 26 25 24 25 24 25 25]
+  [25 25 24 25 25 25 24 25 26 24]]]
+[[[24 25 25 25 25 25 26 25 26 26]
+  [26 24 24 24 25 26 26 26 25 25]
+  [26 25 25 25 25 24 25 25 26 26]
+  [25 24 24 25 26 25 24 25 26 26]
+  [25 24 25 25 26 24 24 24 26 25]
+  [25 24 26 24 26 25 25 25 26 26]
+  [26 24 26 26 26 24 25 25 25 25]
+  [25 25 25 26 26 26 25 25 24 24]
+  [24 25 25 25 25 25 25 24 25 24]
+  [25 24 26 25 24 24 25 24 24 25]]
+
+ [[26 26 26 26 26 27 26 28 26 25]
+  [27 27 25 25 25 26 27 27 26 26]
+  [27 26 25 27 26 26 26 28 25 26]
+  [25 25 25 25 24 24 25 26 25 26]
+  [25 24 25 25 25 24 26 26 25 25]
+  [26 25 25 27 26 24 25 24 25 26]
+  [25 24 26 26 26 25 25 25 25 25]
+  [26 25 26 24 25 24 24 24 24 24]
+  [25 24 24 25 24 25 25 24 25 25]
+  [25 24 24 24 24 25 26 24 26 25]]]
+
+
+
+

@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-Tests for the inner product Tensorflow operation.
-"""
 
 import unittest
 import numpy as np
@@ -35,8 +32,7 @@ class InnerProductOpTest(unittest.TestCase):
             #input_ry[:,:,:,:,5] *= 0
             #input_ry += 0.2*(np.random.rand(b,c,x,y,z))
 
-            for devicename in ['GPU', 'CPU']:
-            #for devicename in ['GPU']:
+            for devicename in ['CPU','GPU']:
                 
                 if devicename == 'CPU':
                     config = tf.ConfigProto(log_device_placement=False, device_count = {'GPU': 0})
