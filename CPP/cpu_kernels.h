@@ -56,6 +56,9 @@ void init_flows_channels_first(const float* d, float* ps, const int n_c, const i
 void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c);
 void softmax_update(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
 float softmax_with_convergence(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
+void sigmoid(const float* bufferin, float* bufferout, const int n_s);
+void sigmoid_update(const float* bufferin, float* bufferout, const int n_s, const float alpha);
+float sigmoid_with_convergence(const float* bufferin, float* bufferout, const int n_s, const float alpha);
 
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* rz, const float* u, const int n_x, const int n_y, const int n_z, const int n_c);
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* u, const int n_x, const int n_y, const int n_c);
@@ -63,6 +66,7 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* u, const int n_
 
 //Functions for mean field backward calculation
 void untangle_softmax(const float* g, const float* u, float* dy, const int n_s, const int n_c);
+void untangle_sigmoid(const float* g, const float* u, float* dy, const int n_s);
 void get_gradient_for_u(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
 void get_gradient_for_u(const float* dy, const float* rx, const float* ry, float* du, const int n_x, const int n_y, const int n_c, const float tau);
 void get_gradient_for_u(const float* dy, const float* rxs, float* du, const int n_x, const int n_c, const float tau);

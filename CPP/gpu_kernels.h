@@ -75,6 +75,7 @@ void populate_reg_gradients(const Eigen::GpuDevice& dev, const float* g, const f
 
 //Functions specifically for the mean field forward calculation
 void softmax(const Eigen::GpuDevice& dev, const float* e1, const float* e2, float* u, const int n_s, const int n_c);
+void sigmoid(const Eigen::GpuDevice& dev, const float* e1, const float* e2, float* u, const int n_s);
 void change_to_diff(const Eigen::GpuDevice& dev, float* transfer, float* diff, const int n_s, const float tau);
 void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u_b, const float* rx_b, const float* ry_b, const float* rz_b, const int n_x, const int n_y, const int n_z, const int n_c);
 void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u_b, const float* rx_b, const float* ry_b, const int n_x, const int n_y, const int n_c);
@@ -85,6 +86,7 @@ void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u
 //Functions specifically for helping with mean field gradient calculation
 void softmax_gradient(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_d, const int n_s, const int n_c);
 void process_grad_potts(const Eigen::GpuDevice& dev, const float* du_i, const float* u, float* loc, const int n_s, const int n_c, const float tau);
+void process_grad_binary(const Eigen::GpuDevice& dev, const float* du_i, const float* u, float* loc, const int n_s, const float tau);
 
 void populate_reg_mean_gradients(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c);
 void populate_reg_mean_gradients(const Eigen::GpuDevice& dev, const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c);

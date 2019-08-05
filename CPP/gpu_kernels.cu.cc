@@ -862,9 +862,36 @@ void softmax(const Eigen::GpuDevice& dev, const float* e1, const float* e2, floa
         softmax_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(e1, e2, u, n_s, n_c);
     else
         softmax_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(e1, u, n_s, n_c);
-    if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
+    if(CHECK_ERRORS) check_error(dev, "softmax launch failed with error");
 }
 
+
+
+__global__ void sigmoid_kernel(const float* e1, const float* e2, float* u, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    float cost = e1[i]+e2[i];
+	float value = 1.0f / (1.0f + exp(-cost));
+	if(i < n_s)
+		u[i] = value;
+}
+
+__global__ void sigmoid_kernel(const float* e1, float* u, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    float cost = e1[i];
+	float value = 1.0f / (1.0f + exp(-cost));
+	if(i < n_s)
+		u[i] = value;
+}
+
+void sigmoid(const Eigen::GpuDevice& dev, const float* e1, const float* e2, float* u, const int n_s){
+    if(e2 != NULL)
+        sigmoid_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(e1, e2, u, n_s);
+    else
+        sigmoid_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(e1, u, n_s);
+    if(CHECK_ERRORS) check_error(dev, "sigmoid launch failed with error");
+}
 
 __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
@@ -1204,6 +1231,22 @@ __global__ void process_grad_potts_kernel(const float* du_i, const float* u, flo
 void process_grad_potts(const Eigen::GpuDevice& dev, const float* du_i, const float* u, float* loc, const int n_s, const int n_c, const float tau){
     process_grad_potts_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(du_i, u, loc, n_s, n_c, tau);
     if(CHECK_ERRORS) check_error(dev, "process_grad_potts launch failed with error");
+}
+
+
+
+__global__ void process_grad_binary_kernel(const float* du_i, const float* u, float* loc, const int n_s, const float tau){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+	float new_grad = du_i[i]*u[i]*(1.0f-u[i])*tau;
+	if( i < n_s )
+        loc[i] = new_grad;
+    
+}
+
+void process_grad_binary(const Eigen::GpuDevice& dev, const float* du_i, const float* u, float* loc, const int n_s, const float tau){
+    process_grad_binary_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(du_i, u, loc, n_s, tau);
+    if(CHECK_ERRORS) check_error(dev, "process_grad_binary launch failed with error");
 }
 
 __device__ float get_gradient_for_u_kernel_dn(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d){

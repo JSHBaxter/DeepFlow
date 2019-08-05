@@ -143,6 +143,7 @@ void softmax(const float* bufferin, float* bufferout, const int n_s, const int n
             bufferout[c + n_c*s] /= accum;
     }
 }
+
 void softmax_update(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha){
     float* new_u = new float[n_c];
     for(int s = 0; s < n_s; s++) {
@@ -192,6 +193,37 @@ float softmax_with_convergence(const float* bufferin, float* bufferout, const in
         }
     }
     delete new_u;
+    return max_change;
+}
+
+void sigmoid(const float* bufferin, float* bufferout, const int n_s){
+    for(int s = 0; s < n_s; s++) {
+		float cost = bufferin[s];
+        bufferout[s] = 1.0f / (1.0f + std::exp(-cost));
+    }
+}
+
+void sigmoid_update(const float* bufferin, float* bufferout, const int n_s, const float alpha){
+	for(int s = 0; s < n_s; s++) {
+		float cost = bufferin[s];
+		float new_u = 1.0f / (1.0f + std::exp(-cost));
+		float diff = alpha * (new_u-bufferout[s]);
+		bufferout[s] += diff;
+	}
+}
+    
+float sigmoid_with_convergence(const float* bufferin, float* bufferout, const int n_s, const float alpha){
+    float max_change = 0.0f;
+	for(int s = 0; s < n_s; s++) {
+		float cost = bufferin[s];
+		float new_u = 1.0f / (1.0f + std::exp(-cost));
+		float diff = alpha * (new_u-bufferout[s]);
+		bufferout[s] += diff;
+		if( diff > max_change )
+			max_change = diff;
+		else if( -diff > max_change )
+			max_change = -diff;
+	}
     return max_change;
 }
 
@@ -324,6 +356,11 @@ void untangle_softmax(const float* g, const float* u, float* dy, const int n_s, 
 			}
 			dy[idxc(s,n_s,c,n_c)] = new_grad*uc;
 		}
+}
+
+void untangle_sigmoid(const float* g, const float* u, float* dy, const int n_s){
+	for(int s = 0; s < n_s; s++)
+		dy[s] = g[s]*u[s]*(1-u[s]);
 }
 
 void get_gradient_for_u(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau){
