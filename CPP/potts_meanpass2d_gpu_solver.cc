@@ -6,184 +6,156 @@
 #include "tensorflow/core/platform/default/logging.h"
 #include "tensorflow/core/framework/shape_inference.h"
 
-
+#include "potts_meanpass_gpu_solver.h"
 #include "gpu_kernels.h"
 
-#include <math.h> 	
-#include <thread>
+class POTTS_MEANPASS_GPU_SOLVER_2D : public POTTS_MEANPASS_GPU_SOLVER_BASE
+{
+private:
+    const int n_x;
+    const int n_y;
+    const float* const rx;
+    const float* const ry;
+	
+protected:
+    int min_iter_calc(){
+		return n_x+n_y;
+	}
+    void init_vars(){}
+    void calculate_regularization(){
+		get_effective_reg(dev, r_eff, u, rx, ry, n_x, n_y, n_c);
+	}
+    void clean_up(){}
+	
+public:
+	POTTS_MEANPASS_GPU_SOLVER_2D(
+        const GPUDevice & dev,
+        const int batch,
+        const int sizes[4],
+        const float* data_cost,
+        const float* rx_cost,
+        const float* ry_cost,
+        float* u,
+		float** buffers_full
+	):
+	POTTS_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[2]*sizes[3], sizes[1], data_cost, u, buffers_full),
+	n_x(sizes[2]),
+	n_y(sizes[3]),
+	rx(rx_cost),
+	ry(ry_cost)
+	{}
+};
+
+
+class POTTS_MEANPASS_GPU_GRADIENT_2D : public POTTS_MEANPASS_GPU_GRADIENT_BASE
+{
+private:
+    const int n_x;
+    const int n_y;
+    const float* const rx;
+    const float* const ry;
+    float* const g_rx;
+    float* const g_ry;
+	
+protected:
+    int min_iter_calc(){
+		return n_x+n_y;
+	}
+    void init_vars(){
+		clear_buffer(dev, g_rx, n_c*n_s);
+		clear_buffer(dev, g_ry, n_c*n_s);
+	}
+	void get_reg_gradients_and_push(float tau){
+		populate_reg_mean_gradients_and_add(dev, d_y, u, g_rx, g_ry, n_x, n_y, n_c);
+		get_gradient_for_u(dev, d_y, d_y, rx, ry, n_x, n_y, n_c);
+	}
+    void clean_up(){}
+
+public:
+	POTTS_MEANPASS_GPU_GRADIENT_2D(
+        const GPUDevice & dev,
+        const int batch,
+        const int sizes[4],
+        const float* u,
+        const float* g,
+        const float* rx_cost,
+        const float* ry_cost,
+        float* g_d,
+        float* g_rx,
+        float* g_ry,
+		float** full_buffs
+	) :
+	POTTS_MEANPASS_GPU_GRADIENT_BASE(dev, batch, sizes[2]*sizes[3], sizes[1], u, g, g_d, full_buffs),
+	n_x(sizes[2]),
+	n_y(sizes[3]),
+	rx(rx_cost),
+	ry(ry_cost),
+	g_rx(g_rx),
+	g_ry(g_ry)
+	{}
+};
 
 template <>
-struct PottsMeanpass2dFunctor<GPUDevice>{
-    
-    void operator()(
-            const GPUDevice& d,
-            int sizes[4],
-            const float* data_cost,
-            const float* rx_cost,
-            const float* ry_cost,
-            float* u,
-            float** buffers_full,
-            float** /*unused image buffers*/){
-
-        //if we got channels last on GPU, send error message
-        // TODO
-
-        int n_bat = sizes[0];
-        int n_c = sizes[1];
-        int n_x = sizes[2];
-        int n_y = sizes[3];
-        int n_s = n_x*n_y;
-
-        float* temp = buffers_full[0];
-
-        // optimization constants
-        const float tau = 0.5f;
-        const float beta = 0.01f;
-        const float epsilon = 10e-5f;
-
-        for(int b = 0; b < n_bat; b++){
-            //std::cout << "Batch: " << b << std::endl;
-
-            const float* data_b = data_cost + b*n_s*n_c;
-            const float* rx_b = rx_cost + b*n_s*n_c;
-            const float* ry_b = ry_cost + b*n_s*n_c;
-            float* u_b = u + b*n_s*n_c;
-
-            //initialize variables
-            softmax(d, data_b, NULL, u_b, n_s, n_c);
-
-            // iterate in blocks
-            int min_iter = 10;
-            if (n_x > min_iter)
-                min_iter = n_x;
-            if (n_y > min_iter)
-                min_iter = n_y;
-            int max_loop = 200;
-            for(int i = 0; i < max_loop; i++) {
-
-                //Each iteration consists of:
-                // - calculating the effective regularization (store answer in temp)
-                // - getting new probability estimates, and normalize (store answer in temp)
-                // - updating probability estimates and get convergence criteria (stored in temp)
-                for(int iter = 0; iter < min_iter; iter++){
-                    get_effective_reg(d, temp, u_b, rx_b, ry_b, n_x, n_y, n_c);
-                    softmax(d, data_b, temp, temp, n_s, n_c);
-                    change_to_diff(d, u_b, temp, n_s*n_c, tau);
-                }
-
-                //get the max change
-                float max_change = max_of_buffer(d, temp, n_c*n_s);
-
-                //std::cout << "Iter #: " << iter << " Max change: " << max_change << std::endl;
-                if (max_change < tau*beta)
-                    break;
-
-            }
-
-            //extra block for good measure
-            for(int iter = 0; iter < min_iter; iter++){
-                get_effective_reg(d, temp, u_b, rx_b, ry_b, n_x, n_y, n_c);
-                softmax(d, data_b, temp, temp, n_s, n_c);
-                change_to_diff(d, u_b, temp, n_s*n_c, tau);
-            }
-
-            //one last pseudo-iteration
-            get_effective_reg(d, temp, u_b, rx_b, ry_b, n_x, n_y, n_c);
-            add_then_store(d, data_b, temp, u_b, n_s*n_c);
-        }
-
-    }    
-    
-    
-    int num_buffers_full(){ return 1; }
-    int num_buffers_images(){ return 0; }
-
+struct PottsMeanpass2dFunctor<GPUDevice> {
+  void operator()(
+	const GPUDevice& d,
+	int sizes[4],
+	const float* data_cost,
+	const float* rx_cost,
+	const float* ry_cost,
+	float* u,
+	float** buffers_full,
+	float** /*unused image buffers*/){
+      
+    int n_batches = sizes[0];
+	int n_s = sizes[2]*sizes[3];
+	int n_c = sizes[1];
+    for(int b = 0; b < n_batches; b++)
+        POTTS_MEANPASS_GPU_SOLVER_2D(d, b, sizes,
+									  data_cost+ b*n_s*n_c,
+									  rx_cost+ b*n_s*n_c,
+									  ry_cost+ b*n_s*n_c,
+									  u+ b*n_s*n_c,
+									  buffers_full)();
+      
+  }
+  int num_buffers_full(){ return 1; }
+  int num_buffers_images(){ return 0; }
 };
 
 template <>
 struct PottsMeanpass2dGradFunctor<GPUDevice>{
 
     void operator()(
-            const GPUDevice& d,
-            int sizes[4],
-            const float* data_cost,
-            const float* rx_cost,
-            const float* ry_cost,
-            const float* u,
-            const float* g,
-            float* g_data,
-            float* g_rx,
-            float* g_ry,
-            float** buffers_full,
-            float** /*unused image buffers*/
+		const GPUDevice& d,
+		int sizes[4],
+		const float* data_cost,
+		const float* rx_cost,
+		const float* ry_cost,
+		const float* u,
+		const float* g,
+		float* g_data,
+		float* g_rx,
+		float* g_ry,
+		float** buffers_full,
+		float** /*unused image buffers*/
     ){
 
-        //std::cout << "\t" << buffers_full << std::endl;
-
-        const float epsilon = 0.00001;
-        const float beta = 1e-20;
-        const float tau = 0.5;
-        int n_bat = sizes[0];
-        int n_c = sizes[1];
-        int n_x = sizes[2];
-        int n_y = sizes[3];
-        int n_s = n_x*n_y;
-
-        float* du_i = buffers_full[0];
-        float* dy = buffers_full[1];
-        float* u_tmp = buffers_full[2];
-
-        //std::cout << du_i << std::endl;
-        //std::cout << g_data << std::endl;
-
-        //std::cout << "\t" << du_i << std::endl;
-        //std::cout << "\t" << dy << std::endl;
-        //std::cout << "\t" << u_tmp << std::endl;
-
-        int max_loops = n_x+n_y;
-        const int min_iters = 10;
-
-        for (int b = 0; b < n_bat; b++){
-
-            // create easier pointers
-            const float* g_b = g+b*n_c*n_s;
-            const float* u_b = u+b*n_c*n_s;
-            const float* rx_b = rx_cost+b*n_c*n_s;
-            const float* ry_b = ry_cost+b*n_c*n_s;
-            float* g_d_b = g_data+b*n_c*n_s;
-            float* g_rx_b = g_rx+b*n_c*n_s;
-            float* g_ry_b = g_ry+b*n_c*n_s;
-
-            //get initial gradient for the final logits
-            softmax(d, u_b, NULL, u_tmp, n_s, n_c);
-            copy_buffer(d, g_b, g_d_b, n_s*n_c);
-            populate_reg_mean_gradients(d, g_b, u_tmp, g_rx_b, g_ry_b, n_x, n_y, n_c);
-
-            //push gradients back a number of iterations
-            float max_change = 0.0f;
-            get_gradient_for_u(d, g_b, du_i, rx_b, ry_b, n_x, n_y, n_c);
-            
-            for(int i = 0; i < max_loops; i++){
-                for(int iter = 0; iter < min_iters; iter++){
-                    process_grad_potts(d, du_i, u_tmp, dy, n_s, n_c, tau);
-                    populate_reg_mean_gradients_and_add(d, dy, u_tmp, g_rx_b, g_ry_b, n_x, n_y, n_c);
-                    inc_buffer(d, dy, g_d_b, n_s*n_c);
-                    get_gradient_for_u(d, dy, dy, rx_b, ry_b, n_x, n_y, n_c);
-                    mult_buffer(d, 1.0f-tau, du_i, n_s*n_c);
-                    inc_buffer(d, dy, du_i, n_s*n_c);
-                }
-
-                copy_buffer(d, du_i, dy, n_s*n_c);
-                max_change = max_of_buffer(d, dy, n_c*n_s);
-                //std::cout << "Batch " << b << " iteration " << min_iters*(i+1) << "du max " << max_change <<  ": \t" << max_change << std::endl;
-                if(max_change < beta)
-                    break;
-            }
-
-            //std::cout << "Batch " << b << " iteration " << max_loops*i << ": \t" << max_change << std::endl;
-
-        }
-    }
+		int n_batches = sizes[0];
+		int n_s = sizes[2]*sizes[3];
+		int n_c = sizes[1];
+		for(int b = 0; b < n_batches; b++)
+			POTTS_MEANPASS_GPU_GRADIENT_2D(d, b, sizes,
+										  u+b*n_s*n_c,
+										  g+b*n_s*n_c,
+										  rx_cost+b*n_s*n_c,
+										  ry_cost+b*n_s*n_c,
+										  g_data+b*n_s*n_c,
+										  g_rx+b*n_s*n_c,
+										  g_ry+b*n_s*n_c,
+										  buffers_full)();
+      
+	}
 
     int num_buffers_full(){ return 3; }
     int num_buffers_images(){ return 0; }
@@ -191,4 +163,3 @@ struct PottsMeanpass2dGradFunctor<GPUDevice>{
 };
 
 #endif // GOOGLE_CUDA
-                           

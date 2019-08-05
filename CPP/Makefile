@@ -22,7 +22,8 @@ hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc hmf_mean
 hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc hmf_auglag_cpu_solver.cc
 
 ifneq (,$(CUDAFLAG))
-	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc kernels.o hmf_auglag_gpu_solver.cc hmf_meanpass_gpu_solver.cc potts_auglag_gpu_solver.cc
+	gpu_solvers = hmf_auglag_gpu_solver.cc hmf_meanpass_gpu_solver.cc potts_auglag_gpu_solver.cc potts_meanpass_gpu_solver.cc
+	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc kernels.o $(gpu_solvers)
 else
 	helpers = tf_memory_utils.cc cpu_kernels.cc hmf_trees.cc
 endif
