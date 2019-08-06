@@ -20,8 +20,7 @@ protected:
 	
     virtual void clear_spatial_flows(){
         px = new float[n_s*n_c];
-		for(int i = 0; i < n_s*n_c; i++)
-			px[i] = 0.0f;
+		clear(px, n_s*n_c);
 	}
 	
     virtual void update_spatial_flow_calc(){

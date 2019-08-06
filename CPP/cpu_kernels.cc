@@ -558,10 +558,36 @@ void compute_source_sink_multipliers( float* erru, float* u, float* ps, float* p
     
 }
 
+void compute_source_sink_multipliers_binary( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_s){
+    for(int s = 0; s < n_s; s++){
+        ps[s] = icc + pt[s] + div[s] - u[s] * icc;
+		if( d[s] < 0.0f )
+			ps[s] = 0.0f;
+		else if( ps[s] > d[s])
+			ps[s] = d[s];
+		
+        pt[s] = ps[s] - div[s] + u[s] * icc;
+		if( d[s] > 0.0f )
+			pt[s] = 0.0f;
+		else if( pt[s] > -d[s])
+			pt[s] = -d[s];
+            
+		erru[s] = cc * (ps[s] - div[s] - pt[s]);
+		u[s] += erru[s];
+		if(erru[s] < 0.0f)
+			erru[s] = -erru[s];
+    }
+}
+
 void compute_capacity_potts(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc){
     for(int s = 0, cs = 0; s < n_s; s++)
         for(int c = 0; c < n_c; c++, cs++)
             g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
+}
+
+void compute_capacity_binary(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const float tau, const float icc){
+    for(int s = 0; s < n_s; s++)
+		g[s] = tau * (div[s] + pt[s] - ps[s] - u[s] * icc);
 }
 
 void compute_flows(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z){

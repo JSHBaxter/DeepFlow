@@ -109,7 +109,7 @@ struct HmfAuglag2dFunctor<GPUDevice> {
                                      data_cost + b*n_s*n_c,
                                      rx_cost + b*n_s*n_r,
                                      ry_cost + b*n_s*n_r,
-                                     u + b*n_s*n_r,
+                                     u + b*n_s*n_c,
                                      full_buff, img_buff)();
 
         TreeNode::free_tree(node, children, bottom_up_list, top_down_list);

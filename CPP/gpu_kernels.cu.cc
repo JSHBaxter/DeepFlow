@@ -104,6 +104,46 @@ void update_source_sink_multiplier_potts(const Eigen::GpuDevice& dev, float* ps,
     if(CHECK_ERRORS) check_error(dev, "update_source_sink_multiplier_potts launch failed with error");
 }
 
+// update the source flow
+__global__ void update_source_sink_multiplier_binary_kernel(float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_s){
+    
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    //update source flow and constrain
+	float div_t = div[i];
+	float u_t = u[i];
+	float d_t = d[i];
+    float ps_t = icc+pt[i]+div_t-u_t*icc;
+	ps_t = (d_t <= 0.0f) ? 0.0f : ps_t;
+	ps_t = (ps_t > d_t && d_t > 0.0f) ? d_t : ps_t;
+    if( i < n_s )
+        ps[i] = ps_t;
+    
+    //update sink flow and constrain
+    float pt_t = ps_t-div_t+u_t*icc;
+	pt_t = (d_t >= 0.0f) ? 0.0f : pt_t;
+	pt_t = (pt_t > -d_t && d_t < 0.0f) ? -d_t : pt_t;
+    if( i < n_s )
+        pt[i] = pt_t;
+        
+	//update multiplier
+	float erru_t = cc * (ps_t - div_t - pt_t);
+	u_t += erru_t;
+	erru_t = (erru_t < 0.0f) ? -erru_t : erru_t;
+        
+	//output
+	if( i < n_s ){
+		u[i] = u_t;
+		erru[i] = erru_t;
+	}
+    
+}
+
+void update_source_sink_multiplier_binary(const Eigen::GpuDevice& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_s){
+    update_source_sink_multiplier_binary_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(ps, pt, div, u, erru, d, cc, icc, n_s);
+    if(CHECK_ERRORS) check_error(dev, "update_source_sink_multiplier_binary launch failed with error");
+}
+
 __global__ void update_source_flows_kernel_channel_first(float* ps, const float* pt, const float* div, const float* u, float icc, const int n_c, const int n_s) {
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
@@ -407,7 +447,7 @@ void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* di
     if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
 }
 
-__global__ void calc_capacity_kernel(float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
+__global__ void calc_capacity_potts_kernel(float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float ps_t = ps[i];
     for(int c = 0; c < n_c; c++){
@@ -419,8 +459,21 @@ __global__ void calc_capacity_kernel(float* g, const float* div, const float* ps
 }
 
 void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
-    calc_capacity_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, div, ps, pt, u, n_s, n_c, icc, tau);
+    calc_capacity_potts_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, div, ps, pt, u, n_s, n_c, icc, tau);
     if(CHECK_ERRORS) check_error(dev, "calc_capacity_potts launch failed with error");
+}
+
+__global__ void calc_capacity_binary_kernel(float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const float icc, const float tau){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    float g_t = div[i] + pt[i] - ps[i] - icc * u[i];
+    g_t *= tau;
+	if(i < n_s)
+		g[i] = g_t;
+}
+
+void calc_capacity_binary(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const float icc, const float tau){
+	calc_capacity_binary_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, div, ps, pt, u, n_s, icc, tau);
+    if(CHECK_ERRORS) check_error(dev, "calc_capacity_binary_kernel launch failed with error");
 }
 
 __global__ void calc_capacity_potts_source_separate_kernel(float* g, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){

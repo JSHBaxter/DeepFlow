@@ -24,6 +24,7 @@ protected:
     virtual void clear_spatial_flows(){
         px = new float[n_s*n_c];
         py = new float[n_s*n_c];
+		clear(px, py, n_s*n_c);
 	}
 	
     virtual void update_spatial_flow_calc(){

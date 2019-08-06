@@ -3,10 +3,10 @@
 #include <iostream>
 #include <limits>
 
-#include "potts_auglag_cpu_solver.h"
+#include "binary_auglag_cpu_solver.h"
 #include "cpu_kernels.h"
 
-class POTTS_AUGLAG_CPU_SOLVER_3D : public POTTS_AUGLAG_CPU_SOLVER_BASE
+class BINARY_AUGLAG_CPU_SOLVER_3D : public BINARY_AUGLAG_CPU_SOLVER_BASE
 {
 private:
     const int n_x;
@@ -42,7 +42,7 @@ protected:
 	}
 
 public:
-	POTTS_AUGLAG_CPU_SOLVER_3D(
+	BINARY_AUGLAG_CPU_SOLVER_3D(
         const int batch,
         const int sizes[5],
         const float* data_cost,
@@ -51,7 +51,7 @@ public:
         const float* rz_cost,
         float* u 
 	):
-	POTTS_AUGLAG_CPU_SOLVER_BASE(batch, sizes[1]*sizes[2]*sizes[3], sizes[4], data_cost, u),
+	BINARY_AUGLAG_CPU_SOLVER_BASE(batch, sizes[1]*sizes[2]*sizes[3], sizes[4], data_cost, u),
     n_x(sizes[1]),
     n_y(sizes[2]),
     n_z(sizes[3]),
@@ -67,7 +67,7 @@ public:
 
 
 template <>
-struct PottsAuglag3dFunctor<CPUDevice> {
+struct BinaryAuglag3dFunctor<CPUDevice> {
   void operator()(
       const CPUDevice& d,
       int sizes[5],
@@ -85,7 +85,7 @@ struct PottsAuglag3dFunctor<CPUDevice> {
     int n_batches = sizes[0];
     std::thread** threads = new std::thread* [n_batches];
     for(int b = 0; b < n_batches; b++)
-        threads[b] = new std::thread(POTTS_AUGLAG_CPU_SOLVER_3D(b, sizes,
+        threads[b] = new std::thread(BINARY_AUGLAG_CPU_SOLVER_3D(b, sizes,
 																data_cost+b*n_s*n_c,
 																rx_cost+b*n_s*n_c,
 																ry_cost+b*n_s*n_c,

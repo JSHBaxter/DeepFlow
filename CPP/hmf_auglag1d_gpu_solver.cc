@@ -100,7 +100,7 @@ struct HmfAuglag1dFunctor<GPUDevice> {
             HMF_AUGLAG_GPU_SOLVER_1D(d, bottom_up_list, b, sizes,
                                      data_cost + b*n_s*n_c,
                                      rx_cost + b*n_s*n_r,
-                                     u + b*n_s*n_r,
+                                     u + b*n_s*n_c,
                                      full_buff, img_buff)();
 
         TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
