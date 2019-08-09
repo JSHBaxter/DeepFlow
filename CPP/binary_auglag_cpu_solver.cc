@@ -20,7 +20,9 @@ pt(0),
 div(0),
 g(0),
 u(u)
-{std::cout << n_s << " " << n_c << std::endl;}
+{
+    //std::cout << n_s << " " << n_c << std::endl;
+}
 
 //perform one iteration of the algorithm
 void BINARY_AUGLAG_CPU_SOLVER_BASE::block_iter(){
@@ -62,7 +64,7 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_c);
-		std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

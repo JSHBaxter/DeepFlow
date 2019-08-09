@@ -107,18 +107,14 @@ struct HmfAuglag2dFunctor<CPUDevice> {
     int n_c = sizes[3];
     int n_r = sizes[5];
     std::thread** threads = new std::thread* [n_batches];
-    std::cout << threads << std::endl;
     HMF_AUGLAG_CPU_SOLVER_2D** solvers = new HMF_AUGLAG_CPU_SOLVER_2D* [n_batches];
-    std::cout << solvers << std::endl;
     for(int b = 0; b < n_batches; b++){
         solvers[b] = new HMF_AUGLAG_CPU_SOLVER_2D(bottom_up_list, b, sizes, 
                                                   data_cost+b*n_s*n_c,
                                                   rx_cost+b*n_s*n_r,
 												  ry_cost+b*n_s*n_r,
 												  u+b*n_s*n_c);
-        std::cout << solvers[b] << std::endl;
         threads[b] = new std::thread(*(solvers[b]));
-        std::cout << threads[b] << std::endl;
     }
     for(int b = 0; b < n_batches; b++)
         //(*(solvers[b]))();

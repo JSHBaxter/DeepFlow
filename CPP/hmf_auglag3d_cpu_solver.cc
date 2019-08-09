@@ -82,13 +82,6 @@ public:
     ry_b(0),
     rz_b(0)
     {
-        std::cout << "Derived class:" << std::endl;
-        std::cout << "\t" << px << std::endl;
-        std::cout << "\t" << py << std::endl;
-        std::cout << "\t" << pz << std::endl;
-        std::cout << "\t" << rx_b << std::endl;
-        std::cout << "\t" << ry_b << std::endl;
-        std::cout << "\t" << rz_b << std::endl;
     }
     
     void clean_up(){
@@ -131,7 +124,6 @@ struct HmfAuglag3dFunctor<CPUDevice> {
     int n_c = sizes[4];
     int n_r = sizes[6];
     std::thread** threads = new std::thread* [n_batches];
-    std::cout << threads << std::endl;
     HMF_AUGLAG_CPU_SOLVER_3D** solvers = new HMF_AUGLAG_CPU_SOLVER_3D* [n_batches];
     std::cout << solvers << std::endl;
     for(int b = 0; b < n_batches; b++){
@@ -141,9 +133,7 @@ struct HmfAuglag3dFunctor<CPUDevice> {
 												  ry_cost+b*n_s*n_r,
 												  rz_cost+b*n_s*n_r,
 												  u+b*n_s*n_c);
-        std::cout << solvers[b] << std::endl;
         threads[b] = new std::thread(*(solvers[b]));
-        std::cout << threads[b] << std::endl;
     }
     for(int b = 0; b < n_batches; b++)
         //(*(solvers[b]))();

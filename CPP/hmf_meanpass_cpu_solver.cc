@@ -19,7 +19,9 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
     u(u),
     u_tmp(0),
     r_eff(0)
-    {std::cout << n_s << " " << n_c << " " << n_r << std::endl;}
+    {
+        //std::cout << n_s << " " << n_c << " " << n_r << std::endl;
+    }
 
 float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(){
     aggregate_bottom_up(u,u_tmp,n_s,n_c,n_r,bottom_up_list);
@@ -60,7 +62,7 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
         for (int iter = 0; iter < min_iter; iter++)
             max_change = block_iter();
 
-        std::cout << "Iter #" << i << ": " << max_change << std::endl;
+        //std::cout << "Iter #" << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

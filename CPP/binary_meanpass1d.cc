@@ -73,11 +73,9 @@ public:
         int num_intermediates_images = BinaryMeanpass1dFunctor<Device>().num_buffers_images();
         float** buffers_full = NULL;
         float** buffers_imgs = NULL;
-        std::cout << "Getting buffers" << std::endl;
         get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, buffers_imgs, n_i, num_intermediates_images, data_cost);
         
         // call function
-        std::cout << "Calling buffers" << std::endl;
         BinaryMeanpass1dFunctor<Device>()(
             context->eigen_device<Device>(),
             size_array,

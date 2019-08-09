@@ -99,8 +99,6 @@ public:
         get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, buffers_imgs, n_i, num_intermediates_images, data_cost);
         
         // call function
-        std::cout << "calling function" << std::endl;
-        std::cout << num_intermediates_full << std::endl;
         HmfAuglag3dFunctor<Device>()(
             context->eigen_device<Device>(),
             size_array,

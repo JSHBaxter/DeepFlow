@@ -21,7 +21,9 @@ n_s(n_s),
 data(data_cost),
 r_eff(full_buffs[0]),
 u(u)
-{std::cout << n_s << " " << n_c << std::endl;}
+{
+    //std::cout << n_s << " " << n_c << std::endl;
+}
 
 //perform one iteration of the algorithm
 void POTTS_MEANPASS_GPU_SOLVER_BASE::block_iter(){
@@ -49,7 +51,7 @@ void POTTS_MEANPASS_GPU_SOLVER_BASE::operator()(){
             block_iter();
 
 		float max_change = max_of_buffer(dev, r_eff, n_c*n_s);
-		std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -92,7 +94,9 @@ g_data(g_d),
 d_y(full_buffs[0]),
 g_u(full_buffs[1]),
 u(full_buffs[2])
-{std::cout << n_s << " " << n_c << std::endl;}
+{
+    //std::cout << n_s << " " << n_c << std::endl;
+}
 
 //perform one iteration of the algorithm
 void POTTS_MEANPASS_GPU_GRADIENT_BASE::block_iter(){
@@ -132,7 +136,7 @@ void POTTS_MEANPASS_GPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = max_of_buffer(dev, g_u, n_s*n_c);
-		std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < beta)
             break;
     }

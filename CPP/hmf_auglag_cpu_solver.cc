@@ -27,7 +27,9 @@ div(0),
 g(0),
 data_b(0),
 u(u)
-{std::cout << n_s << " " << n_c << " " << n_r << std::endl;}
+{
+    //std::cout << n_s << " " << n_c << " " << n_r << std::endl;
+}
 
 //perform one iteration of the algorithm
 void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
@@ -196,7 +198,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_r);
-		std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

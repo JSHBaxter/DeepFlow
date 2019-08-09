@@ -22,7 +22,9 @@ pt(full_buff[0]),
 div(full_buff[1]),
 g(full_buff[2]),
 ps(full_buff[3])
-{std::cout << n_s << " " << n_c << std::endl;}
+{
+    //std::cout << n_s << " " << n_c << std::endl;
+}
 
 void BINARY_AUGLAG_GPU_SOLVER_BASE::block_iter(){
     
@@ -59,7 +61,7 @@ void BINARY_AUGLAG_GPU_SOLVER_BASE::operator()(){
 
         //Determine if converged
         float max_change = max_of_buffer(dev, g, n_s*n_c);
-		std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

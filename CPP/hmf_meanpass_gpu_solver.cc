@@ -72,7 +72,7 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
 
         //Determine if converged
         float max_change = max_of_buffer(dev, temp, n_s*n_c);
-        std::cout << "Iter #" << i << ": " << max_change << std::endl;
+        //std::cout << "Iter #" << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
