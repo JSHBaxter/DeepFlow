@@ -43,7 +43,8 @@ public:
 	n_y(sizes[3]),
 	rx(rx_cost),
 	ry(ry_cost)
-	{}
+	{std::cout << rx_cost << std::endl;
+	 std::cout << ry_cost << std::endl;}
 };
 
 

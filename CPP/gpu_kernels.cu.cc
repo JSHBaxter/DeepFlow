@@ -495,7 +495,9 @@ __global__ void log_buffer_kernel(const float* in, float* out, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
     float value = in[i];
-    value = log(value + epsilon);
+	value = (value < epsilon) ? epsilon : value;
+	value = (value > 1.0f - epsilon) ? 1.0f - epsilon : value;
+    value = log(value);
     
     if(i < n_s)
         out[i] = value;

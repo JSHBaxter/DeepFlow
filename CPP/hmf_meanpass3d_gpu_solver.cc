@@ -30,7 +30,7 @@ protected:
     }
     
     void update_spatial_flow_calc(){
-        get_effective_reg(dev, temp, temp, rx, ry, rz, n_x, n_y, n_z, n_r);
+        get_effective_reg(dev, temp, u_full, rx, ry, rz, n_x, n_y, n_z, n_r);
     }
 
 public:
@@ -82,13 +82,16 @@ protected:
     int min_iter_calc(){
         return n_x + n_y + n_z;
     }
+	
+	void clear_variables(){
+		clear_buffer(dev, g_rx, n_s*n_r);
+		clear_buffer(dev, g_ry, n_s*n_r);
+		clear_buffer(dev, g_rz, n_s*n_r);
+	}
     
     void update_spatial_flow_calc(){
-        //and calculate gradients for the rest
-        populate_reg_mean_gradients(dev, dy, u_tmp, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_r);
-        
-        //get gradients for u terms (without diminish from last iteration - save to du_i)
-        get_gradient_for_u(dev, dy, du, rx, ry, rz, n_x, n_y, n_z, n_r);
+		populate_reg_mean_gradients_and_add(dev, dy, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_r);
+		get_gradient_for_u(dev, dy, dy, rx, ry, rz, n_x, n_y, n_z, n_r);
     }
 
 public:
@@ -145,25 +148,26 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
         float** full_buff,
         float** img_buff){
 
+        int n_s = sizes[2]*sizes[3]*sizes[4];
+        int n_c = sizes[1];
+        int n_r = sizes[5];
+		
         //build the tree
         TreeNode* node = NULL;
         TreeNode** children = NULL;
         TreeNode** bottom_up_list = NULL;
         TreeNode** top_down_list = NULL;
-        int* parentage = new int[sizes[5]];
-        int* data_index = new int[sizes[5]];
-        get_from_gpu(d, parentage_g, parentage, sizes[5]*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, sizes[5]*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[5], sizes[1]);
-        delete parentage;
-        delete data_index;
+        int* parentage = new int[n_r];
+        int* data_index = new int[n_r];
+        get_from_gpu(d, parentage_g, parentage, n_r*sizeof(int));
+        get_from_gpu(d, data_index_g, data_index, n_r*sizeof(int));
+        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, n_r, n_c);
+        free(parentage);
+        free(data_index);
         //node->print_tree();
         //TreeNode::print_list(bottom_up_list, sizes[5]+1);
 
         int n_batches = sizes[0];
-        int n_s = sizes[2]*sizes[3]*sizes[4];
-        int n_c = sizes[1];
-        int n_r = sizes[5];
         for(int b = 0; b < n_batches; b++)
             HMF_MEANPASS_GPU_SOLVER_3D(d, bottom_up_list, b, sizes,
                                        data_cost + b*n_s*n_c,
@@ -178,7 +182,7 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
 
     }
 
-    int num_buffers_full(){ return 1; }
+    int num_buffers_full(){ return 2; }
     int num_buffers_images(){ return 0; }
     int num_buffers_branch(){ return 0; }
     int num_buffers_data(){ return 0; }
@@ -210,23 +214,26 @@ struct HmfMeanpass3dGradFunctor<GPUDevice>{
         clear_buffer(d, g_par, sizes[5]);
         clear_buffer(d, g_didx, sizes[5]);
 
+        int n_s = sizes[2]*sizes[3]*sizes[4];
+        int n_c = sizes[1];
+        int n_r = sizes[5];
+		
         //build the tree
         TreeNode* node = NULL;
         TreeNode** children = NULL;
         TreeNode** bottom_up_list = NULL;
         TreeNode** top_down_list = NULL;
-        int* parentage = new int[sizes[5]];
-        int* data_index = new int[sizes[5]];
-        get_from_gpu(d, parentage_g, parentage, sizes[5]*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, sizes[5]*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, sizes[5], sizes[1]);
-        delete parentage;
-        delete data_index;
+        int* parentage = new int[n_r];
+        int* data_index = new int[n_r];
+        get_from_gpu(d, parentage_g, parentage, n_r*sizeof(int));
+        get_from_gpu(d, data_index_g, data_index, n_r*sizeof(int));
+        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, n_r, n_c);
+        free(parentage);
+        free(data_index);
+        //node->print_tree();
+        //TreeNode::print_list(bottom_up_list, sizes[5]+1);
 
         int n_batches = sizes[0];
-        int n_s = sizes[2]*sizes[3]*sizes[4];
-        int n_c = sizes[1];
-        int n_r = sizes[5];
         for(int b = 0; b < n_batches; b++)
             HMF_MEANPASS_GPU_GRADIENT_3D(d, bottom_up_list, b, sizes,
                                          rx_cost + b*n_s*n_r,

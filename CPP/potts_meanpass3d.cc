@@ -246,7 +246,8 @@ REGISTER_OP("PottsMeanpass3dGrad")
     ::tensorflow::shape_inference::ShapeHandle input;
     for (size_t i = 0; i < c->num_inputs(); i++)
       TF_RETURN_IF_ERROR(c->WithRank(c->input(i), 5, &input));
-    c->set_output(0, c->input(0));
+    for (size_t i = 0; i < c->num_inputs()-2; i++)
+        c->set_output(i, c->input(i+1));
     return Status::OK();
   });
 

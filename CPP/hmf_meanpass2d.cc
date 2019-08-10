@@ -62,7 +62,7 @@ public:
                              (int) rx_shape.dim_size(1),
                              (int) rx_shape.dim_size(3)};
 
-        // check input is of rank 5
+        // check input is of correct rank
         DCHECK_EQ(data_shape.dims(), 4);
         DCHECK_EQ(rx_shape.dims(), 4);
         DCHECK_EQ(ry_shape.dims(), 4);
@@ -80,14 +80,14 @@ public:
         OP_REQUIRES_OK(context, context->allocate_output(0, data_shape, &u));
 
         // create intermediate buffers as needed
-        int n_s = size_array[4]*size_array[2]*size_array[5];
-        int n_i = size_array[4]*size_array[2];
+        int n_i = size_array[2]*size_array[3];
+        int n_s = n_i*size_array[4];
         int num_intermediates_full = HmfMeanpass2dFunctor<Device>().num_buffers_full();
         int num_intermediates_images = HmfMeanpass2dFunctor<Device>().num_buffers_images();
         float** buffers_full = NULL;
         float** buffers_imgs = NULL;
         get_temporary_buffers(context, buffers_full, n_s, num_intermediates_full, buffers_imgs, n_i, num_intermediates_images, data_cost);
-        
+		
         // call function
         HmfMeanpass2dFunctor<Device>()(
             context->eigen_device<Device>(),
@@ -117,6 +117,8 @@ public:
 
     void Compute(OpKernelContext* context) override {
         
+		std::cout << "In kernel" << std::endl;
+		
         // ensure all inputs are present
         DCHECK_EQ(7, context->num_inputs());
 
@@ -173,8 +175,8 @@ public:
         OP_REQUIRES_OK(context, context->allocate_output(4, data_index_shape, &grad_didx));
 
         // create intermediate buffers as needed
-        int n_s = size_array[4]*size_array[2]*size_array[5];
-        int n_i = size_array[4]*size_array[2];
+        int n_i = size_array[2]*size_array[3];
+        int n_s = n_i*size_array[4];
         int num_intermediates_full = HmfMeanpass2dGradFunctor<Device>().num_buffers_full();
         int num_intermediates_images = HmfMeanpass2dGradFunctor<Device>().num_buffers_images();
         float** buffers_full = NULL;
@@ -244,7 +246,7 @@ REGISTER_OP("HmfMeanpass2dGrad")
     TF_RETURN_IF_ERROR(c->WithRank(c->input(c->num_inputs()-3), 1, &input));
     TF_RETURN_IF_ERROR(c->WithRank(c->input(c->num_inputs()-2), 1, &input));
     TF_RETURN_IF_ERROR(c->WithRank(c->input(c->num_inputs()-1), 4, &input));
-    for (size_t i = 0; i < c->num_inputs()-1; i++)
+    for (size_t i = 0; i < c->num_inputs()-2; i++)
         c->set_output(i, c->input(i+1));
     return Status::OK();
   });

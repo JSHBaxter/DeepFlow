@@ -52,7 +52,10 @@ public:
     ry(ry_cost),
 	px(buffers_full[4]),
 	py(buffers_full[5])
-	{}
+	{std::cout << rx << std::endl;
+	 std::cout << ry << std::endl;
+	 std::cout << px << std::endl;
+	 std::cout << py << std::endl;}
 };
 
 template <>
@@ -70,6 +73,7 @@ struct BinaryAuglag2dFunctor<GPUDevice>{
     int n_c = sizes[1];
     int n_s = sizes[2]*sizes[3];
     int n_batches = sizes[0];
+	std::cout << "Running Binary Auglag 2D" << std::endl;
     for(int b = 0; b < n_batches; b++)
         BINARY_AUGLAG_GPU_SOLVER_2D(d, b, sizes, 
 								   data_cost+b*n_s*n_c,

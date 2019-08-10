@@ -25,10 +25,11 @@ protected:
     const float* const data;
     float* const u;
     float* const temp;
+    float* const u_full;
     
     // optimization constants
     const float tau = 0.5f;
-    const float beta = 0.005f;
+	const float beta = 0.01f;
     const float epsilon = 10e-5f;
     
     virtual int min_iter_calc() = 0;
@@ -62,21 +63,23 @@ protected:
     const int n_c;
     const int n_r;
     const int n_s;
-    const float* const u;
+    const float* const logits;
     const float* const grad;
     float* const g_data;
-    float* const u_tmp;
+    float* const u;
     float* const tmp;
     float* const dy;
     float* const du;
     
     // optimization constants
-    const float tau = 0.1f;
-    const float beta = 0.005f;
-    const float epsilon = 10e-5f;
+	const float beta = 0.0001f;
+	const float epsilon = 0.01f;
+	const float tau = 0.5f;
     
     virtual int min_iter_calc() = 0;
+	virtual void clear_variables() = 0;
     virtual void update_spatial_flow_calc() = 0;
+    void block_iter();
     
 public:
     HMF_MEANPASS_GPU_GRADIENT_BASE(

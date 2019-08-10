@@ -194,8 +194,8 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
         block_iter();
 
     //get final output
-    copy_buffer(dev, u_tmp, u, n_s*n_c);
-    //log_buffer(dev, u_tmp, u_b, n_s*n_c);
+    //copy_buffer(dev, u_tmp, u, n_s*n_c);
+    log_buffer(dev, u_tmp, u, n_s*n_c);
 
 }
 

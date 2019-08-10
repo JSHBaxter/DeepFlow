@@ -274,7 +274,7 @@ REGISTER_OP("HmfMeanpass3dGrad")
     TF_RETURN_IF_ERROR(c->WithRank(c->input(c->num_inputs()-3), 1, &input));
     TF_RETURN_IF_ERROR(c->WithRank(c->input(c->num_inputs()-2), 1, &input));
     TF_RETURN_IF_ERROR(c->WithRank(c->input(c->num_inputs()-1), 5, &input));
-    for (size_t i = 0; i < c->num_inputs()-1; i++)
+    for (size_t i = 0; i < c->num_inputs()-2; i++)
         c->set_output(i, c->input(i+1));
     return Status::OK();
   });
