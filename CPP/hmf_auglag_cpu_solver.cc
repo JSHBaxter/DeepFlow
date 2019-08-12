@@ -177,8 +177,17 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
         for(int c = 0; c < n_c; c++)
             data_b[c*n_s+s] = -data[s*n_c+c];
 
+	//initialize multipliers
+    clear(u_tmp+n_s*n_c, n_s*(n_r-n_c));
+	softmax_channels_first(data_b, u_tmp, n_s, n_c);
+    for (int l = n_c; l < n_r; l++) {
+        const TreeNode* n = bottom_up_list[l];
+        for(int c = 0; c < n->c; c++)
+            inc(u_tmp+n->children[c]->r*n_s, u_tmp+n->r*n_s, n_s);
+    }
+
     //initialize variables
-    clear(g, div, u_tmp, n_r*n_s);
+    clear(g, div, n_r*n_s);
     clear_spatial_flows();
     clear(pt, n_r*n_s);
     clear(ps, n_s);
