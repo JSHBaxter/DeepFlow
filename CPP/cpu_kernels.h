@@ -55,6 +55,7 @@ void init_flows(const float* d, float* ps, const int n_c, const int n_s);
 void init_flows_channels_first(const float* d, float* ps, const int n_c, const int n_s);
 
 //Functions specifically for the mean field forward calculation
+void softmax_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c);
 void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c);
 void softmax_update(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
 float softmax_with_convergence(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);

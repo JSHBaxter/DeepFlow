@@ -128,6 +128,22 @@ inline int idxc(const int x, const int n_x, const int y, const int n_y, const in
     return c + n_c*idx(x,n_x,y,n_y,z,n_z);
 }
 
+void softmax_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c){
+    for(int s = 0; s < n_s; s++) {
+        float max_cost = bufferin[s];
+        for(int c = 1; c < n_c; c++)
+            if(bufferin[n_s* c + s] > max_cost)
+                max_cost = bufferin[n_s* c + s];
+        float accum = 0.0f;
+        for(int c = 0; c < n_c; c++){
+            bufferout[n_s* c + s] = std::exp(bufferin[n_s* c + s]-max_cost);
+            accum += bufferout[n_s* c + s];
+        }
+        for(int c = 0; c < n_c; c++)
+            bufferout[n_s* c + s] /= accum;
+    }
+}
+
 void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c){
     for(int s = 0; s < n_s; s++) {
         float max_cost = bufferin[n_c*s];
