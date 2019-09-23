@@ -13,6 +13,7 @@
 #include "hmf_trees.h"
 #include "hmf_auglag_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <algorithm>
 
 
 class HMF_AUGLAG_GPU_SOLVER_2D : public HMF_AUGLAG_GPU_SOLVER_BASE
@@ -27,7 +28,7 @@ private:
 
 protected:
     int min_iter_calc() {
-        return n_x + n_y;
+        return std::max(n_x,n_y)+n_r-n_c;
     }
     
     virtual void clear_spatial_flows(){

@@ -17,6 +17,7 @@ struct PottsMeanpass3dFunctor {
       const float* rx_cost,
       const float* ry_cost,
       const float* rz_cost,
+      const float* init,
       float* out,
       float** buffers_full,
       float** buffers_images);

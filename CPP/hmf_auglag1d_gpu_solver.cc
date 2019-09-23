@@ -24,7 +24,7 @@ private:
 
 protected:
     int min_iter_calc() {
-        return n_x;
+        return n_x+n_r-n_c;
     }
     
     virtual void clear_spatial_flows(){

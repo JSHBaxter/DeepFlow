@@ -8,6 +8,7 @@
 
 #include "potts_auglag_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <algorithm>
 
 class POTTS_AUGLAG_GPU_SOLVER_3D : public POTTS_AUGLAG_GPU_SOLVER_BASE
 {
@@ -24,7 +25,7 @@ private:
 
 protected:
     virtual int min_iter_calc(){
-		return n_x+n_y+n_z;
+		return std::max(std::max(n_x,n_y), n_z);
 	}
 	
     virtual void clear_spatial_flows(){

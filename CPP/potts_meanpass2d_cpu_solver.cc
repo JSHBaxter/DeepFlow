@@ -5,6 +5,7 @@
 
 #include "potts_meanpass_cpu_solver.h"
 #include "cpu_kernels.h"
+#include <algorithm>
 
 class POTTS_MEANPASS_CPU_SOLVER_2D : public POTTS_MEANPASS_CPU_SOLVER_BASE
 {
@@ -16,7 +17,7 @@ private:
 	
 protected:
     int min_iter_calc(){
-		return n_x+n_y;
+		return std::max(n_x,n_y);
 	}
     void init_vars(){}
     void calculate_regularization(){
@@ -31,9 +32,10 @@ public:
         const float* data_cost,
         const float* rx_cost,
         const float* ry_cost,
+        const float* init_u,
         float* u 
 	):
-	POTTS_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1]*sizes[2], sizes[3], data_cost, u),
+	POTTS_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1]*sizes[2], sizes[3], data_cost, init_u, u),
 	n_x(sizes[1]),
 	n_y(sizes[2]),
 	rx(rx_cost),
@@ -94,6 +96,7 @@ struct PottsMeanpass2dFunctor<CPUDevice> {
       const float* data_cost,
       const float* rx_cost,
       const float* ry_cost,
+      const float* init_u,
       float* u,
       float** /*unused full buffers*/,
       float** /*unused image buffers*/){
@@ -108,6 +111,7 @@ struct PottsMeanpass2dFunctor<CPUDevice> {
 																  data_cost+ b*n_s*n_c,
 																  rx_cost+ b*n_s*n_c,
 																  ry_cost+ b*n_s*n_c,
+                                                                  init_u+ b*n_s*n_c,
 																  u+ b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();

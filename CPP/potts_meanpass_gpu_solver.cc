@@ -12,6 +12,7 @@ POTTS_MEANPASS_GPU_SOLVER_BASE::POTTS_MEANPASS_GPU_SOLVER_BASE(
     const int n_s,
     const int n_c,
     const float* data_cost,
+    const float* init_u,
     float* u,
 	float** full_buffs) :
 dev(dev),
@@ -22,6 +23,11 @@ data(data_cost),
 r_eff(full_buffs[0]),
 u(u)
 {
+    if(init_u)
+        copy_buffer(dev, init_u, u, n_s*n_c);
+    else
+	    softmax(dev, data, 0, u, n_s, n_c);
+        
     //std::cout << n_s << " " << n_c << std::endl;
 }
 
@@ -37,7 +43,6 @@ void POTTS_MEANPASS_GPU_SOLVER_BASE::operator()(){
 
 	//initialize variables
 	init_vars();
-	softmax(dev, data, 0, u, n_s, n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();

@@ -15,6 +15,7 @@ struct PottsMeanpass1dFunctor {
       int size[3],
       const float* data_cost,
       const float* rx_cost,
+      const float* init,
       float* out,
       float** buffers_full,
       float** buffers_images);

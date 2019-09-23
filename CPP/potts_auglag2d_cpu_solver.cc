@@ -5,6 +5,7 @@
 
 #include "potts_auglag_cpu_solver.h"
 #include "cpu_kernels.h"
+#include <algorithm>
 
 class POTTS_AUGLAG_CPU_SOLVER_2D : public POTTS_AUGLAG_CPU_SOLVER_BASE
 {
@@ -18,7 +19,7 @@ private:
 
 protected:
     virtual int min_iter_calc(){
-		return n_x+n_y;
+		return std::max(n_x,n_y);
 	}
 	
     virtual void clear_spatial_flows(){

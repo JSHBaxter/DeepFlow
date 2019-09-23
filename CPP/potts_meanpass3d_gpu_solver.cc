@@ -8,6 +8,7 @@
 
 #include "potts_meanpass_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <algorithm>
 
 class POTTS_MEANPASS_GPU_SOLVER_3D : public POTTS_MEANPASS_GPU_SOLVER_BASE
 {
@@ -21,7 +22,7 @@ private:
 	
 protected:
     int min_iter_calc(){
-		return n_x+n_y+n_z;
+		return std::max(std::max(n_x,n_y), n_z);
 	}
     void init_vars(){}
     void calculate_regularization(){
@@ -38,10 +39,11 @@ public:
         const float* rx_cost,
         const float* ry_cost,
         const float* rz_cost,
+        const float* init_u,
         float* u,
 		float** buffers_full
 	):
-	POTTS_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[2]*sizes[3]*sizes[4], sizes[1], data_cost, u, buffers_full),
+	POTTS_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[2]*sizes[3]*sizes[4], sizes[1], data_cost, init_u, u, buffers_full),
 	n_x(sizes[2]),
 	n_y(sizes[3]),
 	n_z(sizes[4]),
@@ -118,6 +120,7 @@ struct PottsMeanpass3dFunctor<GPUDevice> {
 	const float* rx_cost,
 	const float* ry_cost,
 	const float* rz_cost,
+    const float* init_u,
 	float* u,
 	float** buffers_full,
 	float** /*unused image buffers*/){
@@ -125,12 +128,14 @@ struct PottsMeanpass3dFunctor<GPUDevice> {
     int n_batches = sizes[0];
 	int n_s = sizes[2]*sizes[3]*sizes[4];
 	int n_c = sizes[1];
+      
     for(int b = 0; b < n_batches; b++)
         POTTS_MEANPASS_GPU_SOLVER_3D(d, b, sizes,
 									  data_cost+ b*n_s*n_c,
 									  rx_cost+ b*n_s*n_c,
 									  ry_cost+ b*n_s*n_c,
 									  rz_cost+ b*n_s*n_c,
+									  init_u+ b*n_s*n_c,
 									  u+ b*n_s*n_c,
 									  buffers_full)();
       

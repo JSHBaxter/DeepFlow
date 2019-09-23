@@ -13,6 +13,7 @@
 #include "hmf_trees.h"
 #include "hmf_meanpass_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <algorithm>
 
 class HMF_MEANPASS_GPU_SOLVER_2D : public HMF_MEANPASS_GPU_SOLVER_BASE
 {
@@ -24,7 +25,7 @@ private:
     
 protected:
     int min_iter_calc(){
-        return n_x + n_y;
+		return std::max(n_x,n_y)+n_r-n_c;
     }
     void update_spatial_flow_calc(){
         get_effective_reg(dev, temp, u_full, rx, ry, n_x, n_y, n_r);

@@ -5,6 +5,7 @@
 #include "cpu_kernels.h"
 #include "hmf_trees.h"
 #include "hmf_meanpass_cpu_solver.h"
+#include <algorithm>
 
 class HMF_MEANPASS_CPU_SOLVER_3D : public HMF_MEANPASS_CPU_SOLVER_BASE
 {
@@ -18,7 +19,7 @@ private:
 
 protected:
     int min_iter_calc(){
-        return n_x + n_y + n_z;
+        return std::max(n_x,std::max(n_y,n_z))+n_r-n_c;
     }
     
     void update_spatial_flow_calc(){

@@ -11,6 +11,7 @@ POTTS_MEANPASS_CPU_SOLVER_BASE::POTTS_MEANPASS_CPU_SOLVER_BASE(
     const int n_s,
     const int n_c,
     const float* data_cost,
+    const float* init_u,
     float* u ) :
 b(batch),
 n_c(n_c),
@@ -19,6 +20,10 @@ data(data_cost),
 r_eff(0),
 u(u)
 {
+    if(init_u)
+        copy(init_u, u, n_s*n_c);
+    else
+        softmax(data, u, n_s, n_c);
     //std::cout << n_s << " " << n_c << std::endl;
 }
 
@@ -42,7 +47,6 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
 
 	//initialize variables
 	init_vars();
-	softmax(data, u, n_s, n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();

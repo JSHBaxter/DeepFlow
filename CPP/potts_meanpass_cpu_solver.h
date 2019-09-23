@@ -37,6 +37,7 @@ public:
         const int n_s,
         const int n_c,
         const float* data_cost,
+        const float* init_u,
         float* u) ;
         
     ~POTTS_MEANPASS_CPU_SOLVER_BASE();
