@@ -61,8 +61,6 @@ protected:
     }
 };
 
-// Define the OpKernel class
-// template parameter <float> is the datatype of the tensors.
 template <typename Device>
 class PottsMeanpass1dGradOp : public PottsMeanpassNdGradOp<Device> {
 public:
