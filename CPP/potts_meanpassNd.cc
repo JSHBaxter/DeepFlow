@@ -37,9 +37,9 @@ void PottsMeanpassNdOp<Device>::Compute(OpKernelContext* context) {
     
     //allocate temprary buffers
     float** buffers_full = NULL;
-    get_temporary_buffers(context, buffers_full, this->n_s, this->Get_Num_Intermediates_Full(), &(context->input(0)));
     float** buffers_imgs = NULL;
-    get_temporary_buffers(context, buffers_imgs, this->n_i, this->Get_Num_Intermediates_Images(), &(context->input(0)));
+    get_temporary_buffers(context, buffers_full, this->n_s, this->Get_Num_Intermediates_Full(), 
+                                   buffers_imgs, this->n_i, this->Get_Num_Intermediates_Images(), &(context->input(0)));
     
     //pass down to child to find and run method
     this->CallFunction(context, buffers_full, buffers_imgs);
@@ -85,7 +85,7 @@ void PottsMeanpassNdOp<Device>::CheckInputs(OpKernelContext* context) {
     for(int i = 1; i < N+2; i++)
         this->n_s *= size_array[i];
     for(int i = 2; i < N+2; i++)
-        this->n_i = size_array[2]*size_array[3]*size_array[4];
+        this->n_i = size_array[i];
         
 }
 
@@ -112,10 +112,9 @@ template <typename Device>
 PottsMeanpassNdGradOp<Device>::~PottsMeanpassNdGradOp(){
     if(this->size_array)
         delete this->size_array;
-    if(this->grads)
-        delete this->grads;
+    //if(this->grads)
+    //    delete this->grads;
 }
-
 
 template <typename Device>
 void PottsMeanpassNdGradOp<Device>::Compute(OpKernelContext* context) {
@@ -124,9 +123,9 @@ void PottsMeanpassNdGradOp<Device>::Compute(OpKernelContext* context) {
     
     //allocate temprary buffers
     float** buffers_full = NULL;
-    get_temporary_buffers(context, buffers_full, this->n_s, this->Get_Num_Intermediates_Full(), &(context->input(0)));
     float** buffers_imgs = NULL;
-    get_temporary_buffers(context, buffers_imgs, this->n_i, this->Get_Num_Intermediates_Images(), &(context->input(0)));
+    get_temporary_buffers(context, buffers_full, this->n_s, this->Get_Num_Intermediates_Full(), 
+                                   buffers_imgs, this->n_i, this->Get_Num_Intermediates_Images(), &(context->input(0)));
     
     //pass down to child to find and run method
     this->CallFunction(context, buffers_full, buffers_imgs);
@@ -140,7 +139,7 @@ template <typename Device>
 void PottsMeanpassNdGradOp<Device>::CheckInputs(OpKernelContext* context) {
 
     // ensure all inputs are present
-    DCHECK_EQ(N+I+3, context->num_inputs());
+    DCHECK_EQ(N+3, context->num_inputs());
 
     // get the input tensors
     const Tensor* data_cost = &(context->input(0));
@@ -153,11 +152,11 @@ void PottsMeanpassNdGradOp<Device>::CheckInputs(OpKernelContext* context) {
     const DataType data_type = data_cost->dtype();
     const TensorShape& data_shape = data_cost->shape();
     DCHECK_EQ(data_shape.dims(), N+2);
-    for(int i = 0; i < N+I+2; i++)
+    for(int i = 0; i < N+2; i++)
         DCHECK_EQ((&(context->input(i+1)))->shape().dims(), N+2);
 
     // check shapes of input and weights
-    for(int i = 0; i < N+I+2; i++) {
+    for(int i = 0; i < N+2; i++) {
         const TensorShape& other_shape = (&(context->input(i+1)))->shape();
         for(int j = 0; j < N+2; j++)
             DCHECK_EQ(data_shape.dim_size(j), other_shape.dim_size(j));
@@ -172,7 +171,7 @@ void PottsMeanpassNdGradOp<Device>::CheckInputs(OpKernelContext* context) {
     for(int i = 1; i < N+2; i++)
         this->n_s *= size_array[i];
     for(int i = 2; i < N+2; i++)
-        this->n_i = size_array[2]*size_array[3]*size_array[4];
+        this->n_i = size_array[i];
         
 }
 
@@ -181,6 +180,8 @@ void PottsMeanpassNdGradOp<Device>::GetOutputTensors(OpKernelContext* context) {
     if(grads)
         delete grads;
     grads = new Tensor*[N+I+1];
-    for(int i = 0; i < N+I+1; i++)
+    for(int i = 0; i < N+I+1; i++){
+        grads[i] = NULL;
         OP_REQUIRES_OK(context, context->allocate_output(i, (&(context->input(0)))->shape(), &(grads[i])));
+    }
 }

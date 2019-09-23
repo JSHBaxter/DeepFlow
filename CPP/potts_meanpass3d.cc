@@ -65,7 +65,46 @@ protected:
     }
 };
 
+// Define the OpKernel class
+template <typename Device>
+class PottsMeanpass3dWithInitOp : public PottsMeanpassNdOp<Device> {
+public:
+    explicit PottsMeanpass3dWithInitOp(OpKernelConstruction* context) :
+        PottsMeanpassNdOp<Device>(context, 3, 1) {}
 
+protected:
+
+    int Get_Num_Intermediates_Full() override {
+        return PottsMeanpass3dFunctor<Device>().num_buffers_full();
+    }
+    int Get_Num_Intermediates_Images() override {
+        return PottsMeanpass3dFunctor<Device>().num_buffers_images();
+    }
+    
+    void CallFunction(OpKernelContext* context, float** buffers_full, float** buffers_imgs) override {
+    
+        const Tensor* data_cost = &(context->input(0));
+        const Tensor* rx_cost = &(context->input(1));
+        const Tensor* ry_cost = &(context->input(2));
+        const Tensor* rz_cost = &(context->input(3));
+        const Tensor* init_u = &(context->input(4));
+        Tensor* new_u = this->u;
+        
+        // call function
+        PottsMeanpass3dFunctor<Device>()(
+            context->eigen_device<Device>(),
+            this->size_array,
+            data_cost->flat<float>().data(),
+            rx_cost->flat<float>().data(),
+            ry_cost->flat<float>().data(),
+            rz_cost->flat<float>().data(),
+            init_u->flat<float>().data(),
+            new_u->flat<float>().data(),
+            buffers_full,
+            buffers_imgs
+        );
+    }
+};
 
 template <typename Device>
 class PottsMeanpass3dGradOp : public PottsMeanpassNdGradOp<Device> {
@@ -84,7 +123,7 @@ protected:
     
     void CallFunction(OpKernelContext* context, float** buffers_full, float** buffers_imgs) override {
     
-        const Tensor* grad = &(context->input(1));
+        const Tensor* grad = &(context->input(0));
         const Tensor* data_cost = &(context->input(1));
         const Tensor* rx_cost = &(context->input(2));
         const Tensor* ry_cost = &(context->input(3));
@@ -94,6 +133,55 @@ protected:
         Tensor* grad_rx = this->grads[1];
         Tensor* grad_ry = this->grads[2];
         Tensor* grad_rz = this->grads[3];
+        
+        // call function for gradient
+        PottsMeanpass3dGradFunctor<Device>()(
+            context->eigen_device<Device>(),
+            this->size_array,
+            data_cost->flat<float>().data(),
+            rx_cost->flat<float>().data(),
+            ry_cost->flat<float>().data(),
+            rz_cost->flat<float>().data(),
+            u->flat<float>().data(),
+            grad->flat<float>().data(),
+            grad_data->flat<float>().data(),
+            grad_rx->flat<float>().data(),
+            grad_ry->flat<float>().data(),
+            grad_rz->flat<float>().data(),
+            buffers_full,
+            buffers_imgs
+        );
+    }
+};
+
+template <typename Device>
+class PottsMeanpass3dWithInitGradOp : public PottsMeanpassNdGradOp<Device> {
+public:
+    explicit PottsMeanpass3dWithInitGradOp(OpKernelConstruction* context) :
+        PottsMeanpassNdGradOp<Device>(context, 3, 1) {}
+
+protected:
+
+    int Get_Num_Intermediates_Full() override {
+        return PottsMeanpass3dGradFunctor<Device>().num_buffers_full();
+    }
+    int Get_Num_Intermediates_Images() override {
+        return PottsMeanpass3dGradFunctor<Device>().num_buffers_images();
+    }
+    
+    void CallFunction(OpKernelContext* context, float** buffers_full, float** buffers_imgs) override {
+    
+        const Tensor* grad = &(context->input(0));
+        const Tensor* data_cost = &(context->input(1));
+        const Tensor* rx_cost = &(context->input(2));
+        const Tensor* ry_cost = &(context->input(3));
+        const Tensor* rz_cost = &(context->input(4));
+        const Tensor* u = &(context->input(5));
+        Tensor* grad_data = this->grads[0];
+        Tensor* grad_rx = this->grads[1];
+        Tensor* grad_ry = this->grads[2];
+        Tensor* grad_rz = this->grads[3];
+        Tensor* grad_init = this->grads[4];
         
         // call function for gradient
         PottsMeanpass3dGradFunctor<Device>()(
@@ -128,6 +216,22 @@ REGISTER_OP("PottsMeanpass3d")
     c->set_output(0, c->input(0));
     return Status::OK();
   });
+
+REGISTER_OP("PottsMeanpass3dWithInit")
+  .Input("data: float")
+  .Input("rx: float")
+  .Input("ry: float")
+  .Input("rz: float")
+  .Input("init_u: float")
+  .Output("u: float")
+  .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+    ::tensorflow::shape_inference::ShapeHandle input;
+    for (size_t i = 0; i < c->num_inputs(); i++)
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(i), 5, &input));
+    c->set_output(0, c->input(0));
+    return Status::OK();
+  });
+
 REGISTER_OP("PottsMeanpass3dGrad")
   .Input("grad: float")
   .Input("data: float")
@@ -148,15 +252,40 @@ REGISTER_OP("PottsMeanpass3dGrad")
     return Status::OK();
   });
 
+REGISTER_OP("PottsMeanpass3dWithInitGrad")
+  .Input("grad: float")
+  .Input("data: float")
+  .Input("rx: float")
+  .Input("ry: float")
+  .Input("rz: float")
+  .Input("u: float")
+  .Output("grad_data: float")
+  .Output("grad_rx: float")
+  .Output("grad_ry: float")
+  .Output("grad_rz: float")
+  .Output("grad_init: float")
+  .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+    ::tensorflow::shape_inference::ShapeHandle input;
+    for (size_t i = 0; i < c->num_inputs(); i++)
+      TF_RETURN_IF_ERROR(c->WithRank(c->input(i), 5, &input));
+    for (size_t i = 0; i < c->num_inputs()-1; i++)
+        c->set_output(i, c->input(i+1));
+    return Status::OK();
+  });
+
 
 // Register the CPU kernels.
 REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3d").Device(DEVICE_CPU), PottsMeanpass3dOp<CPUDevice>);
+REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3dWithInit").Device(DEVICE_CPU), PottsMeanpass3dWithInitOp<CPUDevice>);
 REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3dGrad").Device(DEVICE_CPU), PottsMeanpass3dGradOp<CPUDevice>);
+REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3dWithInitGrad").Device(DEVICE_CPU), PottsMeanpass3dWithInitGradOp<CPUDevice>);
 
 // Register the GPU kernels.
 #ifdef GOOGLE_CUDA 
 REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3d").Device(DEVICE_GPU), PottsMeanpass3dOp<GPUDevice>);
+REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3dWithInit").Device(DEVICE_GPU), PottsMeanpass3dWithInitOp<GPUDevice>);
 REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3dGrad").Device(DEVICE_GPU), PottsMeanpass3dGradOp<GPUDevice>);
+REGISTER_KERNEL_BUILDER(Name("PottsMeanpass3dWithInitGrad").Device(DEVICE_GPU), PottsMeanpass3dWithInitGradOp<GPUDevice>);
 #endif  // GOOGLE_CUDA
 
 

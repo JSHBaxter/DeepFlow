@@ -64,7 +64,7 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
 
         float max_change = maxabs(g,n_s*n_c);
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
-        if (max_change < tau*beta)
+        if (max_change < beta)
             break;
     }
 

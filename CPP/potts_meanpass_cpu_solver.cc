@@ -60,7 +60,7 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
             max_change = block_iter(iter == min_iter-1);
 
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
-        if (max_change < tau*beta)
+        if (max_change < beta)
             break;
     }
 

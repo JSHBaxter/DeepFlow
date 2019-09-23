@@ -101,7 +101,7 @@ struct PottsMeanpass1dFunctor<GPUDevice> {
         POTTS_MEANPASS_GPU_SOLVER_1D(d, b, sizes,
 									  data_cost+ b*n_s*n_c,
 									  rx_cost+ b*n_s*n_c,
-									  init_u+ b*n_s*n_c,
+									  init_u + (init_u ? b*n_s*n_c : 0),
 									  u+ b*n_s*n_c,
 									  buffers_full)();
       

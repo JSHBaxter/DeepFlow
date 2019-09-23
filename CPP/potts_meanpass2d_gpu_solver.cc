@@ -118,7 +118,7 @@ struct PottsMeanpass2dFunctor<GPUDevice> {
 									  data_cost+ b*n_s*n_c,
 									  rx_cost+ b*n_s*n_c,
 									  ry_cost+ b*n_s*n_c,
-									  init_u+ b*n_s*n_c,
+									  init_u + (init_u ? b*n_s*n_c : 0),
 									  u+ b*n_s*n_c,
 									  buffers_full)();
       

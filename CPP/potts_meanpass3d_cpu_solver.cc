@@ -126,7 +126,7 @@ struct PottsMeanpass3dFunctor<CPUDevice> {
 																  rx_cost + b*n_s*n_c,
 																  ry_cost + b*n_s*n_c,
 																  rz_cost + b*n_s*n_c,
-                                                                  init_u + b*n_s*n_c,
+                                                                  init_u + (init_u ? b*n_s*n_c : 0),
 																  u + b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();

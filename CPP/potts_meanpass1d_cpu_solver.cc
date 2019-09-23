@@ -94,7 +94,7 @@ struct PottsMeanpass1dFunctor<CPUDevice> {
         threads[b] = new std::thread(POTTS_MEANPASS_CPU_SOLVER_1D(b, sizes,
 																  data_cost+ b*n_s*n_c,
 																  rx_cost+ b*n_s*n_c,
-                                                                  init_u+ b*n_s*n_c,
+                                                                  init_u + (init_u ? b*n_s*n_c : 0),
 																  u+ b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();
