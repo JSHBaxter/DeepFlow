@@ -12,6 +12,7 @@ BINARY_MEANPASS_GPU_SOLVER_BASE::BINARY_MEANPASS_GPU_SOLVER_BASE(
     const int n_s,
     const int n_c,
     const float* data_cost,
+	const float* init_u,
     float* u,
 	float** full_buffs) :
 dev(dev),
@@ -23,6 +24,10 @@ r_eff(full_buffs[0]),
 u(u)
 {
     //std::cout << n_s << " " << n_c << std::endl;
+	if(init_u)
+		copy_buffer(dev, init_u, u, n_s*n_c);
+	else
+		sigmoid(dev, data, 0, u, n_s*n_c);
 }
 
 //perform one iteration of the algorithm
@@ -37,7 +42,6 @@ void BINARY_MEANPASS_GPU_SOLVER_BASE::operator()(){
 
 	//initialize variables
 	init_vars();
-	sigmoid(dev, data, 0, u, n_s*n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();

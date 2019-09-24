@@ -37,6 +37,7 @@ public:
         const int n_s,
         const int n_c,
         const float* data_cost,
+        const float* init_u,
         float* u) ;
         
     ~BINARY_MEANPASS_CPU_SOLVER_BASE();
@@ -63,7 +64,7 @@ protected:
     // optimization constants
 	const float beta = 0.0001f;
 	const float epsilon = 0.01f;
-	const float tau = 0.5f;
+	const float tau = 0.1f;
     
     virtual int min_iter_calc() = 0;
     virtual void init_vars() = 0;

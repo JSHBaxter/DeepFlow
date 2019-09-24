@@ -11,6 +11,7 @@ BINARY_MEANPASS_CPU_SOLVER_BASE::BINARY_MEANPASS_CPU_SOLVER_BASE(
     const int n_s,
     const int n_c,
     const float* data_cost,
+	const float* init_u,
     float* u ) :
 b(batch),
 n_c(n_c),
@@ -20,6 +21,10 @@ r_eff(0),
 u(u)
 {
     //std::cout << n_s << " " << n_c << std::endl;
+	if(init_u)
+		copy(init_u, u, n_s*n_c);
+	else
+		sigmoid(data, u, n_s*n_c);
 }
 
 //perform one iteration of the algorithm
@@ -27,10 +32,11 @@ float BINARY_MEANPASS_CPU_SOLVER_BASE::block_iter(bool last){
 	float max_change = 0.0f;
 	calculate_regularization();
 	inc(data, r_eff, n_s*n_c);
+	sigmoid(r_eff, r_eff, n_s*n_c);
 	if(last)
-		max_change = sigmoid_with_convergence(r_eff, u, n_s*n_c, tau);
+		max_change = update_with_convergence(u, r_eff, n_s*n_c, tau);
 	else
-		sigmoid_update(r_eff, u, n_s*n_c, tau);
+		update(u, r_eff, n_s*n_c, tau);
 	return max_change;
 }
 
@@ -42,7 +48,6 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 
 	//initialize variables
 	init_vars();
-	sigmoid(data, u, n_s*n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();

@@ -34,9 +34,10 @@ public:
         const float* rx_cost,
         const float* ry_cost,
         const float* rz_cost,
+		const float* init_u,
         float* u 
 	):
-	BINARY_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1]*sizes[2]*sizes[3], sizes[4], data_cost, u),
+	BINARY_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1]*sizes[2]*sizes[3], sizes[4], data_cost, init_u, u),
 	n_x(sizes[1]),
 	n_y(sizes[2]),
 	n_z(sizes[3]),
@@ -108,6 +109,7 @@ struct BinaryMeanpass3dFunctor<CPUDevice> {
       const float* rx_cost,
       const float* ry_cost,
       const float* rz_cost,
+	  const float* init_u,
       float* u,
       float** /*unused full buffers*/,
       float** /*unused image buffers*/){
@@ -123,6 +125,7 @@ struct BinaryMeanpass3dFunctor<CPUDevice> {
 																  rx_cost + b*n_s*n_c,
 																  ry_cost + b*n_s*n_c,
 																  rz_cost + b*n_s*n_c,
+																  init_u + (init_u ? b*n_s*n_c : 0),
 																  u + b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();

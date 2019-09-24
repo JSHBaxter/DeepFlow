@@ -60,8 +60,8 @@ void softmax(const float* bufferin, float* bufferout, const int n_s, const int n
 void softmax_update(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
 float softmax_with_convergence(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
 void sigmoid(const float* bufferin, float* bufferout, const int n_s);
-void sigmoid_update(const float* bufferin, float* bufferout, const int n_s, const float alpha);
-float sigmoid_with_convergence(const float* bufferin, float* bufferout, const int n_s, const float alpha);
+void update(float* buffer, const float* update, const int n_s, const float alpha);
+float update_with_convergence(float* buffer, const float* update, const int n_s, const float alpha);
 
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* rz, const float* u, const int n_x, const int n_y, const int n_z, const int n_c);
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* u, const int n_x, const int n_y, const int n_c);

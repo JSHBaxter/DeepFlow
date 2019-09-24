@@ -32,10 +32,11 @@ public:
         const int sizes[3],
         const float* data_cost,
         const float* rx_cost,
+		const float* init_u,
         float* u,
 		float** buffers_full
 	):
-	BINARY_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[2], sizes[1], data_cost, u, buffers_full),
+	BINARY_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[2], sizes[1], data_cost, init_u, u, buffers_full),
 	n_x(sizes[2]),
 	rx(rx_cost)
 	{}
@@ -88,6 +89,7 @@ struct BinaryMeanpass1dFunctor<GPUDevice> {
 	int sizes[3],
 	const float* data_cost,
 	const float* rx_cost,
+	const float* init_u,
 	float* u,
 	float** buffers_full,
 	float** /*unused image buffers*/){
@@ -99,6 +101,7 @@ struct BinaryMeanpass1dFunctor<GPUDevice> {
         BINARY_MEANPASS_GPU_SOLVER_1D(d, b, sizes,
 									  data_cost+ b*n_s*n_c,
 									  rx_cost+ b*n_s*n_c,
+									  init_u + (init_u ? b*n_s*n_c : 0),
 									  u+ b*n_s*n_c,
 									  buffers_full)();
       

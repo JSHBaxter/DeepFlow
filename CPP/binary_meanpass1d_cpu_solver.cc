@@ -28,9 +28,10 @@ public:
         const int sizes[3],
         const float* data_cost,
         const float* rx_cost,
+		const float* init_u,
         float* u 
 	):
-	BINARY_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1], sizes[2], data_cost, u),
+	BINARY_MEANPASS_CPU_SOLVER_BASE(batch, sizes[1], sizes[2], data_cost, init_u, u),
 	n_x(sizes[1]),
 	rx(rx_cost)
 	{}
@@ -80,6 +81,7 @@ struct BinaryMeanpass1dFunctor<CPUDevice> {
       int sizes[3],
       const float* data_cost,
       const float* rx_cost,
+	  const float* init_u,
       float* u,
       float** /*unused full buffers*/,
       float** /*unused image buffers*/){
@@ -92,6 +94,7 @@ struct BinaryMeanpass1dFunctor<CPUDevice> {
         threads[b] = new std::thread(BINARY_MEANPASS_CPU_SOLVER_1D(b, sizes,
 																  data_cost+ b*n_s*n_c,
 																  rx_cost+ b*n_s*n_c,
+																  init_u + (init_u ? b*n_s*n_c : 0),
 																  u+ b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();

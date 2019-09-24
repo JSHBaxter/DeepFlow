@@ -50,7 +50,10 @@ void inc(const float* inc, float* acc, const float alpha, const int n_s){
 
 void log_buffer(float* buffer, const int n_s){
     for(int i = 0; i < n_s; i++)
-        buffer[i] = log(buffer[i]+epsilon);
+		if( buffer[i] < epsilon )
+			buffer[i] = log(epsilon);
+		else
+			buffer[i] = log(buffer[i]);
 }
 
 void div_buffer(float* buffer, const float number, const int n_s){
@@ -219,22 +222,18 @@ void sigmoid(const float* bufferin, float* bufferout, const int n_s){
     }
 }
 
-void sigmoid_update(const float* bufferin, float* bufferout, const int n_s, const float alpha){
+void update(float* buffer, const float* update, const int n_s, const float alpha){
 	for(int s = 0; s < n_s; s++) {
-		float cost = bufferin[s];
-		float new_u = 1.0f / (1.0f + std::exp(-cost));
-		float diff = alpha * (new_u-bufferout[s]);
-		bufferout[s] += diff;
+		float diff = alpha * (update[s]-buffer[s]);
+		buffer[s] += diff;
 	}
 }
     
-float sigmoid_with_convergence(const float* bufferin, float* bufferout, const int n_s, const float alpha){
+float update_with_convergence(float* buffer, const float* update, const int n_s, const float alpha){
     float max_change = 0.0f;
 	for(int s = 0; s < n_s; s++) {
-		float cost = bufferin[s];
-		float new_u = 1.0f / (1.0f + std::exp(-cost));
-		float diff = alpha * (new_u-bufferout[s]);
-		bufferout[s] += diff;
+		float diff = alpha * (update[s]-buffer[s]);
+		buffer[s] += diff;
 		if( diff > max_change )
 			max_change = diff;
 		else if( -diff > max_change )
