@@ -22,6 +22,7 @@ private:
 
 protected:
     virtual int min_iter_calc(){
+		return std::max(n_x,n_y);
 	}
 	
     virtual void clear_spatial_flows(){

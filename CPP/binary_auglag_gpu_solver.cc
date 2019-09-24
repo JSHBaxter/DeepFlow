@@ -74,5 +74,4 @@ void BINARY_AUGLAG_GPU_SOLVER_BASE::operator()(){
     log_buffer(dev, u, u, n_s*n_c);
 
 }
-
 #endif

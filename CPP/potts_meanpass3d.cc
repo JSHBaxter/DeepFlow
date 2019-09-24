@@ -4,8 +4,7 @@
 /// segmentation model operation in Tensorflow.
 
 #include "potts_meanpass3d.h"
-#include "potts_meanpassNd.h"
-#include "tf_memory_utils.h"
+#include "regularNd.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/platform/default/logging.h"
@@ -27,10 +26,10 @@ using GPUDevice = Eigen::GpuDevice;
 
 // Define the OpKernel class
 template <typename Device>
-class PottsMeanpass3dOp : public PottsMeanpassNdOp<Device> {
+class PottsMeanpass3dOp : public RegularNdOp<Device> {
 public:
     explicit PottsMeanpass3dOp(OpKernelConstruction* context) :
-        PottsMeanpassNdOp<Device>(context, 3, 0) {}
+        RegularNdOp<Device>(context, 3, 4, 1) {}
 
 protected:
 
@@ -47,7 +46,7 @@ protected:
         const Tensor* rx_cost = &(context->input(1));
         const Tensor* ry_cost = &(context->input(2));
         const Tensor* rz_cost = &(context->input(3));
-        Tensor* new_u = this->u;
+        Tensor* new_u = this->outputs[0];
         
         // call function
         PottsMeanpass3dFunctor<Device>()(
@@ -67,10 +66,10 @@ protected:
 
 // Define the OpKernel class
 template <typename Device>
-class PottsMeanpass3dWithInitOp : public PottsMeanpassNdOp<Device> {
+class PottsMeanpass3dWithInitOp : public RegularNdOp<Device> {
 public:
     explicit PottsMeanpass3dWithInitOp(OpKernelConstruction* context) :
-        PottsMeanpassNdOp<Device>(context, 3, 1) {}
+        RegularNdOp<Device>(context, 3, 5, 1) {}
 
 protected:
 
@@ -88,7 +87,7 @@ protected:
         const Tensor* ry_cost = &(context->input(2));
         const Tensor* rz_cost = &(context->input(3));
         const Tensor* init_u = &(context->input(4));
-        Tensor* new_u = this->u;
+        Tensor* new_u = this->outputs[0];
         
         // call function
         PottsMeanpass3dFunctor<Device>()(
@@ -107,10 +106,10 @@ protected:
 };
 
 template <typename Device>
-class PottsMeanpass3dGradOp : public PottsMeanpassNdGradOp<Device> {
+class PottsMeanpass3dGradOp : public RegularNdOp<Device> {
 public:
     explicit PottsMeanpass3dGradOp(OpKernelConstruction* context) :
-        PottsMeanpassNdGradOp<Device>(context, 3, 0) {}
+        RegularNdOp<Device>(context, 3, 6, 4) {}
 
 protected:
 
@@ -129,10 +128,10 @@ protected:
         const Tensor* ry_cost = &(context->input(3));
         const Tensor* rz_cost = &(context->input(4));
         const Tensor* u = &(context->input(5));
-        Tensor* grad_data = this->grads[0];
-        Tensor* grad_rx = this->grads[1];
-        Tensor* grad_ry = this->grads[2];
-        Tensor* grad_rz = this->grads[3];
+        Tensor* grad_data = this->outputs[0];
+        Tensor* grad_rx = this->outputs[1];
+        Tensor* grad_ry = this->outputs[2];
+        Tensor* grad_rz = this->outputs[3];
         
         // call function for gradient
         PottsMeanpass3dGradFunctor<Device>()(
@@ -155,10 +154,10 @@ protected:
 };
 
 template <typename Device>
-class PottsMeanpass3dWithInitGradOp : public PottsMeanpassNdGradOp<Device> {
+class PottsMeanpass3dWithInitGradOp : public RegularNdOp<Device> {
 public:
     explicit PottsMeanpass3dWithInitGradOp(OpKernelConstruction* context) :
-        PottsMeanpassNdGradOp<Device>(context, 3, 1) {}
+        RegularNdOp<Device>(context, 3, 6, 5) {}
 
 protected:
 
@@ -177,11 +176,11 @@ protected:
         const Tensor* ry_cost = &(context->input(3));
         const Tensor* rz_cost = &(context->input(4));
         const Tensor* u = &(context->input(5));
-        Tensor* grad_data = this->grads[0];
-        Tensor* grad_rx = this->grads[1];
-        Tensor* grad_ry = this->grads[2];
-        Tensor* grad_rz = this->grads[3];
-        Tensor* grad_init = this->grads[4];
+        Tensor* grad_data = this->outputs[0];
+        Tensor* grad_rx = this->outputs[1];
+        Tensor* grad_ry = this->outputs[2];
+        Tensor* grad_rz = this->outputs[3];
+        Tensor* grad_init = this->outputs[4];
         
         // call function for gradient
         PottsMeanpass3dGradFunctor<Device>()(

@@ -21,7 +21,7 @@ private:
 
 protected:
     virtual int min_iter_calc(){
-		return n_x+n_y;
+		return std::max(n_x,n_y);
 	}
 	
     virtual void clear_spatial_flows(){
@@ -89,5 +89,3 @@ struct BinaryAuglag2dFunctor<GPUDevice>{
   int num_buffers_images(){ return 0; }
 };
 #endif // GOOGLE_CUDA
-
-                           

@@ -132,5 +132,3 @@ REGISTER_KERNEL_BUILDER(Name("HmfAuglag2d").Device(DEVICE_CPU), HmfAuglag2dOp<CP
 #ifdef GOOGLE_CUDA 
 REGISTER_KERNEL_BUILDER(Name("HmfAuglag2d").Device(DEVICE_GPU), HmfAuglag2dOp<GPUDevice>);
 #endif  // GOOGLE_CUDA
-
-

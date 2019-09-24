@@ -21,7 +21,7 @@ private:
 
 protected:
     virtual int min_iter_calc(){
-		return n_x+n_y+n_z;
+		return std::max(std::max(n_x,n_y), n_z);
 	}
 	
     virtual void clear_spatial_flows(){
@@ -63,8 +63,6 @@ public:
 	pz(0)
 	{}
 };
-
-
 
 template <>
 struct BinaryAuglag3dFunctor<CPUDevice> {

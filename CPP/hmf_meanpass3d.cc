@@ -289,5 +289,3 @@ REGISTER_KERNEL_BUILDER(Name("HmfMeanpass3dGrad").Device(DEVICE_CPU), HmfMeanpas
 REGISTER_KERNEL_BUILDER(Name("HmfMeanpass3d").Device(DEVICE_GPU), HmfMeanpass3dOp<GPUDevice>);
 REGISTER_KERNEL_BUILDER(Name("HmfMeanpass3dGrad").Device(DEVICE_GPU), HmfMeanpass3dGradOp<GPUDevice>);
 #endif  // GOOGLE_CUDA
-
-
