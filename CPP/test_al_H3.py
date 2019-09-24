@@ -30,7 +30,7 @@ class InnerProductOpTest(unittest.TestCase):
         data_index = tf.convert_to_tensor(data_index_list, dtype=tf.int32)
         
         for i in range(1):
-            input_d = 0.1*np.random.rand(b,c,x,y,z)
+            input_d = 10*np.random.rand(b,c,x,y,z)
             input_rx = 0.0*np.ones((b,r,x,y,z))
             input_rx[:,0:(c-1),:,:] = 0.0
             input_ry = 0.0*np.ones((b,r,x,y,z))
@@ -43,7 +43,7 @@ class InnerProductOpTest(unittest.TestCase):
             #input_rx[:,:,:,:,5] *= 0
             #input_rx += 0.2*(np.random.rand(b,c,x))
 
-            for devicename in ['GPU']:
+            for devicename in ['GPU', 'CPU']:
                 
                 if devicename == 'CPU':
                     config = tf.ConfigProto(log_device_placement=False, device_count = {'GPU': 0})
@@ -85,7 +85,7 @@ class InnerProductOpTest(unittest.TestCase):
 
                 print( '\n' )
 
-                #forward = np.exp(forward);
+                forward = np.exp(forward);
                 for i in range(c):
                     print( (np.round(forward[0,i,:,:,:]*100)).astype(int) )
                 print( '\n' )

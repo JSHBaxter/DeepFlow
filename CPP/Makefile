@@ -17,8 +17,8 @@ CIFLAGS := -std=c++11 $(CUDA_I) $(TF_CFLAGS) $(CUDAFLAG) -fPIC -c
 CUFLAGS = -std=c++11 -c $(TF_CFLAGS) $(CUDAFLAG) --expt-relaxed-constexpr -x cu -Xcompiler -fPIC -ccbin $(C) -DNDEBUG
 LFLAGS := $(CUDA_L) $(TF_LFLAGS)
 
-interfacing = regularNd.cc tf_memory_utils.cc
-interfacing_h = regularNd.h tf_memory_utils.h
+interfacing = regularNd.cc hmfNd.cc tf_memory_utils.cc
+interfacing_h = regularNd.h hmfNd.h tf_memory_utils.h
 binary_mean_pass = binary_meanpass3d.cc binary_meanpass2d.cc binary_meanpass1d.cc binary_meanpass_cpu_solver.cc
 binary_mean_pass_h = binary_meanpass3d.h binary_meanpass2d.h binary_meanpass1d.h binary_meanpass_cpu_solver.h
 binary_aug_lag = binary_auglag3d.cc binary_auglag2d.cc binary_auglag1d.cc binary_auglag_cpu_solver.cc

@@ -30,7 +30,7 @@ class InnerProductOpTest(unittest.TestCase):
         for i in range(1):
             input_d = 1*np.random.rand(b,c,x)
             input_rx = 0*np.ones((b,r,x))
-            input_rx[:,0:c,:] = 1
+            input_rx[:,0:c,:] = 0.1
             print(input_rx)
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
@@ -78,7 +78,7 @@ class InnerProductOpTest(unittest.TestCase):
 
                 print( '\n' )
 
-                #forward = np.exp(forward);
+                forward = np.exp(forward);
                 for i in range(c):
                     print( (np.round(forward[0,i,:]*100)).astype(int) )
                 print( '\n' )

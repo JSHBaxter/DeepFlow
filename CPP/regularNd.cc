@@ -28,6 +28,8 @@ template <typename Device>
 RegularNdOp<Device>::~RegularNdOp(){
     if(this->size_array)
         delete this->size_array;
+    if(this->outputs)
+        delete this->outputs;
 }
 
 template <typename Device>

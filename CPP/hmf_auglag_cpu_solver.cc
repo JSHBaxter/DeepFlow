@@ -217,7 +217,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
         block_iter();
 
     //log output and transpose output back into proper buffer
-    //log_buffer(u_tmp, n_s*n_c);
+    log_buffer(u_tmp, n_s*n_c);
     for(int s = 0; s < n_s; s++)
         for(int c = 0; c < n_c; c++)
             u[s*n_c+c] = u_tmp[c*n_s+s];
