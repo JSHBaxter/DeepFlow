@@ -125,15 +125,15 @@ template <typename Device>
 void HmfNdOp<Device>::GetOutputTensors(OpKernelContext* context) {
     if(outputs)
         delete outputs;
-    outputs = new Tensor*[O];
+    outputs = new Tensor*[is_grad ? O+2 : O];
     for(int i = 0; i < O; i++){
         outputs[i] = NULL;
-        OP_REQUIRES_OK(context, context->allocate_output(i, (&(context->input(0)))->shape(), &(outputs[i])));
+        OP_REQUIRES_OK(context, context->allocate_output(i, (&(context->input(i)))->shape(), &(outputs[i])));
     }
 	if(is_grad){
-		Tensor* tmp_p = 0;
-        OP_REQUIRES_OK(context, context->allocate_output(O, (&(context->input(I)))->shape(), &(tmp_p)));
-		Tensor* tmp_d = 0;
-        OP_REQUIRES_OK(context, context->allocate_output(O+1, (&(context->input(I+1)))->shape(), &(tmp_d)));
+		outputs[O] = NULL;
+        OP_REQUIRES_OK(context, context->allocate_output(O, (&(context->input(I)))->shape(), &(outputs[O])));
+		outputs[O+1] = NULL;
+        OP_REQUIRES_OK(context, context->allocate_output(O+1, (&(context->input(I+1)))->shape(), &(outputs[O+1])));
 	}
 }

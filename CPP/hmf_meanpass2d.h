@@ -20,6 +20,7 @@ struct HmfMeanpass2dFunctor {
       const float* data_cost,
       const float* rx_cost,
       const float* ry_cost,
+	  const float* init_u,
       float* out,
       float** buffers_full,
       float** buffers_images);

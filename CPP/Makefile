@@ -28,7 +28,9 @@ potts_mean_pass_h = potts_meanpass3d.h potts_meanpass2d.h potts_meanpass1d.h pot
 potts_aug_lag = potts_auglag3d.cc potts_auglag2d.cc potts_auglag1d.cc potts_auglag_cpu_solver.cc
 potts_aug_lag_h = potts_auglag3d.h potts_auglag2d.h potts_auglag1d.h potts_auglag_cpu_solver.h
 hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc hmf_meanpass_cpu_solver.cc
+hmf_mean_pass_h = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc hmf_meanpass_cpu_solver.cc
 hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc hmf_auglag_cpu_solver.cc
+hmf_aug_lag_h = hmf_auglag1d.h hmf_auglag2d.h hmf_auglag3d.h hmf_auglag_cpu_solver.h
 
 cpu_kernels = cpu_kernels.cc hmf_trees.cc hmf_trees.h
 

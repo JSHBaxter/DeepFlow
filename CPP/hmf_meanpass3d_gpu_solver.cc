@@ -44,6 +44,7 @@ public:
         const float* rx_cost,
         const float* ry_cost,
         const float* rz_cost,
+		const float* init_u,
         float* const u,
         float** full_buff,
         float** img_buff) :
@@ -54,6 +55,7 @@ public:
                                  sizes[1],
                                  sizes[5],
                                  data_cost,
+								 init_u,
                                  u,
                                  full_buff,
                                  img_buff),
@@ -145,6 +147,7 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
         const float* rx_cost,
         const float* ry_cost,
         const float* rz_cost,
+		const float* init_u,
         float* u,
         float** full_buff,
         float** img_buff){
@@ -175,6 +178,7 @@ struct HmfMeanpass3dFunctor<GPUDevice> {
                                        rx_cost + b*n_s*n_r,
                                        ry_cost + b*n_s*n_r,
                                        rz_cost + b*n_s*n_r,
+									   init_u + (init_u ? b*n_s*n_c : 0),
                                        u + b*n_s*n_c,
                                        full_buff,
                                        img_buff)();

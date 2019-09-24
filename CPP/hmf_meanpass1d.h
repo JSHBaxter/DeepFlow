@@ -19,6 +19,7 @@ struct HmfMeanpass1dFunctor {
       const int* data_index,
       const float* data_cost,
       const float* rx_cost,
+	  const float* init_u,
       float* out,
       float** buffers_full,
       float** buffers_images);

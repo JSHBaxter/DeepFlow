@@ -28,12 +28,14 @@ public:
         const int sizes[5],
         const float* data_cost,
         const float* rx_cost,
+		const float* init_u,
         float* u ) :
     HMF_MEANPASS_CPU_SOLVER_BASE(bottom_up_list,batch,
                                  sizes[1],
                                  sizes[2],
                                  sizes[4],
                                  data_cost,
+								 init_u,
                                  u),
     n_x(sizes[1]),
     rx(rx_cost)
@@ -89,6 +91,7 @@ struct HmfMeanpass1dFunctor<CPUDevice> {
       const int* data_index,
       const float* data_cost,
       const float* rx_cost,
+      const float* init_u,
       float* u,
       float** /*unused full buffers*/,
       float** /*unused image buffers*/){
@@ -111,6 +114,7 @@ struct HmfMeanpass1dFunctor<CPUDevice> {
     for(int b = 0; b < n_batches; b++)
         threads[b] = new std::thread(HMF_MEANPASS_CPU_SOLVER_1D(bottom_up_list, b, sizes, data_cost + b*n_s*n_c,
                                                                 rx_cost + b*n_s*n_r,
+																init_u + (init_u ? b*n_s*n_c : 0),
                                                                 u + b*n_s*n_c));
     for(int b = 0; b < n_batches; b++)
         threads[b]->join();

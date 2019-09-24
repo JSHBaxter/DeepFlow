@@ -40,6 +40,7 @@ public:
         const float* data_cost,
         const float* rx_cost,
         const float* ry_cost,
+		const float* init_u,
         float* const u,
         float** full_buff,
         float** img_buff) :
@@ -50,6 +51,7 @@ public:
                                  sizes[1],
                                  sizes[4],
                                  data_cost,
+								 init_u,
                                  u,
                                  full_buff,
                                  img_buff),
@@ -129,6 +131,7 @@ struct HmfMeanpass2dFunctor<GPUDevice> {
         const float* data_cost,
         const float* rx_cost,
         const float* ry_cost,
+		const float* init_u,
         float* u,
         float** full_buff,
         float** img_buff){
@@ -158,6 +161,7 @@ struct HmfMeanpass2dFunctor<GPUDevice> {
                                        data_cost + b*n_s*n_c,
                                        rx_cost + b*n_s*n_r,
                                        ry_cost + b*n_s*n_r,
+									   init_u + (init_u ? b*n_s*n_c : 0),
                                        u + b*n_s*n_c,
                                        full_buff,
                                        img_buff)();
@@ -193,13 +197,13 @@ struct HmfMeanpass2dGradFunctor<GPUDevice>{
         float** full_buff,
         float** img_buff){
 
-        //clear unusable derviative
-        clear_buffer(d, g_par, sizes[4]);
-        clear_buffer(d, g_didx, sizes[4]);
-
         int n_s = sizes[2]*sizes[3];
         int n_c = sizes[1];
         int n_r = sizes[4];
+		
+        //clear unusable derviative
+        clear_buffer(d, g_par, n_r);
+        clear_buffer(d, g_didx, n_r);
 		
         //build the tree
         TreeNode* node = NULL;

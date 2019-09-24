@@ -9,6 +9,7 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
         const int n_c,
         const int n_r,
         const float* data_cost,
+        const float* const init_u,
         float* u):
     bottom_up_list(bottom_up_list),
     b(batch),
@@ -19,9 +20,14 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
     u(u),
     u_tmp(0),
     r_eff(0)
-    {
-        //std::cout << n_s << " " << n_c << " " << n_r << std::endl;
-    }
+{
+	//std::cout << n_s << " " << n_c << " " << n_r << std::endl;
+	//initialize variables
+	if(init_u)
+		copy(init_u, u, n_s*n_c);
+	else
+		softmax(data, u, n_s, n_c);
+}
 
 float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(){
     aggregate_bottom_up(u,u_tmp,n_s,n_c,n_r,bottom_up_list);
@@ -47,9 +53,6 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
     float max_change = 0.0f;
     u_tmp = new float[n_s*n_r];
     r_eff = new float[n_s*n_r];
-
-    //initialize variables
-    softmax(data, u, n_s, n_c);
     
     // iterate in blocks
     int min_iter = min_iter_calc();

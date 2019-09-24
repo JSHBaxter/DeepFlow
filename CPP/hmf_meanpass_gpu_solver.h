@@ -45,6 +45,7 @@ public:
         const int n_c,
         const int n_r,
         const float* const data_cost,
+        const float* const init_u,
         float* const u,
         float** full_buff,
         float** img_buff);

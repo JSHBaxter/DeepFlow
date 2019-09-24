@@ -9,6 +9,7 @@ HMF_MEANPASS_GPU_SOLVER_BASE::HMF_MEANPASS_GPU_SOLVER_BASE(
     const int n_c,
     const int n_r,
     const float* const data_cost,
+	const float* const init_u,
     float* const u,
     float** full_buff,
     float** img_buff) :
@@ -22,7 +23,14 @@ data(data_cost),
 u(u),
 temp(full_buff[0]),
 u_full(full_buff[1])
-{}
+{
+	//std::cout << n_s << " " << n_c << " " << n_r << std::endl;
+	//initialize variables
+	if(init_u)
+		copy_buffer(dev, init_u, u, n_s*n_c);
+	else
+		softmax(dev, data, NULL, u, n_s, n_c);
+}
     
 void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
     
@@ -56,9 +64,6 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
 }
 
 void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
-
-    //initialize variables
-    softmax(dev, data, NULL, u, n_s, n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();

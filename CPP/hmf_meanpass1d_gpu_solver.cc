@@ -37,6 +37,7 @@ public:
         const int sizes[5],
         const float* data_cost,
         const float* rx_cost,
+		const float* init_u,
         float* const u,
         float** full_buff,
         float** img_buff) :
@@ -47,6 +48,7 @@ public:
                                  sizes[1],
                                  sizes[3],
                                  data_cost,
+								 init_u,
                                  u,
                                  full_buff,
                                  img_buff),
@@ -114,6 +116,7 @@ struct HmfMeanpass1dFunctor<GPUDevice> {
         const int* data_index_g,
         const float* data_cost,
         const float* rx_cost,
+		const float* init_u,
         float* u,
         float** full_buff,
         float** img_buff){
@@ -142,6 +145,7 @@ struct HmfMeanpass1dFunctor<GPUDevice> {
             HMF_MEANPASS_GPU_SOLVER_1D(d, bottom_up_list, b, sizes,
                                        data_cost + b*n_s*n_c,
                                        rx_cost + b*n_s*n_r,
+									   init_u + (init_u ? b*n_s*n_c : 0),
                                        u + b*n_s*n_c,
                                        full_buff,
                                        img_buff)();
