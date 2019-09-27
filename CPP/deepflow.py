@@ -185,7 +185,7 @@ def _hmf_meanpass3d_with_init_grad_cc(op, grad):
     :param grad: gradient with respect to the output of the `hmf_meanpass3d` op.
     :return: gradients with respect to the input of `hmf_meanpass3d`.
     """
-    gradient = module.hmf_meanpass3d_grad(op.inputs[0], op.inputs[1], op.inputs[2], op.inputs[3], grad, op.outputs[0], op.inputs[5], op.inputs[6])
+    gradient = module.hmf_meanpass3d_with_init_grad(op.inputs[0], op.inputs[1], op.inputs[2], op.inputs[3], grad, op.outputs[0], op.inputs[5], op.inputs[6])
     return gradient
 
 @ops.RegisterGradient("HmfMeanpass2d")
@@ -224,7 +224,7 @@ def _hmf_meanpass1d_grad_cc(op, grad):
     :param grad: gradient with respect to the output of the `hmf_meanpass1d` op.
     :return: gradients with respect to the input of `hmf_meanpass1d`.
     """
-    gradient = module.hmf_meanpass3d_grad(op.inputs[0], op.inputs[1], grad, op.outputs[0], op.inputs[2], op.inputs[3])
+    gradient = module.hmf_meanpass1d_grad(op.inputs[0], op.inputs[1], grad, op.outputs[0], op.inputs[2], op.inputs[3])
     return gradient
 
 @ops.RegisterGradient("HmfMeanpass1dWithInit")
@@ -237,7 +237,7 @@ def _hmf_meanpass1d_with_init_grad_cc(op, grad):
     :param grad: gradient with respect to the output of the `hmf_meanpass1d` op.
     :return: gradients with respect to the input of `hmf_meanpass1d`.
     """
-    gradient = module.hmf_meanpass3d_with_init_grad(op.inputs[0], op.inputs[1], grad, op.outputs[0], op.inputs[3], op.inputs[4])
+    gradient = module.hmf_meanpass1d_with_init_grad(op.inputs[0], op.inputs[1], grad, op.outputs[0], op.inputs[3], op.inputs[4])
     return gradient
 
 

@@ -14,9 +14,9 @@ class InnerProductOpTest(unittest.TestCase):
     def test_runAndPrintOutput(self):
         
         b = 1
-        c = 8
+        c = 16
         r = 2*c-2;
-        x = 10
+        x = 16
 
         parentage_list = []
         for i in range(r):
@@ -30,8 +30,7 @@ class InnerProductOpTest(unittest.TestCase):
         for i in range(1):
             input_d = 1*np.random.rand(b,c,x)
             input_rx = 0*np.ones((b,r,x))
-            input_rx[:,0:c,:] = 0.1
-            print(input_rx)
+            input_rx[:,0:c,:] = 2
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
             #input_rx[:,:,:,:,4] *= 0

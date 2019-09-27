@@ -29,13 +29,17 @@ protected:
     float* u_tmp;
     float* div;
     float* g;
+    float* g_ps;
+    float** ps_ind;
+    float** g_ind;
+    int* num_children;
     
     // optimization constants
-    const float tau = 0.1f;
-    const float beta = 0.1f;
+    float tau = 0.1f;
+    const float beta = 0.01f;
     const float epsilon = 10e-5f;
-    const float cc = 0.25f;
-    const float icc = 1.0f/cc;
+    float cc;
+    float icc;
     
     virtual int min_iter_calc() = 0;
     virtual void clear_spatial_flows() = 0;
@@ -54,6 +58,7 @@ public:
         float* u,
         float** full_buff,
         float** img_buff);
+    ~HMF_AUGLAG_GPU_SOLVER_BASE();
     
     void operator()();
 };

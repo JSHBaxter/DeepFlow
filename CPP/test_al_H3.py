@@ -13,12 +13,12 @@ meanpass_module = deepflow.module
 class InnerProductOpTest(unittest.TestCase):
     def test_runAndPrintOutput(self):
         
-        b = 1
-        c = 4
+        b = 8
+        c = 8
         r = 2*c-2
-        x = 2
-        y = 10
-        z = 10
+        x = 28
+        y = 56
+        z = 56
 
         parentage_list = []
         for i in range(r):
@@ -29,21 +29,18 @@ class InnerProductOpTest(unittest.TestCase):
         parentage = tf.convert_to_tensor(parentage_list, dtype=tf.int32)
         data_index = tf.convert_to_tensor(data_index_list, dtype=tf.int32)
         
-        for i in range(1):
-            input_d = 10*np.random.rand(b,c,x,y,z)
-            input_rx = 0.0*np.ones((b,r,x,y,z))
-            input_rx[:,0:(c-1),:,:] = 0.0
-            input_ry = 0.0*np.ones((b,r,x,y,z))
-            input_ry[:,0:(c-1),:,:] = 0.0
-            input_rz = 0.0*np.ones((b,r,x,y,z))
-            input_rz[:,0:(c-1),:,:] = 0.0
+        for i in range(10):
+            input_d = 0.1*np.random.rand(b,c,x,y,z)
+            input_rx = 0.1*np.random.rand(b,r,x,y,z)
+            input_ry = 0.1*np.random.rand(b,r,x,y,z)
+            input_rz = 0.1*np.random.rand(b,r,x,y,z)
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
             #input_rx[:,:,:,:,4] *= 0
             #input_rx[:,:,:,:,5] *= 0
             #input_rx += 0.2*(np.random.rand(b,c,x))
 
-            for devicename in ['GPU', 'CPU']:
+            for devicename in ['GPU']:
                 
                 if devicename == 'CPU':
                     config = tf.ConfigProto(log_device_placement=False, device_count = {'GPU': 0})
@@ -79,49 +76,49 @@ class InnerProductOpTest(unittest.TestCase):
                         #forward0 = sess.run(flow, feed_dict = {data: input_d, rx: 0*input_rx, ry: 0*input_ry, rz: 0*input_rz})
                         #gradient = sess.run(grad_flow, feed_dict = {data: input_d, rx: input_rx, ry: input_ry, rz: input_rz})
 
-                print( input_d.shape )
-                for i in range(c):
-                    print( (np.round(input_d[0,i,:,:,:]*100)).astype(int) )
+        print( input_d.shape )
+        for i in range(c):
+            print( (np.round(input_d[0,i,:,:,:]*100)).astype(int) )
 
-                print( '\n' )
+        print( '\n' )
 
-                forward = np.exp(forward);
-                for i in range(c):
-                    print( (np.round(forward[0,i,:,:,:]*100)).astype(int) )
-                print( '\n' )
-                sumprob = np.sum(forward,axis=1)
-                print( (np.round(sumprob[0,:,:,:]*100)).astype(int) )
-                print( '\n' )
-                print( '\n' )
+        forward = np.exp(forward);
+        for i in range(c):
+            print( (np.round(forward[0,i,:,:,:]*100)).astype(int) )
+        print( '\n' )
+        sumprob = np.sum(forward,axis=1)
+        print( (np.round(sumprob[0,:,:,:]*100)).astype(int) )
+        print( '\n' )
+        print( '\n' )
 
-                forward_mean_max = np.max(forward_mean, axis=1, keepdims=True)
-                forward_mean -= forward_mean_max
-                forward_mean = np.exp(forward_mean) / np.sum(np.exp(forward_mean),axis=1,keepdims=True)
-                for i in range(c):
-                    print( (np.round(forward_mean[0,i,:,:,:]*100)).astype(int) )
-                print( '\n' )
-                print( '\n' )
+        forward_mean_max = np.max(forward_mean, axis=1, keepdims=True)
+        forward_mean -= forward_mean_max
+        forward_mean = np.exp(forward_mean) / np.sum(np.exp(forward_mean),axis=1,keepdims=True)
+        for i in range(c):
+            print( (np.round(forward_mean[0,i,:,:,:]*100)).astype(int) )
+        print( '\n' )
+        print( '\n' )
 
-                #forward0 = np.exp(forward0);
-                #print( forward0.shape )
-                #print( (np.round(forward0[0,0,:,:,:]*100)).astype(int) )
-                #print( (np.round(forward0[0,1,:,:,:]*100)).astype(int) )
-                #print( (np.round(forward0[0,2,:,:,:]*100)).astype(int) )
-                #print( (np.round(forward0[0,3,:,:,:]*100)).astype(int) )
+        #forward0 = np.exp(forward0);
+        #print( forward0.shape )
+        #print( (np.round(forward0[0,0,:,:,:]*100)).astype(int) )
+        #print( (np.round(forward0[0,1,:,:,:]*100)).astype(int) )
+        #print( (np.round(forward0[0,2,:,:,:]*100)).astype(int) )
+        #print( (np.round(forward0[0,3,:,:,:]*100)).astype(int) )
 
-                #print( '\n' )
+        #print( '\n' )
 
-                #sumprob = np.sum(forward0,axis=1)
-                #print( (np.round(sumprob[0,:,:,:]*100)).astype(int) )
+        #sumprob = np.sum(forward0,axis=1)
+        #print( (np.round(sumprob[0,:,:,:]*100)).astype(int) )
 
-                #print( gradient[0].shape )
-                #print( (np.round(gradient[0][0,0,:,:,:]*100)).astype(int) )
-                #print( (np.round(gradient[0][0,1,:,:,:]*100)).astype(int) )
-                #print( (np.round(gradient[0][0,2,:,:,:]*100)).astype(int) )
-                #print( (np.round(gradient[0][0,3,:,:,:]*100)).astype(int) )
-                
+        #print( gradient[0].shape )
+        #print( (np.round(gradient[0][0,0,:,:,:]*100)).astype(int) )
+        #print( (np.round(gradient[0][0,1,:,:,:]*100)).astype(int) )
+        #print( (np.round(gradient[0][0,2,:,:,:]*100)).astype(int) )
+        #print( (np.round(gradient[0][0,3,:,:,:]*100)).astype(int) )
 
-                #np.testing.assert_array_equal(gradient_tf, gradient_inner_product)
+
+        #np.testing.assert_array_equal(gradient_tf, gradient_inner_product)
 
 
 if __name__ == '__main__':

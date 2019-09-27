@@ -50,7 +50,7 @@ protected:
         const Tensor* parentage = &(context->input(4));
         const Tensor* data_index = &(context->input(5));
         Tensor* u = this->outputs[0];
-		
+        
         // call function
         HmfMeanpass3dFunctor<Device>()(
             context->eigen_device<Device>(),
@@ -119,7 +119,7 @@ template <typename Device>
 class HmfMeanpass3dGradOp : public HmfNdOp<Device> {
 public:
     HmfMeanpass3dGradOp(OpKernelConstruction* context) : 
-		HmfNdOp<Device>(context, 2, 5, 3, std::is_same<Device, GPUDevice>::value, true)	{}
+		HmfNdOp<Device>(context, 3, 6, 4, std::is_same<Device, GPUDevice>::value, true)	{}
 
 protected:
 
@@ -176,7 +176,7 @@ template <typename Device>
 class HmfMeanpass3dWithInitGradOp : public HmfNdOp<Device> {
 public:
     HmfMeanpass3dWithInitGradOp(OpKernelConstruction* context) : 
-		HmfNdOp<Device>(context, 2, 5, 4, std::is_same<Device, GPUDevice>::value, true)	{}
+		HmfNdOp<Device>(context, 3, 6, 5, std::is_same<Device, GPUDevice>::value, true)	{}
 
 protected:
 

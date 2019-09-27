@@ -30,19 +30,49 @@ u_full(full_buff[1])
 		copy_buffer(dev, init_u, u, n_s*n_c);
 	else
 		softmax(dev, data, NULL, u, n_s, n_c);
-}
     
+    //get pointers to parents' u buffer
+    float** tmp_u_ind = new float* [n_r];
+    for(int n_n = 0; n_n < n_r; n_n++){
+        const TreeNode* n = bottom_up_list[n_n];
+        if(n->parent->parent == NULL)
+            tmp_u_ind[n->r] = 0;
+        else
+            tmp_u_ind[n->r] = u_full + n_s*n->parent->r;
+    }
+    u_ind = (float**) allocate_on_gpu(dev, 2*n_r*sizeof(float*));
+    send_to_gpu(dev, tmp_u_ind, u_ind, n_r*sizeof(float*));
+    delete tmp_u_ind;
+    
+    //get pointers to parents' regularization buffer
+    float** tmp_r_ind = new float* [n_r];
+    for(int n_n = 0; n_n < n_r; n_n++){
+        const TreeNode* n = bottom_up_list[n_n];
+        if(n->parent->parent == NULL)
+            tmp_r_ind[n->r] = 0;
+        else
+            tmp_r_ind[n->r] = temp + n_s*n->parent->r;
+    }
+    reg_ind = u_ind+n_r;
+    send_to_gpu(dev, tmp_r_ind, reg_ind, n_r*sizeof(float*));
+    delete tmp_r_ind;
+}
+
+HMF_MEANPASS_GPU_SOLVER_BASE::~HMF_MEANPASS_GPU_SOLVER_BASE(){
+    deallocate_on_gpu(dev, u_ind);
+}
 void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
     
     //calculate the aggregate probabilities (stored in temp)
-    copy_buffer(dev, u, u_full, n_s*n_c);
-    clear_buffer(dev, u_full+n_c*n_s, n_s*(n_r-n_c));
-    for (int l = n_c; l < n_r; l++) {
-        const TreeNode* n = bottom_up_list[l];
-        for(int c = 0; c < n->c; c++)
-            inc_buffer(dev, u_full+n->children[c]->r*n_s, u_full+n->r*n_s, n_s);
-    }
+    //copy_buffer(dev, u, u_full, n_s*n_c);
+    //clear_buffer(dev, u_full+n_c*n_s, n_s*(n_r-n_c));
+    //for (int l = n_c; l < n_r; l++) {
+    //    const TreeNode* n = bottom_up_list[l];
+    //    for(int c = 0; c < n->c; c++)
+    //        inc_buffer(dev, u_full+n->children[c]->r*n_s, u_full+n->r*n_s, n_s);
+    //}
 	//print_buffer(dev, temp, n_s*n_r);
+    aggregate_bottom_up(dev, u_ind, u_full, u, n_s, n_c, n_r);
 
     //calculate the effective regularization (overwrites own temp)
     update_spatial_flow_calc();

@@ -16,6 +16,9 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #include "tensorflow/core/framework/op_kernel.h"
 
 //General GPU utilities
+void* allocate_on_gpu(const Eigen::GpuDevice& dev, size_t amount);
+void deallocate_on_gpu(const Eigen::GpuDevice& dev, void* ptr);
+void send_to_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount);
 void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount);
 void print_buffer(const Eigen::GpuDevice& dev, const float* buffer, const int n_s);
 
@@ -39,15 +42,18 @@ void div_buffer(const Eigen::GpuDevice& dev, const float* div, float* res, const
 void mult_buffer(const Eigen::GpuDevice& dev, const float mult, float* res, const int n_s);
 void mult_buffer(const Eigen::GpuDevice& dev, const float mult, const float* input, float* res, const int n_s);
 void log_buffer(const Eigen::GpuDevice& dev, const float* in, float* out, const int n_s);
-    
+
+void mark_neg_equal(const Eigen::GpuDevice& dev, const float* buffer_s, const float* buffer_l, float* u, const int n_s, const int n_c);
+
 void exp_and_inc_buffer(const Eigen::GpuDevice& dev, const float* max, float* cost, float* acc, const int n_s);
 
 void add_store_then_max_buffer(const Eigen::GpuDevice& dev, const float* comp1, const float* comp2, float* store, float* res, const int n_s);
 void add_then_store(const Eigen::GpuDevice& dev, const float* addend1, const float* addend2, float* sum, const int size);
 void add_then_store_2(const Eigen::GpuDevice& dev, const float* addend1, const float* addend2, float* sum1, float* sum2, const int size);
 
-float max_of_buffer(const Eigen::GpuDevice& dev, float* buffer, const int n_s); //note that this one pollutes the underlying buffer
+float max_of_buffer(const Eigen::GpuDevice& dev, const float* buffer, const int n_s);
 
+void aggregate_bottom_up(const Eigen::GpuDevice& dev, float** p_ind, float* buffer, const float* org, const int n_s, const int n_c, const int n_r);
 
 //Utilities for augmented lagrangian calculation
 void update_source_flows(const Eigen::GpuDevice& dev, float* ps, const float* pt, const float* div, const float* u, float icc, const int n_c, const int n_s);
@@ -55,11 +61,13 @@ void update_sink_flows(const Eigen::GpuDevice& dev, const float* ps, float* pt, 
 void update_multiplier(const Eigen::GpuDevice& dev, const float* ps, const float* pt, const float* div, float* u, float* erru, float cc, const int n_c, const int n_s);
 void update_source_sink_multiplier_potts(const Eigen::GpuDevice& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_c, const int n_s);
 void update_source_sink_multiplier_binary(const Eigen::GpuDevice& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_s);
+void update_multiplier_hmf(const Eigen::GpuDevice& dev, float* const* const ps_ind, const float* div, const float* pt, float* u, float* erru, const int n_s, const int n_c, const float cc);
 void find_min_constraint(const Eigen::GpuDevice& dev, float* output, const float* neg_constraint, const int n_c, const int n_s);
 
 void calc_capacity_potts(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
 void calc_capacity_binary(const Eigen::GpuDevice& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const float icc, const float tau);
 void calc_capacity_potts_source_separate(const Eigen::GpuDevice& dev, float* g, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
+void calc_capacity_hmf(const Eigen::GpuDevice& dev, float* g, float* const* const ps_ind, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_t);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_t);
 void update_spatial_flows(const Eigen::GpuDevice& dev, const float* g, float* div, float* px, const float* rx, const int n_x, const int n_t);
@@ -67,8 +75,10 @@ void abs_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* cons
 void max_neg_constrain(const Eigen::GpuDevice& dev, float* buffer, const float* constrain, const int n_s);
 void binary_constrain(const Eigen::GpuDevice& dev, float* buffer, const int n_s);
 
-
-
+void update_flow_hmf(const Eigen::GpuDevice& dev, float** g_ind, float* g_s, float* g, float** ps_ind, float* ps, float* pt, const float* div, const float* u, const float icc, const int* p_c, const int s_c, const int n_s, const int n_c);
+void divide_out_and_store_hmf(const Eigen::GpuDevice& dev, const float* g_s, const float* g, float* ps, float* pt, const int* p_c, const int s_c, const int n_s, const int n_c);
+void prep_flow_hmf(const Eigen::GpuDevice& dev, float* g, float* const* const ps_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c);
+void compute_parents_flow_hmf(const Eigen::GpuDevice& dev, float** g_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c);
 
 void populate_data_gradient(const Eigen::GpuDevice& dev, const float* g, const float* u, float* output, const int n_s);
 

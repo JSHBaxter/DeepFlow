@@ -8,9 +8,28 @@
 #include "gpu_kernels.h"
 
 #define NUM_THREADS 256
-#define epsilon 0.00001f
+#define epsilon 0.0001f
 
 #define CHECK_ERRORS false
+
+void check_error(const Eigen::GpuDevice& dev, const char* string){
+    cudaError_t cudaerr = cudaStreamSynchronize(dev.stream());
+    if (cudaerr != cudaSuccess){
+        printf(string);
+        printf(" \"%s\".\n", cudaGetErrorString(cudaerr));
+    }
+}
+
+void* allocate_on_gpu(const Eigen::GpuDevice& dev, size_t amount){
+    void* ptr;
+    cudaMalloc(&ptr,amount);
+    if(CHECK_ERRORS) check_error(dev, "cudaMalloc failed");
+    return ptr;
+}
+
+void deallocate_on_gpu(const Eigen::GpuDevice& dev, void* ptr){
+    cudaFree(ptr);
+}
 
 void get_from_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, size_t amount){
     cudaMemcpyAsync(dest,source,amount,cudaMemcpyDeviceToHost,dev.stream());
@@ -21,7 +40,7 @@ void print_buffer(const Eigen::GpuDevice& dev, const float* buffer, const int n_
 	float* c_buffer = (float*) malloc(n_s*sizeof(float));
 	get_from_gpu(dev, buffer, c_buffer, n_s*sizeof(float));
 	for(int i = 0; i < n_s; i++)
-		printf("%f ",c_buffer[i]);
+		printf("%f",c_buffer[i]);
 	printf("\n");
 	free(c_buffer);
 }
@@ -32,16 +51,7 @@ void send_to_gpu(const Eigen::GpuDevice& dev, const void* source, void* dest, si
     cudaStreamSynchronize(dev.stream());
 }
 
-void check_error(const Eigen::GpuDevice& dev, const char* string){
-    cudaError_t cudaerr = cudaStreamSynchronize(dev.stream());
-    if (cudaerr != cudaSuccess){
-        printf(string);
-        printf(" \"%s\".\n", cudaGetErrorString(cudaerr));
-    }
-}
-
 // Sets variables to 0.0f
-
 void clear_buffer(const Eigen::GpuDevice& dev, float* buffer, const int size){
     set_buffer(dev, buffer, 0.0f, size);
 }
@@ -60,6 +70,167 @@ __global__ void set_kernel(float* buffer, const float number, const int n_s){
 void set_buffer(const Eigen::GpuDevice& dev, float* buffer, const float number, const int n_s){
     set_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, number, n_s);
     if(CHECK_ERRORS) check_error(dev, "set_buffer launch failed with error");
+}
+
+__global__ void mark_neg_equal_kernel(const float* buffer_s, const float* buffer_l, float* u, const int n_s, const int n_c){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    float num1 = buffer_s[i];
+    for(int c = 0; c < n_c; c++){
+        float num2 = buffer_l[i+c*n_s];
+        float out = (num1 == -num2) ? 1.0f : 0.0f;
+        if(i < n_s)
+            u[i+c*n_s] = out;
+    }
+}
+
+void mark_neg_equal(const Eigen::GpuDevice& dev, const float* buffer_s, const float* buffer_l, float* u, const int n_s, const int n_c){
+    mark_neg_equal_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer_s, buffer_l, u, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "mark_neg_equal launch failed with error");
+}
+
+__global__ void aggregate_bottom_up_kernel(float** p_ind, float* buffer, const float* org, const int n_s, const int n_c, const int n_r){
+    __shared__ float* p_ind_t [NUM_THREADS];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    p_ind_t[threadIdx.x] = p_ind[threadIdx.x];
+    __syncthreads();
+    
+    //clear buffers
+    for(int c = 0; c < n_r; c++)
+        if( c < n_c)
+            if( i < n_s )
+                buffer[i+c*n_s] = org[i+c*n_s];
+            else
+                buffer[i+c*n_s] = 0.0f;
+    
+    for(int c = 0; c < n_r; c++){
+        //get value of own buffer (and write it if leaf)
+        float buffer_val = buffer[i+c*n_s];
+        
+        //accumulate into parents buffer
+        float* p_ptr = p_ind_t[c];
+        if( p_ptr ){
+            buffer_val += p_ptr[i];
+            if( i < n_s )
+                p_ptr[i] = buffer_val;
+        }
+        __syncthreads();
+    }
+}
+
+void aggregate_bottom_up(const Eigen::GpuDevice& dev, float** p_ind, float* buffer, const float* org, const int n_s, const int n_c, const int n_r){
+    aggregate_bottom_up_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(p_ind, buffer, org, n_s, n_c, n_r);
+    if(CHECK_ERRORS) check_error(dev, "aggregate_bottom_up launch failed with error");
+}
+
+__global__ void prep_flow_hmf_kernel(float* g, float* const* const ps_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c){
+    __shared__ float* ps_ind_t [NUM_THREADS];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    ps_ind_t[threadIdx.x] = ps_ind[threadIdx.x];
+    __syncthreads();
+    
+    for(int c = 0; c < n_c; c++){
+        float* ps_ptr = ps_ind_t[c];
+        float pre_val = ps_ptr[i] - div[i+c*n_s] - icc * u[i+c*n_s];
+        if(i < n_s)
+            g[i+c*n_s] = pre_val;
+    }
+}
+
+void prep_flow_hmf(const Eigen::GpuDevice& dev, float* g, float* const* const ps_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c){
+    prep_flow_hmf_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, ps_ind, pt, div, u, icc, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "prep_flow_hmf launch failed with error");
+}
+
+__global__ void compute_parents_flow_hmf_kernel(float** g_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c){
+    __shared__ float* g_ind_t [NUM_THREADS];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    g_ind_t[threadIdx.x] = g_ind[threadIdx.x];
+    __syncthreads();
+    
+    for(int c = 0; c < n_c; c++){
+        float* pg_ptr = g_ind_t[c];
+        float update = pg_ptr[i] + pt[i+c*n_s] + div[i+c*n_s] - icc * u[i+c*n_s];
+        if( i < n_s )
+            pg_ptr[i] = update;
+    }
+    
+}
+
+void compute_parents_flow_hmf(const Eigen::GpuDevice& dev, float** g_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c){
+    compute_parents_flow_hmf_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g_ind, pt, div, u, icc, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "compute_parents_flow_hmf launch failed with error");
+}
+
+__global__ void update_flow_hmf_kernel(float** g_ind, float* g_s, float* g, float* const* const ps_ind, float* ps, float* pt, const float* div, const float* u, const float icc, const int* p_c, const int s_c, const int n_s, const int n_c){
+    __shared__ float* g_ind_t [NUM_THREADS/4];
+    __shared__ float* ps_ind_t [NUM_THREADS/4];
+    __shared__ int c_t [NUM_THREADS/4];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    if( threadIdx.x < NUM_THREADS/4 ){
+        ps_ind_t[threadIdx.x] = ps_ind[threadIdx.x];
+        g_ind_t[threadIdx.x] = g_ind[threadIdx.x];
+        c_t[threadIdx.x] = p_c[threadIdx.x];
+    }
+    __syncthreads();
+    
+    //set buffer to initial self-capacity
+    if(i < n_s)
+        g_s[i] = icc;
+    
+    for(int c = 0; c < n_c; c++){
+        float* ps_ptr = ps_ind_t[c];
+        float pre_val = ps_ptr[i] - div[i+c*n_s] - icc * u[i+c*n_s];
+        if(i < n_s)
+            g[i+c*n_s] = pre_val;
+    }
+    
+    //insert component from children into parents tmp buffer
+    for(int c = 0; c < n_c; c++){
+        float* pg_ptr = g_ind_t[c];
+        float update = pg_ptr[i] + pt[i+c*n_s] + div[i+c*n_s] - icc * u[i+c*n_s];
+        if( i < n_s )
+            pg_ptr[i] = update;
+    }
+    
+    //divide out to normalize by number of children and output into flow buffers
+    float g_s_val = g_s[i] / (float) s_c;
+    if(i < n_s)
+        ps[i] = g_s_val;
+    for(int c = 0; c < n_c; c++){
+        int num_c = c_t[c];
+        float g_val = g[i+c*n_s] / (float) num_c;
+        if(i < n_s)
+            pt[i+c*n_s] = g_val;
+    }
+}
+
+void update_flow_hmf(const Eigen::GpuDevice& dev, float** g_ind, float* g_s, float* g, float** ps_ind, float* ps, float* pt, const float* div, const float* u, const float icc, const int* p_c, const int s_c, const int n_s, const int n_c){
+    update_flow_hmf_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g_ind, g_s, g, ps_ind, ps, pt, div, u, icc, p_c, s_c, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "update_flow_hmf launch failed with error");
+}
+
+__global__ void divide_out_and_store_hmf_kernel(const float* g_s, const float* g, float* ps, float* pt, const int* p_c, const int s_c, const int n_s, const int n_c){
+    __shared__ int c_t [NUM_THREADS];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    c_t[threadIdx.x] = p_c[threadIdx.x];
+    __syncthreads();
+    
+    //divide out to normalize by number of children and output into flow buffers
+    float g_s_val = g_s[i] / (float) s_c;
+    if(i < n_s)
+        ps[i] = g_s_val;
+    for(int c = 0; c < n_c; c++){
+        int num_c = c_t[c];
+        float g_val = g[i+c*n_s] / (float) num_c;
+        if(i < n_s)
+            pt[i+c*n_s] = g_val;
+    }
+}
+
+void divide_out_and_store_hmf(const Eigen::GpuDevice& dev, const float* g_s, const float* g, float* ps, float* pt, const int* p_c, const int s_c, const int n_s, const int n_c){
+    divide_out_and_store_hmf_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g_s, g, ps, pt, p_c, s_c, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "divide_out_and_store_hmf launch failed with error");
 }
 
 // update the source flow
@@ -142,6 +313,29 @@ __global__ void update_source_sink_multiplier_binary_kernel(float* ps, float* pt
 void update_source_sink_multiplier_binary(const Eigen::GpuDevice& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_s){
     update_source_sink_multiplier_binary_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(ps, pt, div, u, erru, d, cc, icc, n_s);
     if(CHECK_ERRORS) check_error(dev, "update_source_sink_multiplier_binary launch failed with error");
+}
+
+// update the source flow
+__global__ void update_multiplier_hmf_kernel(float* const* const ps_ind, const float* pt, const float* div, float* u, float* erru, const float cc, const int n_s, const int n_c){
+    __shared__ const float* ps_ind_t [NUM_THREADS];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    ps_ind_t[threadIdx.x] = ps_ind[threadIdx.x];
+    __syncthreads();
+    
+    for(int c = 0; c < n_c; c++){
+        const float* ps_ptr = ps_ind_t[c];
+        float diff = cc*(pt[i+c*n_s] + div[i+c*n_s] - ps_ptr[i]);
+        float new_u = u[i+c*n_s] - diff;
+        if(i < n_s){
+            erru[i+c*n_s] = diff;
+            u[i+c*n_s] = new_u;
+        }
+    }
+}
+
+void update_multiplier_hmf(const Eigen::GpuDevice& dev, float* const* const ps_ind, const float* div, const float* pt, float* u, float* erru, const int n_s, const int n_c, const float cc){
+    update_multiplier_hmf_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(ps_ind, pt,div,u,erru,cc, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "update_multiplier_hmf launch failed with error");
 }
 
 __global__ void update_source_flows_kernel_channel_first(float* ps, const float* pt, const float* div, const float* u, float icc, const int n_c, const int n_s) {
@@ -491,12 +685,31 @@ void calc_capacity_potts_source_separate(const Eigen::GpuDevice& dev, float* g, 
     if(CHECK_ERRORS) check_error(dev, "calc_capacity_potts_source_separate launch failed with error");
 }
 
+__global__ void calc_capacity_hmf_kernel(float* g, float* const* const ps_ind, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
+    __shared__ const float* ps_ind_t [NUM_THREADS];
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    ps_ind_t[threadIdx.x] = ps_ind[threadIdx.x];
+    __syncthreads();
+    
+    for(int c = 0; c < n_c; c++){
+        const float* ps_ptr = ps_ind_t[c];
+        float g_t = div[i+c*n_s] + pt[i+c*n_s] - ps_ptr[0] - icc * u[i+c*n_s];
+        g_t *= tau;
+        if(i < n_s)
+            g[i+c*n_s] = g_t;
+    }
+}
+
+void calc_capacity_hmf(const Eigen::GpuDevice& dev, float* g, float* const* const ps_ind, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
+    calc_capacity_hmf_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(g, ps_ind, div, pt, u, n_s, n_c, icc, tau);
+    if(CHECK_ERRORS) check_error(dev, "calc_capacity_hmf launch failed with error");
+}
+
 __global__ void log_buffer_kernel(const float* in, float* out, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
     float value = in[i];
 	value = (value < epsilon) ? epsilon : value;
-	value = (value > 1.0f - epsilon) ? 1.0f - epsilon : value;
     value = log(value);
     
     if(i < n_s)
@@ -548,7 +761,7 @@ __global__ void maxreduce(float* buffer, int j, int n) {
 }
 
 
-float max_of_buffer(const Eigen::GpuDevice& dev, float* buffer, const int n_s){
+float max_of_buffer(const Eigen::GpuDevice& dev, const float* buffer, const int n_s){
     float* buffer_c = (float*) malloc(n_s*sizeof(float));
     get_from_gpu(dev,buffer,buffer_c,n_s*sizeof(float));
     float max_value = 0.0f;

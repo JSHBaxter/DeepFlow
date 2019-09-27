@@ -76,7 +76,13 @@ public:
     px(full_buff[4]),
     py(full_buff[5]),
     pz(full_buff[6])
-    {}
+    {
+        float max_rx = max_of_buffer(dev, rx_cost, this->n_s*this->n_r);
+        float max_ry = max_of_buffer(dev, ry_cost, this->n_s*this->n_r);
+        float max_rz = max_of_buffer(dev, rz_cost, this->n_s*this->n_r);
+        this->icc = 0.1f * std::max(std::max(max_rx, max_ry), max_rz);
+        this->cc = 1.0f / this->icc;
+    }
 };
 
 template <>
@@ -128,7 +134,7 @@ struct HmfAuglag3dFunctor<GPUDevice> {
     }
 
     int num_buffers_full(){ return 7; }
-    int num_buffers_images(){ return 1; }
+    int num_buffers_images(){ return 2; }
     int num_buffers_branch(){ return 0; }
     int num_buffers_data(){ return 0; }
 };

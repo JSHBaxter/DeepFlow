@@ -27,6 +27,9 @@ protected:
     float* const temp;
     float* const u_full;
     
+    float** u_ind;
+    float** reg_ind;
+    
     // optimization constants
     const float tau = 0.5f;
 	const float beta = 0.01f;
@@ -49,6 +52,7 @@ public:
         float* const u,
         float** full_buff,
         float** img_buff);
+    ~HMF_MEANPASS_GPU_SOLVER_BASE();
     
     void operator()();
 };

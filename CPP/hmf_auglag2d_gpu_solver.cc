@@ -118,7 +118,7 @@ struct HmfAuglag2dFunctor<GPUDevice> {
     }
 
     int num_buffers_full(){ return 6; }
-    int num_buffers_images(){ return 1; }
+    int num_buffers_images(){ return 2; }
     int num_buffers_branch(){ return 0; }
     int num_buffers_data(){ return 0; }
 };
