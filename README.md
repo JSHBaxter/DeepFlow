@@ -44,3 +44,7 @@ The former solver is based on that presented in
 The latter solver is based on that presented in:
 [2] Baxter, J.S.H., Rajchl, M., Yuan, J., & Peters, T. M. (2014). A continuous max-flow approach to multi-labeling problems under arbitrary region regularization. arXiv preprint arXiv:1405.0892.
 
+At the moment, the project is designed for Linux and make. Depending on the
+NVCC compiler used for the CUDA portions, one may need to set the corresponding
+C compiler to a particular version using the C make variable.
+
