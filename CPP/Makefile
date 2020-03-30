@@ -31,7 +31,8 @@ hmf_mean_pass = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc hmf_mean
 hmf_mean_pass_h = hmf_meanpass3d.cc  hmf_meanpass2d.cc  hmf_meanpass1d.cc hmf_meanpass_cpu_solver.cc
 hmf_aug_lag = hmf_auglag1d.cc hmf_auglag2d.cc hmf_auglag3d.cc hmf_auglag_cpu_solver.cc
 hmf_aug_lag_h = hmf_auglag1d.h hmf_auglag2d.h hmf_auglag3d.h hmf_auglag_cpu_solver.h
-
+taylor_series = taylor_series.cpp taylor_series_cpu.cc
+taylor_series_h = taylor_series.h
 cpu_kernels = cpu_kernels.cc hmf_trees.cc hmf_trees.h
 
 ifneq (,$(CUDAFLAG))
@@ -47,6 +48,7 @@ ifneq (,$(CUDAFLAG))
 	hmf_mean_pass_h += hmf_meanpass_gpu_solver.h
 	hmf_aug_lag += hmf_auglag_gpu_solver.cc
 	hmf_aug_lag_h += hmf_auglag_gpu_solver.h
+	taylor_series += taylor_series_gpu.cc
 endif
 
 ifneq (,$(CUDAFLAG))
@@ -80,7 +82,10 @@ hmf.o : $(hmf_mean_pass) $(hmf_aug_lag) $(hmf_mean_pass_h) $(hmf_aug_lag_h) inte
 	$(CC) $(CIFLAGS) hmf.cpp
 	rm hmf.cpp
 
-object_list = interfacing.o potts.o binary.o hmf.o cpu_kernels.o hmf_trees.o
+taylor_series.o : $(taylor_series) $(taylor_series_h)
+	$(CC) $(CIFLAGS) -o taylor_series.o taylor_series.cpp
+
+object_list = interfacing.o potts.o binary.o hmf.o cpu_kernels.o hmf_trees.o taylor_series.o
 ifneq (,$(CUDAFLAG))
 	object_list += gpu_kernels.o
 endif

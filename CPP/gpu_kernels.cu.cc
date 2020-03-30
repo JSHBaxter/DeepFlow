@@ -1606,4 +1606,136 @@ void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du,
     if(CHECK_ERRORS) check_error(dev, "get_gradient_for_u (1D) launch failed with error");
 }
 
+__global__ void taylor_series_channels_first_kernel(const float* input, const float* coeffs, float* output, int n_b, int n_s, int n_c, int n_i){
+    __shared__ float coeffs_shr [NUM_THREADS];
+	int p = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+	for(int c = 0; c < n_c; c++){
+		
+		//load coeffs in as shared data
+		coeffs_shr[p] = coeffs[c*n_i+p];
+		__syncthreads();
+		
+		for(int b = 0; b < n_b; b++){
+			float output_t = coeffs_shr[0];
+			float x = input[(b*n_c+c)*n_s+p];
+			float poly = 1.0f;
+			for(int i = 1; i < n_i; i++){
+				poly *= x / (float) i;
+				output_t += poly * coeffs_shr[i];
+			}
+			if(p < n_s)
+				output[(b*n_c+c)*n_s+p] = output_t;
+		}
+	}
+}
+
+__global__ void taylor_series_channels_last_kernel(const float* input, const float* coeffs, float* output, int n_b, int n_s, int n_c, int n_i){
+    __shared__ float coeffs_shr [NUM_THREADS];
+	int p = blockIdx.x * NUM_THREADS + threadIdx.x;
+	int c = p % n_c;
+    coeffs_shr[p] = coeffs[p];
+	
+	for(int b = 0; b < n_b; b++){
+		float output_t = coeffs_shr[c*n_i];
+		float x = input[b*n_s*n_c+p];
+		float poly = 1.0f;
+		for(int i = 1; i < n_i; i++){
+			poly *= x / (float) i;
+			output_t += poly * coeffs_shr[c*n_i+i];
+		}
+		if(p < n_s*n_c)
+			output[b*n_s*n_c+p] = output_t;
+	}
+}
+void taylor_series_channels_first(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, float* output, int n_b, int n_s, int n_c, int n_i){
+	taylor_series_channels_first_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(input, coeffs, output, n_b, n_s, n_c, n_i);
+    if(CHECK_ERRORS) check_error(dev, "taylor_series_channels_first launch failed with error");
+}
+
+void taylor_series_channels_last(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, float* output, int n_b, int n_s, int n_c, int n_i){
+	if( n_c * n_i > NUM_THREADS ){
+		printf("Too many coeffs to run on GPU with channels last. Either decrease the polynomial degree / number of channels, or switch to channel first.");
+		return;
+	}
+	taylor_series_channels_last_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(input, coeffs, output, n_b, n_s, n_c, n_i);
+    if(CHECK_ERRORS) check_error(dev, "taylor_series_channels_last launch failed with error");
+}
+
+__global__ void taylor_series_grad_channels_first_kernel(const float* input, const float* coeffs, const float* grad, float* g_input, float* g_coeffs, int n_b, int n_s, int n_c, int n_i){
+	__shared__ float coeffs_shr [NUM_THREADS];
+	__shared__ float g_coeffs_shr [NUM_THREADS];
+	int p = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+	for(int c = 0; c < n_c; c++){
+		
+		//load coeffs in as shared data
+		coeffs_shr[p] = coeffs[c*n_i+p];
+		g_coeffs_shr[p] = 0.0f;
+		__syncthreads();
+		
+		for(int b = 0; b < n_b; b++){
+			float x = input[(b*n_c+c)*n_s+p];
+			float g_input_t = 0.0f;
+			float poly = 1.0f;
+			for(int i = 1; i < n_i; i++){
+				g_input_t += poly * coeffs_shr[i];
+				poly *= x / (float) i;
+				float g_coeffs_cont = poly * grad[(b*n_c+c)*n_s+p];
+				atomicAdd(g_coeffs_shr+i,g_coeffs_cont);
+			}
+			g_input_t *= grad[(b*n_c+c)*n_s+p];
+			if(p < n_s)
+				g_input[(b*n_c+c)*n_s+p] = g_input_t;
+		}
+		
+		if(p < n_i)
+			atomicAdd(g_coeffs+(c*n_i+p), g_coeffs_shr[p]);
+	}
+}
+
+__global__ void taylor_series_grad_channels_last_kernel(const float* input, const float* coeffs, const float* grad, float* g_input, float* g_coeffs, int n_b, int n_s, int n_c, int n_i){
+	__shared__ float coeffs_shr [NUM_THREADS];
+	__shared__ float g_coeffs_shr [NUM_THREADS];
+	int p = blockIdx.x * NUM_THREADS + threadIdx.x;
+	int c = p % n_c;
+    coeffs_shr[p] = coeffs[p];
+	g_coeffs_shr[p] = 0.0f;
+	
+	for(int b = 0; b < n_b; b++){
+		float g_input_t = 0.0f;
+		float x = input[b*n_s*n_c+p];
+		float poly = 1.0f;
+		for(int i = 1; i < n_i; i++){
+			g_input_t += poly * coeffs_shr[c*n_i+i];
+			poly *= x / (float) i;
+			float g_coeffs_cont = poly * grad[b*n_c*n_s+p];
+			atomicAdd(g_coeffs_shr+(c*n_i+i),g_coeffs_cont);
+		}
+		g_input_t *= grad[b*n_c*n_s+p];
+		if(p < n_s*n_c)
+			g_input[b*n_s*n_c+p] = g_input_t;
+	}
+	
+	if(p < n_i)
+		atomicAdd(g_coeffs+p, g_coeffs_shr[p]);
+
+}
+void taylor_series_grad_channels_first(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, const float* grad, float* g_input, float* g_coeffs, int n_b, int n_s, int n_c, int n_i){
+	clear_buffer(dev, g_coeffs, n_c*n_i);
+	taylor_series_grad_channels_first_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(input, coeffs, grad, g_input, g_coeffs, n_b, n_s, n_c, n_i);
+    if(CHECK_ERRORS) check_error(dev, "taylor_series_channels_first launch failed with error");
+}
+
+void taylor_series_grad_channels_last(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, const float* grad, float* g_input, float* g_coeffs, int n_b, int n_s, int n_c, int n_i){
+	clear_buffer(dev, g_coeffs, n_c*n_i);
+	clear_buffer(dev, g_input, n_b*n_c*n_s);
+	if( n_c * n_i > NUM_THREADS ){
+		printf("Too many coeffs to run on GPU with channels last. Either decrease the polynomial degree / number of channels, or switch to channel first.");
+		return;
+	}
+	taylor_series_grad_channels_last_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(input, coeffs, grad, g_input, g_coeffs, n_b, n_s, n_c, n_i);
+    if(CHECK_ERRORS) check_error(dev, "taylor_series_channels_last launch failed with error");
+}
+
 #endif // GOOGLE_CUDA

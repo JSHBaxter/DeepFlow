@@ -111,4 +111,10 @@ void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du,
 void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du, const float* rx, const float* ry, const int n_x, const int n_y, const int n_c);
 void get_gradient_for_u(const Eigen::GpuDevice& dev, const float* dy, float* du, const float* rx, const int n_x, const int n_c);
 
+// Misc. functions
+void taylor_series_channels_first(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, float* output, int n_b, int n_s, int n_c, int n_i);
+void taylor_series_channels_last(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, float* output, int n_b, int n_s, int n_c, int n_i);
+void taylor_series_grad_channels_first(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, const float* grad, float* g_input, float* g_coeffs, int n_b, int n_s, int n_c, int n_i);
+void taylor_series_grad_channels_last(const Eigen::GpuDevice& dev, const float* input, const float* coeffs, const float* grad, float* g_input, float* g_coeffs, int n_b, int n_s, int n_c, int n_i);
+
 #endif // GPU_KERNELS
