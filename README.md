@@ -32,12 +32,15 @@ algorithms:
     (1) Marginal probability estimation via iterative mean-field approximations
         which happens to be well-behaved and differentiable provided that the
         regularisation terms are kept within a particular bound, and
-    (2) Maximum a posteriori probability estimation via an augmented lagrangian
-        solution algorithm [1], which is not differentiable but can be used for
+    (2) Maximum a posteriori probability estimation via an augmented Lagrangian
+        solution algorithm [2], which is not differentiable but can be used for
         layer evaluation (but not for training). This solver works best if the data
         terms are normalized into a -1 to 1 range, but is mathematically scale-
         invariant.
 
+The former solver is based on that presented in 
+[1] Baxter, J.S.H., Jannin, P. (2020) Topology-aware activation layer for neural network image segmentation. Proceedings of SPIE Medical Imaging, vol. 11313 p. 11313A. 
+
 The latter solver is based on that presented in:
-[1] Baxter, J. S.H., Rajchl, M., Yuan, J., & Peters, T. M. (2014). A continuous max-flow approach to multi-labeling problems under arbitrary region regularization. arXiv preprint arXiv:1405.0892.
+[2] Baxter, J.S.H., Rajchl, M., Yuan, J., & Peters, T. M. (2014). A continuous max-flow approach to multi-labeling problems under arbitrary region regularization. arXiv preprint arXiv:1405.0892.
 
