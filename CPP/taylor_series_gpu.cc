@@ -51,5 +51,10 @@ struct TaylorSeriesGradFunctor<GPUDevice> {
 		for(int i = 0; i < N-1; i++)
 			n_s *= size_data[i+1];
 		n_s /= n_c;
+		
+		if(channels_first)
+			taylor_series_grad_channels_first(d, input, coeffs, g, g_input, g_coeffs, n_b, n_s, n_c, n_i);
+		else
+			taylor_series_grad_channels_last(d, input, coeffs, g, g_input, g_coeffs, n_b, n_s, n_c, n_i);
 	}
 };

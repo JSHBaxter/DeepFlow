@@ -240,4 +240,29 @@ def _hmf_meanpass1d_with_init_grad_cc(op, grad):
     gradient = module.hmf_meanpass1d_with_init_grad(op.inputs[0], op.inputs[1], grad, op.outputs[0], op.inputs[3], op.inputs[4])
     return gradient
 
+@ops.RegisterGradient("TaylorSeriesNCS")
+def _taylor_series_ncs_grad_cc(op, grad):
+    """
+    The gradient for `TaylorSeriesNCS` using the operation implemented in C++.
+
+    :param op: `TaylorSeriesNCS` `Operation` that we are differentiating, which we can use
+        to find the inputs of the original op.
+    :param grad: gradient with respect to the output of the `TaylorSeriesNCS` op.
+    :return: gradients with respect to the input of `TaylorSeriesNCS`.
+    """
+    gradient = module.taylor_series_ncs_grad(op.inputs[0], op.inputs[1], grad)
+    return gradient
+
+@ops.RegisterGradient("TaylorSeriesNSC")
+def _taylor_series_nsc_grad_cc(op, grad):
+    """
+    The gradient for `TaylorSeriesNSC` using the operation implemented in C++.
+
+    :param op: `TaylorSeriesNSC` `Operation` that we are differentiating, which we can use
+        to find the inputs of the original op.
+    :param grad: gradient with respect to the output of the `TaylorSeriesNSC` op.
+    :return: gradients with respect to the input of `TaylorSeriesNSC`.
+    """
+    gradient = module.taylor_series_nsc_grad(op.inputs[0], op.inputs[1], grad)
+    return gradient
 

@@ -241,6 +241,23 @@ REGISTER_OP(name_str)\
 _TAYLOR_SERIES_REGISTER_OP_("TaylorSeriesNCS");
 _TAYLOR_SERIES_REGISTER_OP_("TaylorSeriesNSC");
   
+#define _TAYLOR_SERIES_GRAD_REGISTER_OP_(name_str) \
+REGISTER_OP(name_str)\
+  .Input("input: float")\
+  .Input("coeff: float")\
+  .Input("grad: float")\
+  .Output("g_input: float")\
+  .Output("g_coeffs: float")\
+  .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {\
+    ::tensorflow::shape_inference::ShapeHandle input;\
+    TF_RETURN_IF_ERROR(c->WithRank(c->input(1), 2, &input));\
+    c->set_output(0, c->input(0));\
+    c->set_output(1, c->input(1));\
+    return Status::OK();\
+  });
+_TAYLOR_SERIES_GRAD_REGISTER_OP_("TaylorSeriesGradNCS");
+_TAYLOR_SERIES_GRAD_REGISTER_OP_("TaylorSeriesGradNSC");
+
 // Register the CPU kernels.
 REGISTER_KERNEL_BUILDER(Name("TaylorSeriesNCS").Device(DEVICE_CPU), TaylorSeriesOp<CPUDevice,true>);
 REGISTER_KERNEL_BUILDER(Name("TaylorSeriesNSC").Device(DEVICE_CPU), TaylorSeriesOp<CPUDevice,false>);

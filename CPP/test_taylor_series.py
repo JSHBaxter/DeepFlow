@@ -19,7 +19,7 @@ class InnerProductOpTest(unittest.TestCase):
         t = 32
 
         for i in range(1):
-            input_d = 5*np.random.rand(b,c,x)
+            input_d = 10*np.random.randn(b,c,x)
             output_d = np.exp(input_d)
             coeffs_d = np.ones((c,t))
 
