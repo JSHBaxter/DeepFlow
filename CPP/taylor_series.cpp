@@ -63,7 +63,7 @@ protected:
 			this->N,
 			input_data->flat<float>().data(),
 			coeff_data->flat<float>().data(),
-			this->output->flat<float>().data()
+			output->flat<float>().data()
 		);
 		
     }
@@ -163,8 +163,8 @@ protected:
 			input_data->flat<float>().data(),
 			coeff_data->flat<float>().data(),
 			grad_data->flat<float>().data(),
-			this->g_input->flat<float>().data(),
-			this->g_coeffs->flat<float>().data()
+			g_input->flat<float>().data(),
+			g_coeffs->flat<float>().data()
 		);
 		
     }
