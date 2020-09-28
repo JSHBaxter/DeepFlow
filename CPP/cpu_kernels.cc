@@ -245,7 +245,7 @@ void parity_mask(float* buffer, const int n_x, const int n_y, const int n_c, con
 void parity_mask(float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
 	for(int x = 0, s = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
-	for(int z = 0; z < n_z; y++)
+	for(int z = 0; z < n_z; z++)
         for(int c = 1; c < n_c; c++, s++)
             buffer[s] *= (parity ^ x ^ y ^ z) & 1;
 }
@@ -270,7 +270,7 @@ void parity_merge(float* buffer, const float* other, const int n_x, const int n_
 void parity_merge(float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
 	for(int x = 0, s = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
-	for(int z = 0; z < n_z; y++)
+	for(int z = 0; z < n_z; z++)
         for(int c = 1; c < n_c; c++, s++){
             buffer[s] *= (parity ^ x ^ y ^ z) & 1;
             buffer[s] += ((parity ^ x ^ y ^ z ^ 1) & 1) * other[s];
