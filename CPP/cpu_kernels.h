@@ -55,6 +55,12 @@ void init_flows(const float* d, float* ps, const int n_c, const int n_s);
 void init_flows_channels_first(const float* d, float* ps, const int n_c, const int n_s);
 
 //Functions specifically for the mean field forward calculation
+void parity_mask(float* buffer, const int n_x, const int n_c, const int parity);
+void parity_mask(float* buffer, const int n_x, const int n_y, const int n_c, const int parity);
+void parity_mask(float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
+void parity_merge(float* buffer, const float* other, const int n_x, const int n_c, const int parity);
+void parity_merge(float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity);
+void parity_merge(float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
 void softmax_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c);
 void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c);
 void softmax_update(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);

@@ -23,6 +23,12 @@ protected:
     void update_spatial_flow_calc(){
         calculate_r_eff(r_eff, rx, ry, u_tmp, n_x, n_y, n_r);
     }
+    void parity_mask_buffer(float* buffer, const int parity){
+        parity_mask(buffer,n_x,n_y,n_c,parity);
+    }
+    void parity_merge_buffer(float* buffer, const float* other, const int parity){
+        parity_merge(buffer,other,n_x,n_y,n_c,parity);
+    }
     
 public:
     HMF_MEANPASS_CPU_SOLVER_2D(

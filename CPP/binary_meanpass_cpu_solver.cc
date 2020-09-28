@@ -28,11 +28,12 @@ u(u)
 }
 
 //perform one iteration of the algorithm
-float BINARY_MEANPASS_CPU_SOLVER_BASE::block_iter(bool last){
+float BINARY_MEANPASS_CPU_SOLVER_BASE::block_iter(int iter, bool last){
 	float max_change = 0.0f;
 	calculate_regularization();
 	inc(data, r_eff, n_s*n_c);
 	sigmoid(r_eff, r_eff, n_s*n_c);
+    parity_merge_buffer(r_eff,u,iter&1);
 	if(last)
 		max_change = update_with_convergence(u, r_eff, n_s*n_c, tau);
 	else
@@ -58,7 +59,7 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
-            max_change = block_iter(iter == min_iter-1);
+            max_change = block_iter(iter, iter == min_iter-1);
 
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
@@ -67,7 +68,7 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++)
-        block_iter(false);
+        block_iter(iter, false);
 
 
 	//calculate the effective regularization

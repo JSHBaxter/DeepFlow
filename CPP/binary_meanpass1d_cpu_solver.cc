@@ -20,6 +20,12 @@ protected:
     void calculate_regularization(){
 		calculate_r_eff(r_eff, rx, u, n_x, n_c);
 	}
+    void parity_mask_buffer(float* buffer, const int parity){
+        parity_mask(buffer,n_x,n_c,parity);
+    }
+    void parity_merge_buffer(float* buffer, const float* other, const int parity){
+        parity_merge(buffer,other,n_x,n_c,parity);
+    }
     void clean_up(){}
 	
 public:

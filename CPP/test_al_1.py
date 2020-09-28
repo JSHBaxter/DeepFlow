@@ -18,7 +18,7 @@ class InnerProductOpTest(unittest.TestCase):
         x = 10
 
         for i in range(1):
-            input_d = 1*np.random.rand(b,c,x)
+            input_d = 10*np.random.rand(b,c,x)
             input_rx = 1*np.ones((b,c,x))
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
@@ -26,39 +26,26 @@ class InnerProductOpTest(unittest.TestCase):
             #input_rx[:,:,:,:,5] *= 0
             #input_rx += 0.2*(np.random.rand(b,c,x))
 
-            for devicename in ['CPU','GPU']:
+            for devicename in ['/CPU:0','/GPU:0']:
                 
-                if devicename == 'CPU':
-                    config = tf.ConfigProto(log_device_placement=False, device_count = {'GPU': 0})
-
-                    data = tf.placeholder(tf.float32, shape = (b,x,c))
-                    rx = tf.placeholder(tf.float32, shape = (b,x,c))
+                if devicename == '/CPU:0':
+                    data = tf.convert_to_tensor(np.transpose(input_d,[0,2,1]),dtype=tf.float32)
+                    rx = tf.convert_to_tensor(np.transpose(input_rx,[0,2,1]),dtype=tf.float32)
 
                 else:
-                    config = tf.ConfigProto(log_device_placement=False)
-
-                    data = tf.placeholder(tf.float32, shape = (b,c,x))
-                    rx = tf.placeholder(tf.float32, shape = (b,c,x))
+                    data = tf.convert_to_tensor(input_d,dtype=tf.float32)
+                    rx = tf.convert_to_tensor(input_rx,dtype=tf.float32)
                     
                 
-                with tf.Session(config=config) as sess:
+                with tf.device(devicename):
 
-                    flow = meanpass_module.potts_auglag1d(data,rx)
-                    flow_mean = meanpass_module.potts_meanpass1d(data,rx)
+                    forward = meanpass_module.potts_auglag1d(data,rx)
+                    forward_mean = meanpass_module.potts_meanpass1d(data,rx)
                     #grad_flow = tf.gradients(flow, (data,rx))
 
-                    if devicename == 'CPU':
-                        forward = sess.run(flow, feed_dict = {data: np.transpose(input_d,[0,2,1]), rx: np.transpose(input_rx,[0,2,1])})
+                    if devicename == '/CPU:0':
                         forward = np.transpose(forward,[0,2,1])
-                        forward_mean = sess.run(flow_mean, feed_dict = {data: np.transpose(input_d,[0,2,1]), rx: np.transpose(input_rx,[0,2,1])})
                         forward_mean = np.transpose(forward_mean,[0,2,1])
-                        #gradient = sess.run(grad_flow, feed_dict = {data: np.transpose(input_d,[0,2,3,4,1]), rx: np.transpose(input_rx,[0,2,3,4,1]), ry: np.transpose(input_ry,[0,2,3,4,1]), rz: np.transpose(input_rz,[0,2,3,4,1])})
-                        #gradient = [np.transpose(g,[0,4,1,2,3]) for g in gradient]
-                    else:
-                        forward = sess.run(flow, feed_dict = {data: input_d, rx: input_rx})
-                        forward_mean = sess.run(flow_mean, feed_dict = {data: input_d, rx: input_rx})
-                        #forward0 = sess.run(flow, feed_dict = {data: input_d, rx: 0*input_rx, ry: 0*input_ry, rz: 0*input_rz})
-                        #gradient = sess.run(grad_flow, feed_dict = {data: input_d, rx: input_rx, ry: input_ry, rz: input_rz})
 
                 print( input_d.shape )
                 print( (np.round(input_d[0,0,:]*100)).astype(int) )

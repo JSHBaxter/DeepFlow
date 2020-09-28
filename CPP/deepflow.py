@@ -250,7 +250,7 @@ def _taylor_series_ncs_grad_cc(op, grad):
     :param grad: gradient with respect to the output of the `TaylorSeriesNCS` op.
     :return: gradients with respect to the input of `TaylorSeriesNCS`.
     """
-    gradient = module.taylor_series_ncs_grad(op.inputs[0], op.inputs[1], grad)
+    gradient = module.taylor_series_grad_ncs(op.inputs[0], op.inputs[1], grad)
     return gradient
 
 @ops.RegisterGradient("TaylorSeriesNSC")
@@ -263,6 +263,6 @@ def _taylor_series_nsc_grad_cc(op, grad):
     :param grad: gradient with respect to the output of the `TaylorSeriesNSC` op.
     :return: gradients with respect to the input of `TaylorSeriesNSC`.
     """
-    gradient = module.taylor_series_nsc_grad(op.inputs[0], op.inputs[1], grad)
+    gradient = module.taylor_series_grad_nsc(op.inputs[0], op.inputs[1], grad)
     return gradient
 

@@ -92,6 +92,12 @@ void change_to_diff(const Eigen::GpuDevice& dev, float* transfer, float* diff, c
 void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u_b, const float* rx_b, const float* ry_b, const float* rz_b, const int n_x, const int n_y, const int n_z, const int n_c);
 void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u_b, const float* rx_b, const float* ry_b, const int n_x, const int n_y, const int n_c);
 void get_effective_reg(const Eigen::GpuDevice& dev, float* r_eff, const float* u_b, const float* rx_b, const int n_x, const int n_c);
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const int n_x, const int n_y, const int n_c, const int parity);
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const int n_x, const int n_c, const int parity);
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity);
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const float* other, const int n_x, const int n_c, const int parity);
 
 
 

@@ -26,6 +26,12 @@ protected:
     void calculate_regularization(){
 		get_effective_reg(dev, r_eff, u, rx, ry, n_x, n_y, n_c);
 	}
+    void parity_mask_buffer(float* buffer, const int parity){
+        parity_mask(dev,buffer,n_x,n_y,n_c,parity);
+    }
+    void parity_merge_buffer(float* buffer, const float* other, const int parity){
+        parity_mask(dev,buffer,other,n_x,n_y,n_c,parity);
+    }
     void clean_up(){}
 	
 public:

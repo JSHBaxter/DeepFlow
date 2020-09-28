@@ -37,7 +37,9 @@ protected:
     
     virtual int min_iter_calc() = 0;
     virtual void update_spatial_flow_calc() = 0;
-    void block_iter();
+    virtual void parity_mask_buffer(float* buffer, const int parity) = 0;
+    virtual void parity_merge_buffer(float* buffer, const float* other, const int parity) = 0;
+    void block_iter(const int parity);
     
 public:
     HMF_MEANPASS_GPU_SOLVER_BASE(
@@ -77,7 +79,7 @@ protected:
     float* const du;
     
     // optimization constants
-	const float beta = 0.0001f;
+	const float beta = 0.00001f;
 	const float epsilon = 0.01f;
 	const float tau = 0.5f;
     

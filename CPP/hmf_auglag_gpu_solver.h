@@ -35,11 +35,11 @@ protected:
     int* num_children;
     
     // optimization constants
-    float tau = 0.1f;
-    const float beta = 0.01f;
+    const float tau = 0.1f;
+    const float beta = 0.001f;
     const float epsilon = 10e-5f;
-    float cc;
-    float icc;
+    const float cc = 10.0f;//0.25f;
+    const float icc = 1.0f/cc;
     
     virtual int min_iter_calc() = 0;
     virtual void clear_spatial_flows() = 0;

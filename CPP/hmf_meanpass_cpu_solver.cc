@@ -29,7 +29,8 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
 		softmax(data, u, n_s, n_c);
 }
 
-float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(){
+float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(const int parity, bool last){
+    float max_change = 0.0f;
     aggregate_bottom_up(u,u_tmp,n_s,n_c,n_r,bottom_up_list);
 	//print_buffer(u_tmp, n_s*n_r);
     update_spatial_flow_calc();
@@ -39,7 +40,12 @@ float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(){
     for(int s = 0, i = 0; s < n_s; s++)
     for(int c = 0; c < n_c; c++, i++)
         r_eff[i] = data[i]+r_eff[n_r*s+c];
-    float max_change = softmax_with_convergence(r_eff, u, n_s, n_c, tau);
+    softmax(r_eff,r_eff,n_s,n_c);
+    parity_merge_buffer(r_eff,u,parity);
+	if(last)
+		max_change = update_with_convergence(u, r_eff, n_s*n_c, tau);
+	else
+		update(u, r_eff, n_s*n_c, tau);
     return max_change;
 }
 
@@ -63,7 +69,7 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
         
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
-            max_change = block_iter();
+            max_change = block_iter(iter&1,iter==min_iter-1);
 
         //std::cout << "Iter #" << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
@@ -72,7 +78,7 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
 
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++)
-        block_iter();
+        block_iter(iter&1,false);
     
     //perform majority of last iteration
     aggregate_bottom_up(u,u_tmp,n_s,n_c,n_r,bottom_up_list);

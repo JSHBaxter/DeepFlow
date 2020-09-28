@@ -80,8 +80,6 @@ public:
         float max_rx = max_of_buffer(dev, rx_cost, this->n_s*this->n_r);
         float max_ry = max_of_buffer(dev, ry_cost, this->n_s*this->n_r);
         float max_rz = max_of_buffer(dev, rz_cost, this->n_s*this->n_r);
-        this->icc = 0.1f * std::max(std::max(max_rx, max_ry), max_rz);
-        this->cc = 1.0f / this->icc;
     }
 };
 

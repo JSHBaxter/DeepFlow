@@ -25,15 +25,17 @@ protected:
     float* r_eff;
     
     // optimization constants
-	const float beta = 0.01f;
+	const float beta = 0.001f;
 	const float epsilon = 0.01f;
-	const float tau = 0.5f;
+	const float tau = 1.0f;//0.5f;
     
     virtual int min_iter_calc() = 0;
     virtual void init_vars() = 0;
     virtual void calculate_regularization() = 0;
+    virtual void parity_mask_buffer(float* buffer, const int parity) = 0;
+    virtual void parity_merge_buffer(float* buffer, const float* other, const int parity) = 0;
     virtual void clean_up() = 0;
-    void block_iter();
+    void block_iter(const int);
     
 public:
     POTTS_MEANPASS_GPU_SOLVER_BASE(
@@ -69,7 +71,7 @@ protected:
 	float* g_u;
     
     // optimization constants
-	const float beta = 0.0001f;
+	const float beta = 0.00001f;
 	const float epsilon = 0.01f;
 	const float tau = 0.5f;
     

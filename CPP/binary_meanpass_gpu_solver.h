@@ -27,13 +27,15 @@ protected:
     // optimization constants
 	const float beta = 0.01f;
 	const float epsilon = 0.01f;
-	const float tau = 0.1f;
+	const float tau = 1.0f;//0.1f;
     
     virtual int min_iter_calc() = 0;
     virtual void init_vars() = 0;
     virtual void calculate_regularization() = 0;
+    virtual void parity_mask_buffer(float* buffer, const int parity) = 0;
+    virtual void parity_merge_buffer(float* buffer, const float* other, const int parity) = 0;
     virtual void clean_up() = 0;
-    void block_iter();
+    void block_iter(int parity);
     
 public:
     BINARY_MEANPASS_GPU_SOLVER_BASE(

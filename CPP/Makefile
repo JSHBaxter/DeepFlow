@@ -7,7 +7,7 @@ NVCC=nvcc
 
 CUDAFLAG = -DGOOGLE_CUDA
 CUDA_I = -I/usr/local/cuda/include
-CUDA_L = /usr/local/cuda/lib64/libcudart.so /usr/local/cuda/lib64/libcublas.so
+CUDA_L = /usr/local/cuda/lib64/libcudart.so /usr/local/cuda-10.2/lib64/libcublas.so
 
 TF_CFLAGS := $(shell ${PYTHON} -c 'import tensorflow as tf; [print(i) for i in tf.sysconfig.get_compile_flags()]') 
 TF_LFLAGS := $(shell ${PYTHON} -c 'import tensorflow as tf; [print(i) for i in tf.sysconfig.get_link_flags()]')

@@ -61,7 +61,7 @@ u_full(full_buff[1])
 HMF_MEANPASS_GPU_SOLVER_BASE::~HMF_MEANPASS_GPU_SOLVER_BASE(){
     deallocate_on_gpu(dev, u_ind);
 }
-void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
+void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(const int parity){
     
     //calculate the aggregate probabilities (stored in temp)
     //copy_buffer(dev, u, u_full, n_s*n_c);
@@ -89,7 +89,8 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(){
     // get new probability estimates, and normalize (store answer in temp)
     softmax(dev, data, temp, temp, n_s, n_c);
 
-    //update labels 
+    //update labels
+    parity_merge_buffer(temp,u,parity);
     change_to_diff(dev, u, temp, n_s*n_c, tau);
 }
 
@@ -104,7 +105,7 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
     for(int i = 0; i < max_loop; i++){    
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
-            block_iter();
+            block_iter(iter&1);
 
         //Determine if converged
         float max_change = max_of_buffer(dev, temp, n_s*n_c);
@@ -115,7 +116,7 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
     
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++)
-        block_iter();
+        block_iter(iter&1);
 
     //calculate the aggregate probabilities
     copy_buffer(dev, u, u_full, n_s*n_c);
@@ -203,8 +204,7 @@ void HMF_MEANPASS_GPU_GRADIENT_BASE::operator()(){
     int min_iter = min_iter_calc();
     if( min_iter < 10 )
         min_iter = 10;
-	min_iter = 1;
-    int max_loop = 0;
+    int max_loop = 10;
     
     //calculate the aggregate probabilities
     softmax(dev, logits, NULL, u, n_s, n_c);

@@ -31,10 +31,11 @@ u(u)
 }
 
 //perform one iteration of the algorithm
-void BINARY_MEANPASS_GPU_SOLVER_BASE::block_iter(){
+void BINARY_MEANPASS_GPU_SOLVER_BASE::block_iter(int parity){
 	float max_change = 0.0f;
 	calculate_regularization();
 	sigmoid(dev, data, r_eff, r_eff, n_s*n_c);
+    parity_merge_buffer(r_eff,u,parity);
 	change_to_diff(dev, u, r_eff, n_s*n_c, tau);
 }
 
@@ -52,7 +53,7 @@ void BINARY_MEANPASS_GPU_SOLVER_BASE::operator()(){
 
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
-            block_iter();
+            block_iter(iter&1);
 
 		float max_change = max_of_buffer(dev, r_eff, n_c*n_s);
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
@@ -62,7 +63,7 @@ void BINARY_MEANPASS_GPU_SOLVER_BASE::operator()(){
 
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++)
-        block_iter();
+        block_iter(iter&1);
 
 
 	//calculate the effective regularization

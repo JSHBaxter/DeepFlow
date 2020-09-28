@@ -28,6 +28,12 @@ protected:
     void update_spatial_flow_calc(){
         get_effective_reg(dev, temp, u_full, rx, n_x, n_r);
     }
+    void parity_mask_buffer(float* buffer, const int parity){
+        parity_mask(dev,buffer,n_x,n_c,parity);
+    }
+    void parity_merge_buffer(float* buffer, const float* other, const int parity){
+        parity_mask(dev,buffer,other,n_x,n_c,parity);
+    }
 
 public:
     HMF_MEANPASS_GPU_SOLVER_1D(

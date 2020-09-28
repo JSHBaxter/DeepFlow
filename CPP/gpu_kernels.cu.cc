@@ -2,7 +2,7 @@
 #define EIGEN_USE_GPU
 
 #include <cuda.h>
-#include <cublas_v2.h>
+//#include <cublas_v2.h>
 #include <stdio.h>
 
 #include "gpu_kernels.h"
@@ -1351,6 +1351,121 @@ __global__ void change_to_diff_kernel(float* t, float* d, const int n_s, const f
 void change_to_diff(const Eigen::GpuDevice& dev, float* transfer, float* diff, const int n_s, const float tau){
     change_to_diff_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(transfer, diff, n_s, tau);
     if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
+}
+
+__global__ void parity_mask_kernel(float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int z = i_temp % n_z; i_temp /= n_z;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_y*n_z*n_c;
+    
+    float value = buffer[i];
+    value *= (parity ^ x ^ y ^ z) & 1;
+    if(i < n_s)
+        buffer[i] = value;
+}
+
+__global__ void parity_mask_kernel(float* buffer, const int n_x, const int n_y, const int n_c, const int parity){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_y*n_c;
+    
+    float value = buffer[i];
+    value *= (parity ^ x ^ y) & 1;
+    if(i < n_s)
+        buffer[i] = value;
+}
+
+__global__ void parity_mask_kernel(float* buffer, const int n_x, const int n_c, const int parity){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_c;
+    
+    float value = buffer[i];
+    value *= (parity ^ x) & 1;
+    if(i < n_s)
+        buffer[i] = value;
+}
+
+__global__ void parity_mask_kernel(float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int z = i_temp % n_z; i_temp /= n_z;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_y*n_z*n_c;
+    
+    float value = buffer[i];
+    float other_value = other[i];
+    value *= (parity ^ x ^ y ^ z) & 1;
+    value += other_value * ((parity ^ x ^ y ^ z ^ 1) & 1);
+    if(i < n_s)
+        buffer[i] = value;
+}
+
+__global__ void parity_mask_kernel(float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int y = i_temp % n_y; i_temp /= n_y;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_y*n_c;
+    
+    float value = buffer[i];
+    float other_value = other[i];
+    value *= (parity ^ x ^ y) & 1;
+    value += other_value * ((parity ^ x ^ y ^1) & 1);
+    if(i < n_s)
+        buffer[i] = value;
+}
+
+__global__ void parity_mask_kernel(float* buffer, const float* other, const int n_x, const int n_c, const int parity){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    int i_temp = i;
+    int x = i_temp % n_x;
+    int n_s = n_x*n_c;
+    
+    float value = buffer[i];
+    float other_value = other[i];
+    value *= (parity ^ x) & 1;
+    value += other_value * ((parity ^ x ^ 1) & 1);
+    if(i < n_s)
+        buffer[i] = value;
+}
+
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
+    int n_s = n_x*n_y*n_z*n_c;
+    parity_mask_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, n_x, n_y, n_z, n_c, parity);
+    if(CHECK_ERRORS) check_error(dev, "parity_mask (3D) launch failed with error");
+}
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const int n_x, const int n_y, const int n_c, const int parity){
+    int n_s = n_x*n_y*n_c;
+    parity_mask_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, n_x, n_y, n_c, parity);
+    if(CHECK_ERRORS) check_error(dev, "parity_mask (2D) launch failed with error");
+}
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const int n_x, const int n_c, const int parity){
+    int n_s = n_x*n_c;
+    parity_mask_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, n_x, n_c, parity);
+    if(CHECK_ERRORS) check_error(dev, "parity_mask (1D) launch failed with error");
+}
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
+    int n_s = n_x*n_y*n_z*n_c;
+    parity_mask_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, other, n_x, n_y, n_z, n_c, parity);
+    if(CHECK_ERRORS) check_error(dev, "parity_mask (3D -merge) launch failed with error");
+}
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity){
+    int n_s = n_x*n_y*n_c;
+    parity_mask_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, other, n_x, n_y, n_c, parity);
+    if(CHECK_ERRORS) check_error(dev, "parity_mask (2D -merge) launch failed with error");
+}
+void parity_mask(const Eigen::GpuDevice& dev, float* buffer, const float* other, const int n_x, const int n_c, const int parity){
+    int n_s = n_x*n_c;
+    parity_mask_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev.stream()>>>(buffer, other, n_x, n_c, parity);
+    if(CHECK_ERRORS) check_error(dev, "parity_mask (1D -merge) launch failed with error");
 }
 
 __device__ float get_effective_reg_kernel_up(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){

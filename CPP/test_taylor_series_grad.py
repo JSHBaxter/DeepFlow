@@ -13,11 +13,11 @@ flow_module = deepflow.module
 class InnerProductOpTest(unittest.TestCase):
     def test_runAndPrintOutput(self):
         
-        b = 1
-        x = 1
-        c = 1
-        t = 1
-        iters = 10
+        b = 16
+        x = 16*16*16
+        c = 4
+        t = 8
+        iters = 1000
 
         for i in range(1):
             coeffs_i = np.random.randn(c,t)*0.01
@@ -51,7 +51,7 @@ class InnerProductOpTest(unittest.TestCase):
                         output_ts = sess.run(taylor_series, feed_dict = {data: input_d, coeffs: coeffs_d})
                         grad_d = np.sign(output_d-output_ts)/(b*c*x)
                         grad_input, grad_coeffs = sess.run(taylor_series_grad, feed_dict = {data: input_d, coeffs: coeffs_d, grad: grad_d})
-                        coeffs_d += 0.01*grad_coeffs
+                        coeffs_d += 0.1*grad_coeffs
                         
                         print(coeffs_d.T)
 

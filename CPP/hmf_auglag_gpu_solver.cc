@@ -28,9 +28,7 @@ u_tmp(full_buff[1]),
 div(full_buff[2]),
 g(full_buff[3]),
 ps(img_buff[0]),
-g_ps(img_buff[0]),
-icc(2.0f),
-cc(1.0f/icc)
+g_ps(img_buff[0])
 {
     //std::cout << n_s << " " << n_c << " " << n_r << std::endl;
     //get pointer to parents' sink buffer (for fetching source flows)
@@ -264,9 +262,6 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
     for(int i = 0; i < max_loop; i++){    
         
         //run the solver a set block of iterations
-        tau *= 0.99f;
-        cc *= 1.01f;
-        icc = 1.0f / cc;
         for (int iter = 0; iter < min_iter; iter++)
             block_iter();
 

@@ -33,6 +33,12 @@ protected:
     void update_spatial_flow_calc(){
         get_effective_reg(dev, temp, u_full, rx, ry, rz, n_x, n_y, n_z, n_r);
     }
+    void parity_mask_buffer(float* buffer, const int parity){
+        parity_mask(dev,buffer,n_x,n_y,n_z,n_c,parity);
+    }
+    void parity_merge_buffer(float* buffer, const float* other, const int parity){
+        parity_mask(dev,buffer,other,n_x,n_y,n_z,n_c,parity);
+    }
 
 public:
     HMF_MEANPASS_GPU_SOLVER_3D(
