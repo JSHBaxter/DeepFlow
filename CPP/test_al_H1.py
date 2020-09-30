@@ -29,8 +29,8 @@ class InnerProductOpTest(unittest.TestCase):
         
         for i in range(1):
             input_d = 0.1*np.random.rand(b,c,x)
-            input_rx = 1*np.ones((b,r,x))
-            input_rx[:,0:c,:] = 1.00001
+            input_rx = 2*np.ones((b,r,x))
+            input_rx[:,0:c,:] = 2.00001
             #input_rx[:,:,:,:,2] *= 0
             #input_rx[:,:,:,:,3] *= 0
             #input_rx[:,:,:,:,4] *= 0
@@ -48,18 +48,19 @@ class InnerProductOpTest(unittest.TestCase):
                 
                 with tf.device(devicename):
                     forward = meanpass_module.hmf_auglag1d(data,rx,parentage,data_index)
-                    forward_mean = meanpass_module.hmf_meanpass1d_with_init(data,rx,forward,parentage,data_index)
+                    forward_mean = meanpass_module.hmf_meanpass1d(data,rx,parentage,data_index)
+                    forward_mean_init = meanpass_module.hmf_meanpass1d_with_init(data,rx,forward,parentage,data_index)
                     #grad_flow = tf.gradients(flow, (data,rx))
 
                     if devicename == '/CPU:0':
                         forward = np.transpose(forward,[0,2,1])
                         forward_mean = np.transpose(forward_mean,[0,2,1])
+                        forward_mean_init = np.transpose(forward_mean_init,[0,2,1])
                         
 
                 print( input_d.shape )
                 for i in range(c):
                     print( (np.round(input_d[0,i,:]*10000)).astype(int) )
-
                 print( '\n' )
 
                 forward = np.exp(forward);
@@ -76,8 +77,16 @@ class InnerProductOpTest(unittest.TestCase):
                 for i in range(c):
                     print( (np.round(forward_mean[0,i,:]*100)).astype(int) )
                 print( '\n' )
-                print( '\n' )
                 sumprob = np.sum(forward_mean,axis=1)
+                print( (np.round(sumprob[0,:]*100)).astype(int) )
+                print( '\n' )
+                print( '\n' )
+
+                forward_mean_init = np.exp(forward_mean_init) / np.sum(np.exp(forward_mean_init),axis=1,keepdims=True)
+                for i in range(c):
+                    print( (np.round(forward_mean_init[0,i,:]*100)).astype(int) )
+                print( '\n' )
+                sumprob = np.sum(forward_mean_init,axis=1)
                 print( (np.round(sumprob[0,:]*100)).astype(int) )
                 print( '\n' )
                 print( '\n' )

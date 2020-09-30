@@ -126,7 +126,6 @@ struct HmfAuglag3dFunctor<CPUDevice> {
     int n_r = sizes[6];
     std::thread** threads = new std::thread* [n_batches];
     HMF_AUGLAG_CPU_SOLVER_3D** solvers = new HMF_AUGLAG_CPU_SOLVER_3D* [n_batches];
-    std::cout << solvers << std::endl;
     for(int b = 0; b < n_batches; b++){
         solvers[b] = new HMF_AUGLAG_CPU_SOLVER_3D(bottom_up_list, b, sizes, 
                                                   data_cost+b*n_s*n_c,
