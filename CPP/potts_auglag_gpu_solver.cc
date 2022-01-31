@@ -1,10 +1,9 @@
-#ifdef GOOGLE_CUDA
 
 #include "potts_auglag_gpu_solver.h"
 #include "gpu_kernels.h"
 
 POTTS_AUGLAG_GPU_SOLVER_BASE::POTTS_AUGLAG_GPU_SOLVER_BASE(
-    const GPUDevice & dev,
+    const cudaStream_t & dev,
     const int batch,
     const int n_s,
     const int n_c,
@@ -62,7 +61,7 @@ void POTTS_AUGLAG_GPU_SOLVER_BASE::operator()(){
         //Determine if converged
         float max_change = max_of_buffer(dev, g, n_s*n_c);
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
-        if (max_change < beta)
+        if (max_change < tau*beta)
             break;
     }
 
@@ -74,5 +73,3 @@ void POTTS_AUGLAG_GPU_SOLVER_BASE::operator()(){
     log_buffer(dev, u, u, n_s*n_c);
 
 }
-
-#endif

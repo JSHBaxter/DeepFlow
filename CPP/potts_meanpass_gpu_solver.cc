@@ -1,13 +1,12 @@
 #include "potts_meanpass_gpu_solver.h"
 #include <math.h>
-#include <thread>
 #include <iostream>
 #include <limits>
 
 #include "gpu_kernels.h"
 
 POTTS_MEANPASS_GPU_SOLVER_BASE::POTTS_MEANPASS_GPU_SOLVER_BASE(
-	const GPUDevice & dev,
+	const cudaStream_t & dev,
     const int batch,
     const int n_s,
     const int n_c,
@@ -82,7 +81,7 @@ POTTS_MEANPASS_GPU_SOLVER_BASE::~POTTS_MEANPASS_GPU_SOLVER_BASE(){
 
 
 POTTS_MEANPASS_GPU_GRADIENT_BASE::POTTS_MEANPASS_GPU_GRADIENT_BASE(
-	const GPUDevice & dev,
+	const cudaStream_t & dev,
     const int batch,
     const int n_s,
     const int n_c,
@@ -107,15 +106,13 @@ u(full_buffs[2])
 //perform one iteration of the algorithm
 void POTTS_MEANPASS_GPU_GRADIENT_BASE::block_iter(){
 	//untangle softmax derivative and add to data term gradient
-	process_grad_potts(dev, g_u, u, d_y, n_s, n_c, tau);
-	inc_buffer(dev, d_y, g_data, n_s*n_c);
+	untangle_softmax(dev, g_u, u, d_y, n_s, n_c);
 	
-	//add to regularization gradients
+	// populate data gradient
+	inc_mult_buffer(dev, d_y, g_data, n_s*n_c, tau);
+	
+	//add to regularization gradients and push back
 	get_reg_gradients_and_push(tau);
-	
-	//push back a level
-	mult_buffer(dev, 1.0f-tau, g_u, n_s*n_c);
-	inc_buffer(dev, d_y, g_u, n_s*n_c);
 }
 
 void POTTS_MEANPASS_GPU_GRADIENT_BASE::operator()(){
@@ -123,8 +120,8 @@ void POTTS_MEANPASS_GPU_GRADIENT_BASE::operator()(){
 	//initialize variables
 	init_vars();
 	softmax(dev, logits, 0, u, n_s, n_c);
-	clear_buffer(dev, d_y, n_s*n_c);
-	copy_buffer(dev, grad, g_u, n_s*n_c);
+	clear_buffer(dev, g_u, n_s*n_c);
+	copy_buffer(dev, grad, d_y, n_s*n_c);
 	
 	//get initial gradient for the data and regularization terms
 	copy_buffer(dev, grad, g_data, n_s*n_c);
@@ -142,7 +139,7 @@ void POTTS_MEANPASS_GPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = max_of_buffer(dev, g_u, n_s*n_c);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "POTTS_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < beta)
             break;
     }

@@ -6,11 +6,13 @@
 #include "cpu_kernels.h"
 
 BINARY_AUGLAG_CPU_SOLVER_BASE::BINARY_AUGLAG_CPU_SOLVER_BASE(
+    const bool channels_first,
     const int batch,
     const int n_s,
     const int n_c,
     const float* data_cost,
     float* u ) :
+channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
@@ -21,7 +23,6 @@ div(0),
 g(0),
 u(u)
 {
-    //std::cout << n_s << " " << n_c << std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -50,7 +51,7 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
     clear_spatial_flows();
     clear(pt, n_c*n_s);
     clear(ps, n_c*n_s);
-	//init_flows(data, ps, pt, n_s, n_c);
+	init_flows_binary(data, ps, pt, n_s*n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();
@@ -64,7 +65,7 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_c);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "BINARY_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

@@ -1,194 +1,92 @@
-#ifdef GOOGLE_CUDA
-#define EIGEN_USE_GPU
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
-
-#include "binary_meanpass_gpu_solver.h"
+#include "binary_meanpass3d_gpu_solver.h"
 #include "gpu_kernels.h"
 
-class BINARY_MEANPASS_GPU_SOLVER_3D : public BINARY_MEANPASS_GPU_SOLVER_BASE
-{
-private:
-    const int n_x;
-    const int n_y;
-    const int n_z;
-    const float* const rx;
-    const float* const ry;
-    const float* const rz;
-	
-protected:
-    int min_iter_calc(){
-		return n_x+n_y+n_z;
-	}
-    void init_vars(){}
-    void calculate_regularization(){
-		get_effective_reg(dev, r_eff, u, rx, ry, rz, n_x, n_y, n_z, n_c);
-	}
-    void parity_mask_buffer(float* buffer, const int parity){
-        parity_mask(dev,buffer,n_x,n_y,n_z,n_c,parity);
-    }
-    void parity_merge_buffer(float* buffer, const float* other, const int parity){
-        parity_mask(dev,buffer,other,n_x,n_y,n_z,n_c,parity);
-    }
-    void clean_up(){}
-	
-public:
-	BINARY_MEANPASS_GPU_SOLVER_3D(
-        const GPUDevice & dev,
-        const int batch,
-        const int sizes[5],
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
-		const float* init_u,
-        float* u,
-		float** buffers_full
-	):
-	BINARY_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[2]*sizes[3]*sizes[4], sizes[1], data_cost, init_u, u, buffers_full),
-	n_x(sizes[2]),
-	n_y(sizes[3]),
-	n_z(sizes[4]),
-	rx(rx_cost),
-	ry(ry_cost),
-	rz(rz_cost)
-	{}
-};
+int BINARY_MEANPASS_GPU_SOLVER_3D::min_iter_calc(){
+	return n_x+n_y+n_z;
+}
 
+void BINARY_MEANPASS_GPU_SOLVER_3D::init_vars(){}
 
-class BINARY_MEANPASS_GPU_GRADIENT_3D : public BINARY_MEANPASS_GPU_GRADIENT_BASE
-{
-private:
-    const int n_x;
-    const int n_y;
-    const int n_z;
-    const float* const rx;
-    const float* const ry;
-    const float* const rz;
-    float* const g_rx;
-    float* const g_ry;
-    float* const g_rz;
-	
-protected:
-    int min_iter_calc(){
-		return n_x+n_y+n_z;
-	}
-    void init_vars(){
-		clear_buffer(dev, g_rx, n_c*n_s);
-		clear_buffer(dev, g_ry, n_c*n_s);
-		clear_buffer(dev, g_rz, n_c*n_s);
-	}
-	void get_reg_gradients_and_push(float tau){
-		populate_reg_mean_gradients_and_add(dev, d_y, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_c);
-		get_gradient_for_u(dev, d_y, d_y, rx, ry, rz, n_x, n_y, n_z, n_c);
-	}
-    void clean_up(){}
+void BINARY_MEANPASS_GPU_SOLVER_3D::calculate_regularization(){
+	get_effective_reg(dev, r_eff, u, rx, ry, rz, n_x, n_y, n_z, n_c);
+}
 
-public:
-	BINARY_MEANPASS_GPU_GRADIENT_3D(
-        const GPUDevice & dev,
-        const int batch,
-        const int sizes[5],
-        const float* u,
-        const float* g,
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
-        float* g_d,
-        float* g_rx,
-        float* g_ry,
-        float* g_rz,
-		float** full_buffs
-	) :
-	BINARY_MEANPASS_GPU_GRADIENT_BASE(dev, batch, sizes[2]*sizes[3]*sizes[4], sizes[1], u, g, g_d, full_buffs),
-	n_x(sizes[2]),
-	n_y(sizes[3]),
-	n_z(sizes[4]),
-	rx(rx_cost),
-	ry(ry_cost),
-	rz(rz_cost),
-	g_rx(g_rx),
-	g_ry(g_ry),
-	g_rz(g_rz)
-	{}
-};
+void BINARY_MEANPASS_GPU_SOLVER_3D::parity_mask_buffer(float* buffer, const int parity){
+	parity_mask(dev,buffer,n_x,n_y,n_z,n_c,parity);
+}
 
-template <>
-struct BinaryMeanpass3dFunctor<GPUDevice> {
-  void operator()(
-	const GPUDevice& d,
-	int sizes[5],
+void BINARY_MEANPASS_GPU_SOLVER_3D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+	parity_mask(dev,buffer,other,n_x,n_y,n_z,n_c,parity);
+}
+
+void BINARY_MEANPASS_GPU_SOLVER_3D::clean_up(){}
+
+BINARY_MEANPASS_GPU_SOLVER_3D::BINARY_MEANPASS_GPU_SOLVER_3D(
+	const cudaStream_t & dev,
+	const int batch,
+    const int n_c,
+    const int sizes[3],
 	const float* data_cost,
 	const float* rx_cost,
 	const float* ry_cost,
 	const float* rz_cost,
 	const float* init_u,
 	float* u,
-	float** buffers_full,
-	float** /*unused image buffers*/){
-      
-    int n_batches = sizes[0];
-	int n_s = sizes[2]*sizes[3]*sizes[4];
-	int n_c = sizes[1];
-    for(int b = 0; b < n_batches; b++)
-        BINARY_MEANPASS_GPU_SOLVER_3D(d, b, sizes,
-									  data_cost+ b*n_s*n_c,
-									  rx_cost+ b*n_s*n_c,
-									  ry_cost+ b*n_s*n_c,
-									  rz_cost+ b*n_s*n_c,
-									  init_u + (init_u ? b*n_s*n_c : 0),
-									  u+ b*n_s*n_c,
-									  buffers_full)();
-      
-  }
-  int num_buffers_full(){ return 1; }
-  int num_buffers_images(){ return 0; }
-};
+	float** buffers_full
+):
+BINARY_MEANPASS_GPU_SOLVER_BASE(dev, batch, sizes[0]*sizes[1]*sizes[2], n_c, data_cost, init_u, u, buffers_full),
+n_x(sizes[0]),
+n_y(sizes[1]),
+n_z(sizes[2]),
+rx(rx_cost),
+ry(ry_cost),
+rz(rz_cost)
+{}
 
-template <>
-struct BinaryMeanpass3dGradFunctor<GPUDevice>{
+int BINARY_MEANPASS_GPU_GRADIENT_3D::min_iter_calc(){
+	return n_x+n_y+n_z;
+}
 
-    void operator()(
-		const GPUDevice& d,
-		int sizes[5],
-		const float* data_cost,
-		const float* rx_cost,
-		const float* ry_cost,
-		const float* rz_cost,
-		const float* u,
-		const float* g,
-		float* g_data,
-		float* g_rx,
-		float* g_ry,
-		float* g_rz,
-		float** buffers_full,
-		float** /*unused image buffers*/
-    ){
+void BINARY_MEANPASS_GPU_GRADIENT_3D::init_vars(){
+	clear_buffer(dev, g_rx, n_c*n_s);
+	clear_buffer(dev, g_ry, n_c*n_s);
+	clear_buffer(dev, g_rz, n_c*n_s);
+}
 
-		int n_batches = sizes[0];
-		int n_s = sizes[2]*sizes[3]*sizes[4];
-		int n_c = sizes[1];
-		for(int b = 0; b < n_batches; b++)
-			BINARY_MEANPASS_GPU_GRADIENT_3D(d, b, sizes,
-										  u+b*n_s*n_c,
-										  g+b*n_s*n_c,
-										  rx_cost+b*n_s*n_c,
-										  ry_cost+b*n_s*n_c,
-										  rz_cost+b*n_s*n_c,
-										  g_data+b*n_s*n_c,
-										  g_rx+b*n_s*n_c,
-										  g_ry+b*n_s*n_c,
-										  g_rz+b*n_s*n_c,
-										  buffers_full)();
-      
-	}
+void BINARY_MEANPASS_GPU_GRADIENT_3D::get_reg_gradients_and_push(float tau){
+	populate_reg_mean_gradients_and_add(dev, d_y, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_c, tau);
+	get_gradient_for_u(dev, d_y, g_u, rx, ry, rz, n_x, n_y, n_z, n_c, tau);
+}
 
-    int num_buffers_full(){ return 3; }
-    int num_buffers_images(){ return 0; }
-    
-};
+void BINARY_MEANPASS_GPU_GRADIENT_3D::clean_up(){}
 
-#endif // GOOGLE_CUDA
+BINARY_MEANPASS_GPU_GRADIENT_3D::BINARY_MEANPASS_GPU_GRADIENT_3D(
+	const cudaStream_t & dev,
+	const int batch,
+    const int n_c,
+    const int sizes[3],
+	const float* u,
+	const float* g,
+	const float* rx_cost,
+	const float* ry_cost,
+	const float* rz_cost,
+	float* g_d,
+	float* g_rx,
+	float* g_ry,
+	float* g_rz,
+	float** full_buffs
+) :
+BINARY_MEANPASS_GPU_GRADIENT_BASE(dev, batch, sizes[0]*sizes[1]*sizes[2], n_c, u, g, g_d, full_buffs),
+n_x(sizes[0]),
+n_y(sizes[1]),
+n_z(sizes[2]),
+rx(rx_cost),
+ry(ry_cost),
+rz(rz_cost),
+g_rx(g_rx),
+g_ry(g_ry),
+g_rz(g_rz)
+{}
+
+

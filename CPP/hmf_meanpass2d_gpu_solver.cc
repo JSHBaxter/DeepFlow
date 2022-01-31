@@ -1,251 +1,104 @@
-#ifdef GOOGLE_CUDA
-#define EIGEN_USE_GPU
-
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
 
 #include <math.h>
-#include <thread>
 #include <iostream>
 #include <limits>
 #include "hmf_trees.h"
-#include "hmf_meanpass_gpu_solver.h"
+#include "hmf_meanpass2d_gpu_solver.h"
 #include "gpu_kernels.h"
 #include <algorithm>
 
-class HMF_MEANPASS_GPU_SOLVER_2D : public HMF_MEANPASS_GPU_SOLVER_BASE
-{
-private:
-    const int n_x;
-    const int n_y;
-    const float* rx;
-    const float* ry;
-    
-protected:
-    int min_iter_calc(){
-		return std::max(n_x,n_y)+n_r-n_c;
-    }
-    void update_spatial_flow_calc(){
-        get_effective_reg(dev, temp, u_full, rx, ry, n_x, n_y, n_r);
-    }
-    void parity_mask_buffer(float* buffer, const int parity){
-        parity_mask(dev,buffer,n_x,n_y,n_c,parity);
-    }
-    void parity_merge_buffer(float* buffer, const float* other, const int parity){
-        parity_mask(dev,buffer,other,n_x,n_y,n_c,parity);
-    }
+int HMF_MEANPASS_GPU_SOLVER_2D::min_iter_calc(){
+    return std::max(n_x,n_y)+n_r-n_c;
+}
 
-public:
-    HMF_MEANPASS_GPU_SOLVER_2D(
-        const GPUDevice & dev,
-        TreeNode** bottom_up_list,
-        const int batch,
-        const int sizes[6],
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
-		const float* init_u,
-        float* const u,
-        float** full_buff,
-        float** img_buff) :
-    HMF_MEANPASS_GPU_SOLVER_BASE(dev,
-                                 bottom_up_list,
-                                 batch,
-                                 sizes[2]*sizes[3],
-                                 sizes[1],
-                                 sizes[4],
-                                 data_cost,
-								 init_u,
-                                 u,
-                                 full_buff,
-                                 img_buff),
-    n_x(sizes[2]),
-    n_y(sizes[3]),
-    rx(rx_cost),
-    ry(ry_cost)
-    {}
+void HMF_MEANPASS_GPU_SOLVER_2D::update_spatial_flow_calc(){
+    get_effective_reg(dev, r_eff, u_full, rx, ry, n_x, n_y, n_r);
+}
 
-};
-class HMF_MEANPASS_GPU_GRADIENT_2D : public HMF_MEANPASS_GPU_GRADIENT_BASE
-{
-private:
-    const int n_x;
-    const int n_y;
-    float* const g_rx;
-    float* const g_ry;
-    const float* const rx;
-    const float* const ry;
-    
-protected:
-    int min_iter_calc(){
-        return n_x + n_y;
-    }
-	
-	void clear_variables(){
-		clear_buffer(dev, g_rx, n_s*n_r);
-		clear_buffer(dev, g_ry, n_s*n_r);
-	}
-    
-    void update_spatial_flow_calc(){
-		populate_reg_mean_gradients_and_add(dev, dy, u, g_rx, g_ry, n_x, n_y, n_r);
-		get_gradient_for_u(dev, dy, dy, rx, ry, n_x, n_y, n_r);
-    }
+void HMF_MEANPASS_GPU_SOLVER_2D::parity_mask_buffer(float* buffer, const int parity){
+    parity_mask(dev,buffer,n_x,n_y,n_c,parity);
+}
 
-public:
-    HMF_MEANPASS_GPU_GRADIENT_2D(
-        const GPUDevice & dev,
-        TreeNode** bottom_up_list,
-        const int batch,
-        const int sizes[6],
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* u,
-        const float* g,
-        float* g_d,
-        float* g_rx,
-        float* g_ry,
-        float** full_buff) :
-    HMF_MEANPASS_GPU_GRADIENT_BASE(dev,
-                                 bottom_up_list,
-                                 batch,
-                                 sizes[2]*sizes[3],
-                                 sizes[1],
-                                 sizes[4],
-                                 u,
-                                 g,
-                                 g_d,
-                                 full_buff),
-    n_x(sizes[2]),
-    n_y(sizes[3]),
-    rx(rx_cost),
-    ry(ry_cost),
-    g_rx(g_rx),
-    g_ry(g_ry)
-    {}
+void HMF_MEANPASS_GPU_SOLVER_2D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+    parity_mask(dev,buffer,other,n_x,n_y,n_c,parity);
+}
 
-};
+HMF_MEANPASS_GPU_SOLVER_2D::HMF_MEANPASS_GPU_SOLVER_2D(
+    const cudaStream_t & dev,
+    TreeNode** bottom_up_list,
+    const int batch,
+    const int n_c,
+    const int n_r,
+    const int sizes[2],
+    const float* data_cost,
+    const float* rx_cost,
+    const float* ry_cost,
+    const float* init_u,
+    float* const u,
+    float** full_buff,
+    float** img_buff) :
+HMF_MEANPASS_GPU_SOLVER_BASE(dev,
+                             bottom_up_list,
+                             batch,
+                             sizes[0]*sizes[1],
+                             n_c,
+                             n_r,
+                             data_cost,
+                             init_u,
+                             u,
+                             full_buff,
+                             img_buff),
+n_x(sizes[0]),
+n_y(sizes[1]),
+rx(rx_cost),
+ry(ry_cost)
+{}
 
-template <>
-struct HmfMeanpass2dFunctor<GPUDevice> {
-    void operator()(
-        const GPUDevice& d,
-        int sizes[6],
-        const int* parentage_g,
-        const int* data_index_g,
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
-		const float* init_u,
-        float* u,
-        float** full_buff,
-        float** img_buff){
+int HMF_MEANPASS_GPU_GRADIENT_2D::min_iter_calc(){
+    return std::max(n_x,n_y)+n_r-n_c;
+}
 
-        int n_s = sizes[2]*sizes[3];
-        int n_c = sizes[1];
-        int n_r = sizes[4];
-		
-        //build the tree
-        TreeNode* node = NULL;
-        TreeNode** children = NULL;
-        TreeNode** bottom_up_list = NULL;
-        TreeNode** top_down_list = NULL;
-        int* parentage = new int[n_r];
-        int* data_index = new int[n_r];
-        get_from_gpu(d, parentage_g, parentage, n_r*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, n_r*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, n_r, n_c);
-        free(parentage);
-        free(data_index);
-        //node->print_tree();
-        //TreeNode::print_list(bottom_up_list, sizes[5]+1);
+void HMF_MEANPASS_GPU_GRADIENT_2D::clear_variables(){
+    clear_buffer(dev, g_rx, n_s*n_r);
+    clear_buffer(dev, g_ry, n_s*n_r);
+}
 
-        int n_batches = sizes[0];
-        for(int b = 0; b < n_batches; b++){
-            HMF_MEANPASS_GPU_SOLVER_2D(d, bottom_up_list, b, sizes,
-                                       data_cost + b*n_s*n_c,
-                                       rx_cost + b*n_s*n_r,
-                                       ry_cost + b*n_s*n_r,
-									   init_u + (init_u ? b*n_s*n_c : 0),
-                                       u + b*n_s*n_c,
-                                       full_buff,
-                                       img_buff)();
-		}
+void HMF_MEANPASS_GPU_GRADIENT_2D::get_reg_gradients_and_push(float tau){
+    populate_reg_mean_gradients_and_add(dev, dy, u, g_rx, g_ry, n_x, n_y, n_r,tau);
+    clear_buffer(dev,du,n_s*(n_r-n_c));
+    get_gradient_for_u(dev, dy+n_s*(n_r-n_c), du+n_s*(n_r-n_c), rx+n_s*(n_r-n_c), ry+n_s*(n_r-n_c), n_x, n_y, n_c, tau);
+}
 
-        TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+HMF_MEANPASS_GPU_GRADIENT_2D::HMF_MEANPASS_GPU_GRADIENT_2D(
+    const cudaStream_t & dev,
+    TreeNode** bottom_up_list,
+    const int batch,
+    const int n_c,
+    const int n_r,
+    const int sizes[2],
+    const float* rx_cost,
+    const float* ry_cost,
+    const float* u,
+    const float* g,
+    float* g_d,
+    float* g_rx,
+    float* g_ry,
+    float** full_buff) :
+HMF_MEANPASS_GPU_GRADIENT_BASE(dev,
+                             bottom_up_list,
+                             batch,
+                             sizes[0]*sizes[1],
+                             n_c,
+                             n_r,
+                             u,
+                             g,
+                             g_d,
+                             full_buff),
+n_x(sizes[0]),
+n_y(sizes[1]),
+rx(rx_cost),
+ry(ry_cost),
+g_rx(g_rx),
+g_ry(g_ry)
+{}
 
-    }
-
-    int num_buffers_full(){ return 2; }
-    int num_buffers_images(){ return 0; }
-    int num_buffers_branch(){ return 0; }
-    int num_buffers_data(){ return 0; }
-};
-
-template <>
-struct HmfMeanpass2dGradFunctor<GPUDevice>{
-    void operator()(
-        const GPUDevice& d,
-        int sizes[6],
-        const int* parentage_g,
-        const int* data_index_g,
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* u,
-        const float* g,
-        float* g_data,
-        float* g_rx,
-        float* g_ry,
-        int* g_par,
-        int* g_didx,
-        float** full_buff,
-        float** img_buff){
-
-        int n_s = sizes[2]*sizes[3];
-        int n_c = sizes[1];
-        int n_r = sizes[4];
-		
-        //clear unusable derviative
-        clear_buffer(d, g_par, n_r);
-        clear_buffer(d, g_didx, n_r);
-		
-        //build the tree
-        TreeNode* node = NULL;
-        TreeNode** children = NULL;
-        TreeNode** bottom_up_list = NULL;
-        TreeNode** top_down_list = NULL;
-        int* parentage = new int[n_r];
-        int* data_index = new int[n_r];
-        get_from_gpu(d, parentage_g, parentage, n_r*sizeof(int));
-        get_from_gpu(d, data_index_g, data_index, n_r*sizeof(int));
-        TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage, data_index, n_r, n_c);
-        free(parentage);
-        free(data_index);
-        //node->print_tree();
-        //TreeNode::print_list(bottom_up_list, sizes[5]+1);
-
-        int n_batches = sizes[0];
-        for(int b = 0; b < n_batches; b++)
-            HMF_MEANPASS_GPU_GRADIENT_2D(d, bottom_up_list, b, sizes,
-                                         rx_cost + b*n_s*n_r,
-                                         ry_cost + b*n_s*n_r,
-                                         u + b*n_s*n_c,
-                                         g + b*n_s*n_c,
-                                         g_data + b*n_s*n_c,
-                                         g_rx + b*n_s*n_r,
-                                         g_ry + b*n_s*n_r,
-                                         full_buff)();
-
-        TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
-
-
-    }
-    int num_buffers_full(){ return 4; }
-    int num_buffers_images(){ return 0; }
-    int num_buffers_branch(){ return 0; }
-    int num_buffers_data(){ return 0; }
-};
-
-#endif //GOOGLE_CUDA

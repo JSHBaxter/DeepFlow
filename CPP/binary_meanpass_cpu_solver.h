@@ -3,27 +3,18 @@
 #ifndef BINARY_MEANPASS_CPU_SOLVER_H
 #define BINARY_MEANPASS_CPU_SOLVER_H
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
-
 class BINARY_MEANPASS_CPU_SOLVER_BASE
 {
 private:
 
 protected:
+    const float channels_first;
     const int b;
     const int n_c;
     const int n_s;
     const float* const data;
     float* const u;
     float* r_eff;
-    
-    // optimization constants
-	const float beta = 0.01f;
-	const float epsilon = 0.01f;
-	const float tau = 1.0f;//0.1f;
     
     virtual int min_iter_calc() = 0;
     virtual void init_vars() = 0;
@@ -33,8 +24,15 @@ protected:
     virtual void clean_up() = 0;
     float block_iter(int, bool);
     
+    // optimization constants
+	const float beta = 0.001f;
+	const float epsilon = 0.0001f;
+	const float tau = 0.5f;
+    
 public:
+	
     BINARY_MEANPASS_CPU_SOLVER_BASE(
+        const float channels_first,
         const int batch,
         const int n_s,
         const int n_c,
@@ -53,6 +51,7 @@ class BINARY_MEANPASS_CPU_GRADIENT_BASE
 private:
 
 protected:
+    const float channels_first;
     const int b;
     const int n_c;
     const int n_s;
@@ -63,19 +62,21 @@ protected:
 	float* d_y;
 	float* g_u;
     
-    // optimization constants
-	const float beta = 0.0001f;
-	const float epsilon = 0.01f;
-	const float tau = 0.1f;
-    
     virtual int min_iter_calc() = 0;
     virtual void init_vars() = 0;
     virtual void get_reg_gradients_and_push(float tau) = 0;
     virtual void clean_up() = 0;
     void block_iter();
     
+    // optimization constants
+	const float beta = 0.0001f;
+	const float epsilon = 0.01f;
+	const float tau = 0.25f;
+    
 public:
+	
     BINARY_MEANPASS_CPU_GRADIENT_BASE(
+        const float channels_first,
 		const int batch,
 		const int n_s,
 		const int n_c,

@@ -11,21 +11,25 @@ private:
 
 protected:
     TreeNode const* const* bottom_up_list;
+    const bool channels_first;
     const int b;
     const int n_c;
     const int n_r;
     const int n_s;
-    const float* const data;
-    float* const u;
+    const float* data;
+    const float* data_b;
+    float* u;
     float* r_eff;
     float* u_tmp;
     
     // optimization constants
-    const float tau = 1.0f;
-    const float beta = 0.001f;
-    const float epsilon = 10e-5f;
+	const float beta = 0.001f;
+	const float epsilon = 0.0001f;
+	const float tau = 0.5f;
     
     virtual int min_iter_calc() = 0;
+    virtual void init_reg_info() = 0;
+    virtual void clean_up() = 0;
     virtual void update_spatial_flow_calc() = 0;
     virtual void parity_mask_buffer(float* buffer, const int parity) = 0;
     virtual void parity_merge_buffer(float* buffer, const float* other, const int parity) = 0;
@@ -33,6 +37,7 @@ protected:
     
 public:
     HMF_MEANPASS_CPU_SOLVER_BASE(
+        const bool channels_first,
         TreeNode** bottom_up_list,
         const int batch,
         const int n_s,
@@ -53,6 +58,7 @@ private:
 
 protected:
     TreeNode const* const* bottom_up_list;
+    const bool channels_first;
     const int b;
     const int n_c;
     const int n_r;
@@ -63,18 +69,22 @@ protected:
     float* dy;
     float* u;
     float* g_u;
+    float* g_u_l;
     
     // optimization constants
-    const float tau = 0.1f;
-    const float beta = 0.005f;
-    const float epsilon = 10e-5f;
+	const float beta = 0.0001f;
+	const float epsilon = 0.0001f;
+	const float tau = 0.25f;
     
     virtual int min_iter_calc() = 0;
-    virtual void update_spatial_flow_calc(bool use_tau) = 0;
-    float block_iter();
+    virtual void init_reg_info() = 0;
+    virtual void clean_up() = 0;
+    virtual void get_reg_gradients_and_push(float tau) = 0;
+    void block_iter();
     
 public:
     HMF_MEANPASS_CPU_GRADIENT_BASE(
+        const bool channels_first,
         TreeNode** bottom_up_list,
         const int batch,
         const int n_s,

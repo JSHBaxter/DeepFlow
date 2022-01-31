@@ -3,20 +3,16 @@
 #ifndef HMF_MEANPASS_GPU_SOLVER_H
 #define HMF_MEANPASS_GPU_SOLVER_H
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include "hmf_trees.h"
-
-using GPUDevice = Eigen::GpuDevice;
 
 class HMF_MEANPASS_GPU_SOLVER_BASE
 {
 private:
 
 protected:
-    const GPUDevice & dev;
+    const cudaStream_t & dev;
     TreeNode const* const* bottom_up_list;
     const int b;
     const int n_c;
@@ -24,16 +20,16 @@ protected:
     const int n_s;
     const float* const data;
     float* const u;
-    float* const temp;
+    float* const r_eff;
     float* const u_full;
     
     float** u_ind;
     float** reg_ind;
     
     // optimization constants
-    const float tau = 0.5f;
-	const float beta = 0.01f;
-    const float epsilon = 10e-5f;
+	const float beta = 0.001f;
+	const float epsilon = 0.0001f;
+	const float tau = 0.5f;
     
     virtual int min_iter_calc() = 0;
     virtual void update_spatial_flow_calc() = 0;
@@ -43,7 +39,7 @@ protected:
     
 public:
     HMF_MEANPASS_GPU_SOLVER_BASE(
-        const GPUDevice & dev,
+        const cudaStream_t & dev,
         TreeNode** bottom_up_list,
         const int batch,
         const int n_s,
@@ -64,7 +60,7 @@ class HMF_MEANPASS_GPU_GRADIENT_BASE
 private:
 
 protected:
-    const GPUDevice & dev;
+    const cudaStream_t & dev;
     TreeNode const* const* bottom_up_list;
     const int b;
     const int n_c;
@@ -79,18 +75,18 @@ protected:
     float* const du;
     
     // optimization constants
-	const float beta = 0.00001f;
-	const float epsilon = 0.01f;
-	const float tau = 0.5f;
+	const float beta = 0.0001f;
+	const float epsilon = 0.0001f;
+	const float tau = 0.25f;
     
     virtual int min_iter_calc() = 0;
 	virtual void clear_variables() = 0;
-    virtual void update_spatial_flow_calc() = 0;
+    virtual void get_reg_gradients_and_push(float tau) = 0;
     void block_iter();
     
 public:
     HMF_MEANPASS_GPU_GRADIENT_BASE(
-        const GPUDevice & dev,
+        const cudaStream_t & dev,
         TreeNode** bottom_up_list,
         const int batch,
         const int n_s,

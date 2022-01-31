@@ -1,16 +1,17 @@
 #include "potts_auglag_cpu_solver.h"
 #include <math.h>
-#include <thread>
 #include <iostream>
 #include <limits>
 #include "cpu_kernels.h"
 
 POTTS_AUGLAG_CPU_SOLVER_BASE::POTTS_AUGLAG_CPU_SOLVER_BASE(
+    const bool channels_first,
     const int batch,
     const int n_s,
     const int n_c,
     const float* data_cost,
     float* u ) :
+channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
@@ -28,11 +29,18 @@ u(u)
 void POTTS_AUGLAG_CPU_SOLVER_BASE::block_iter(){
     
     //calculate the capacity and then update flows
-    compute_capacity_potts(g, u, ps, pt, div, n_s, n_c, tau, icc);
+    if(channels_first)
+        compute_capacity_potts_channels_first(g, u, ps, pt, div, n_s, n_c, tau, icc);
+    else
+        compute_capacity_potts(g, u, ps, pt, div, n_s, n_c, tau, icc);
     update_spatial_flow_calc();
                  
 	//update source flows, sink flows, and multipliers
-	compute_source_sink_multipliers( g, u, ps, pt, div, data, cc, icc, n_c, n_s);
+    if(channels_first)
+	    compute_source_sink_multipliers_channels_first( g, u, ps, pt, div, data, cc, icc, n_c, n_s);
+    else
+	    compute_source_sink_multipliers( g, u, ps, pt, div, data, cc, icc, n_c, n_s);
+        
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
@@ -44,12 +52,18 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
     g = new float[n_s*n_c];
 
     //initialize variables
-	softmax(data, u, n_s, n_c);
+    if(channels_first)
+	    softmax_channels_first(data, u, n_s, n_c);
+    else
+	    softmax(data, u, n_s, n_c);
     clear(g, div, n_c*n_s);
     clear_spatial_flows();
     //clear(pt, n_c*n_s);
     //clear(ps, n_s);
-	init_flows(data, ps, pt, n_s, n_c);
+    if(channels_first)
+	    init_flows_channels_first(data, ps, pt, n_s, n_c);
+    else
+	    init_flows(data, ps, pt, n_s, n_c);
 
     // iterate in blocks
     int min_iter = min_iter_calc();
@@ -64,7 +78,7 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
 
         float max_change = maxabs(g,n_s*n_c);
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
-        if (max_change < beta)
+        if (max_change < tau*beta)
             break;
     }
 

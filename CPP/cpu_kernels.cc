@@ -1,7 +1,6 @@
 #include "cpu_kernels.h"
 #include <limits>
 #include <iostream>
-
 #define epsilon 0.00001f
 
 #include <cmath>
@@ -96,6 +95,13 @@ float max_diff(const float* buffer, const int n_c, const int n_s){
     return avg_all_diff;
 }
 
+float* transpose(const float* bufferin, float* bufferout, const int n_d1, const int n_d2){
+    for(int d1 = 0; d1 < n_d1; d1++)
+        for(int d2 = 0; d2 < n_d2; d2++)
+            bufferout[d2*n_d1+d1] = bufferin[d1*n_d2+d2];
+    return bufferout;
+}
+
 void unfold_buffer(float* buffer, const int n_s, const int n_c, const int n_r){
 	for(int s = n_s-1; s >= 0; s--){
 		for(int c = n_c-1; c >= 0; c--)
@@ -117,6 +123,10 @@ inline int idx(const int x, const int n_x, const int y, const int n_y){
 
 inline int idx(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z){
     return z + n_z*idx(x,n_x,y,n_y);
+}
+
+inline int idx(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z, const int w, const int n_w){
+    return w + n_w*idx(x,n_x,y,n_y,z,n_z);
 }
 
 inline int idxc(const int s, const int n_s, const int c, const int n_c){
@@ -222,6 +232,35 @@ void sigmoid(const float* bufferin, float* bufferout, const int n_s){
     }
 }
 
+void exp(const float* bufferin, float* bufferout, const int n_s){
+    for(int s = 0; s < n_s; s++) {
+		float cost = bufferin[s];
+        bufferout[s] = std::exp(cost);
+    }
+}
+
+float mean(const float* bufferin, const int n_s){
+	float acc = 0.0f;
+    for(int s = 0; s < n_s; s++)
+		acc += bufferin[s];
+	return acc / float(n_s);
+}
+
+float mean_square(const float* bufferin, const int n_s){
+	float acc = 0.0f;
+    for(int s = 0; s < n_s; s++)
+		acc += bufferin[s]*bufferin[s];
+	return acc / float(n_s);
+}
+
+float stdev(const float* bufferin, const int n_s){
+	float mean_val = mean(bufferin, n_s);
+	float mean_square_val = mean_square(bufferin, n_s);
+	float var = mean_square_val - mean_val*mean_val;
+	return std::sqrt(var);
+}
+
+
 void update(float* buffer, const float* update, const int n_s, const float alpha){
 	for(int s = 0; s < n_s; s++) {
 		float diff = alpha * (update[s]-buffer[s]);
@@ -231,14 +270,14 @@ void update(float* buffer, const float* update, const int n_s, const float alpha
 
 void parity_mask(float* buffer, const int n_x, const int n_c, const int parity){
 	for(int x = 0, s = 0; x < n_x; x++)
-        for(int c = 1; c < n_c; c++, s++)
+        for(int c = 0; c < n_c; c++, s++)
             buffer[s] *= (parity ^ x) & 1;
 }
 
 void parity_mask(float* buffer, const int n_x, const int n_y, const int n_c, const int parity){
 	for(int x = 0, s = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
-        for(int c = 1; c < n_c; c++, s++)
+        for(int c = 0; c < n_c; c++, s++)
             buffer[s] *= (parity ^ x ^ y) & 1;
 }
 
@@ -246,13 +285,35 @@ void parity_mask(float* buffer, const int n_x, const int n_y, const int n_z, con
 	for(int x = 0, s = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
 	for(int z = 0; z < n_z; z++)
-        for(int c = 1; c < n_c; c++, s++)
+        for(int c = 0; c < n_c; c++, s++)
+            buffer[s] *= (parity ^ x ^ y ^ z) & 1;
+}
+
+
+void parity_mask_channels_first(float* buffer, const int n_x, const int n_c, const int parity){
+	for(int c = 0, s = 0; c < n_c; c++)
+    for(int x = 0; x < n_x; x++, s++)
+        buffer[s] *= (parity ^ x) & 1;
+}
+
+void parity_mask_channels_first(float* buffer, const int n_x, const int n_y, const int n_c, const int parity){
+	for(int c = 0,  s = 0; c < n_c; c++)
+    for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++, s++)
+            buffer[s] *= (parity ^ x ^ y) & 1;
+}
+
+void parity_mask_channels_first(float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
+	for(int c = 0, s = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int z = 0; z < n_z; z++, s++)
             buffer[s] *= (parity ^ x ^ y ^ z) & 1;
 }
 
 void parity_merge(float* buffer, const float* other, const int n_x, const int n_c, const int parity){
 	for(int x = 0, s = 0; x < n_x; x++)
-        for(int c = 1; c < n_c; c++, s++){
+        for(int c = 0; c < n_c; c++, s++){
             buffer[s] *= (parity ^ x) & 1;
             buffer[s] += ((parity ^ x ^ 1) & 1) * other[s];
         }
@@ -261,7 +322,7 @@ void parity_merge(float* buffer, const float* other, const int n_x, const int n_
 void parity_merge(float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity){
 	for(int x = 0, s = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
-        for(int c = 1; c < n_c; c++, s++){
+        for(int c = 0; c < n_c; c++, s++){
             buffer[s] *= (parity ^ x ^ y) & 1;
             buffer[s] += ((parity ^ x ^ y ^ 1) & 1) * other[s];
         }
@@ -271,7 +332,34 @@ void parity_merge(float* buffer, const float* other, const int n_x, const int n_
 	for(int x = 0, s = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
 	for(int z = 0; z < n_z; z++)
-        for(int c = 1; c < n_c; c++, s++){
+        for(int c = 0; c < n_c; c++, s++){
+            buffer[s] *= (parity ^ x ^ y ^ z) & 1;
+            buffer[s] += ((parity ^ x ^ y ^ z ^ 1) & 1) * other[s];
+        }
+}
+
+void parity_merge_channels_first(float* buffer, const float* other, const int n_x, const int n_c, const int parity){
+	for(int c = 0, s = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++, s++){
+            buffer[s] *= (parity ^ x) & 1;
+            buffer[s] += ((parity ^ x ^ 1) & 1) * other[s];
+        }
+}
+
+void parity_merge_channels_first(float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity){
+	for(int c = 0, s = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++, s++){
+            buffer[s] *= (parity ^ x ^ y) & 1;
+            buffer[s] += ((parity ^ x ^ y ^ 1) & 1) * other[s];
+        }
+}
+
+void parity_merge_channels_first(float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity){
+	for(int c = 0, s = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int z = 0; z < n_z; z++, s++){
             buffer[s] *= (parity ^ x ^ y ^ z) & 1;
             buffer[s] += ((parity ^ x ^ y ^ z ^ 1) & 1) * other[s];
         }
@@ -368,6 +456,121 @@ void calculate_r_eff(float* r_eff, const float* rx, const float* u, const int n_
     }
 }
 
+void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* ry, const float* rz, const float* u, const int n_x, const int n_y, const int n_z, const int n_c) {
+    
+    for (int c = 0; c < n_c; c++)
+    for (int x = 0; x < n_x; x++)
+    for (int y = 0; y < n_y; y++) 
+    for (int z = 0; z < n_z; z++) {
+        r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] = 0.0f;
+
+        //in z+
+        if(z < n_z-1)
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-1.0);
+
+        //in z-
+        if(z > 0)
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)]-1.0);
+
+        //in y+
+        if(y < n_y-1)
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-1.0);
+
+        //in y-
+        if(y > 0)
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)]-1.0);
+
+        //in x+
+        if(x < n_x-1)
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-1.0);
+
+        //in x-
+        if(x > 0)
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)]-1.0);
+
+    }
+}
+
+void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* ry, const float* u, const int n_x, const int n_y, const int n_c) {
+    
+    for (int c = 0; c < n_c; c++) 
+    for (int x = 0; x < n_x; x++)
+    for (int y = 0; y < n_y; y++) {
+        r_eff[idx(c,n_c,x,n_x,y,n_y)] = 0.0f;
+        
+        //in y+
+        if(y < n_y-1)
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y,n_y)] * (2.0*u[idx(c,n_c,x,n_x,y+1,n_y)]-1.0);
+
+        //in y-
+        if(y > 0)
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y-1,n_y)] * (2.0*u[idx(c,n_c,x,n_x,y-1,n_y)]-1.0);
+
+        //in x+
+        if(x < n_x-1)
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x,n_x,y,n_y)] * (2.0*u[idx(c,n_c,x+1,n_x,y,n_y)]-1.0);
+
+        //in x-
+        if(x > 0)
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x-1,n_x,y,n_y)] * (2.0*u[idx(c,n_c,x-1,n_x,y,n_y)]-1.0);
+
+    }
+}
+
+void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* u, const int n_x, const int n_c) {
+    
+    for (int c = 0; c < n_c; c++) 
+    for (int x = 0; x < n_x; x++) {
+        r_eff[idx(c,n_c,x,n_x)] = 0.0f;
+
+        //in x+
+        if(x < n_x-1)
+            r_eff[idx(c,n_c,x,n_x)] += rx[idx(c,n_c,x,n_x)] * (2.0*u[idx(c,n_c,x+1,n_x)]-1.0);
+
+        //in x-
+        if(x > 0)
+            r_eff[idx(c,n_c,x,n_x)] += rx[idx(c,n_c,x-1,n_x)] * (2.0*u[idx(c,n_c,x-1,n_x)]-1.0);
+
+    }
+}
+
+void aggregate_bottom_up_channels_first(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list){
+    
+    for (int l = 0; l < n_r; l++) {
+        const TreeNode* n = bottom_up_list[l];
+        if(n->d == -1)
+            for(int c = 0; c < n->c; c++)
+            for (int s = 0; s < n_s; s++)
+                buffer[idx(n->r,n_r,s,n_s)] += buffer[idx(n->children[c]->r,n_r,s,n_s)];
+        }
+}
+
+void aggregate_bottom_up_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c, const int n_r, const TreeNode* const* bottom_up_list){
+    
+    for (int l = 0; l < n_r; l++) {
+        const TreeNode* n = bottom_up_list[l];
+        if(n->c > 0){
+            for (int s = 0; s < n_s; s++)
+                bufferout[idx(n->r,n_r,s,n_s)] = bufferout[idx(n->children[0]->r,n_r,s,n_s)];
+            for(int c = 1; c < n->c; c++)
+            for(int s = 0; s < n_s; s++)
+                bufferout[idx(n->r,n_r,s,n_s)] += bufferout[idx(n->children[c]->r,n_r,s,n_s)];
+        }else{
+            for (int s = 0; s < n_s; s++)
+                bufferout[idx(n->r,n_r,s,n_s)] = bufferin[idx(n->d,n_c,s,n_s)];
+        }
+    }
+}
+
+void aggregate_top_down_channels_first(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list){
+	
+    for (int l = n_r-1; l >= 0; l--) {
+        const TreeNode* n = bottom_up_list[l];
+        for(int c = 0; c < n->c; c++)
+        for(int s = 0; s < n_s; s++)
+            buffer[idx(n->children[c]->r,n_r,s,n_s)] += buffer[idx(n->r,n_r,s,n_s)];
+    }
+}
 
 void aggregate_bottom_up(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list){
     for (int s = 0; s < n_s; s++)
@@ -402,6 +605,22 @@ void aggregate_top_down(float* buffer, const int n_s, const int n_r, const TreeN
             const TreeNode* n = bottom_up_list[l];
 			for(int c = 0; c < n->c; c++)
 				buffer[idxc(s,n_s,n->children[c]->r,n_r)] += buffer[idxc(s,n_s,n->r,n_r)];
+		}
+}
+
+void untangle_softmax_channels_first(const float* g, const float* u, float* dy, const int n_s, const int n_c){
+	for(int s = 0; s < n_s; s++)
+		for (int c = 0; c < n_c; c++){
+			float new_grad = 0.0f;
+			float uc = u[idx(c,n_c,s,n_s)];
+			for(int a = 0; a < n_c; a++){
+				float da = g[idx(a,n_c,s,n_s)];
+				if(c == a)
+					new_grad += da*(1.0f-uc);
+				else
+					new_grad -= da*u[idx(a,n_c,s,n_s)];
+			}
+			dy[idx(c,n_c,s,n_s)] = new_grad*uc;
 		}
 }
 
@@ -502,6 +721,82 @@ void get_gradient_for_u(const float* dy, const float* rx, float* du, const int n
 	}
 }
 
+void get_gradient_for_u_channels_first(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau){
+	for(int c = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int z = 0; z < n_z; z++){
+		float grad_val = 0.0f;
+
+		//z down
+		if( z > 0 )
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)]*rz[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)];
+
+		//y down
+		if( y > 0 )
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)]*rz[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)];
+
+		//x down
+		if( x > 0 )
+			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)]*ry[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)];
+
+		//z up
+		if( z < n_z - 1)
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]*ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+
+		//y up
+		if ( y < n_y - 1)
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]*rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+
+		//x up
+		if ( x < n_x - 1)
+			grad_val += 2.0f*dy[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]*rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+
+		du[idx(c,n_c,x,n_x,y,n_y,z,n_z)] = tau*grad_val + (1.0f-tau)*du[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+	}
+}
+
+void get_gradient_for_u_channels_first(const float* dy, const float* rx, const float* ry, float* du, const int n_x, const int n_y, const int n_c, const float tau){
+	for(int c = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++){
+		float grad_val = 0.0f;
+		//y down
+		if( y > 0 )
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y-1,n_y)]*ry[idx(c,n_c,x,n_x,y-1,n_y)];
+
+		//x down
+		if( x > 0 )
+			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x,y,n_y)]*ry[idx(c,n_c,x-1,n_x,y,n_y)];
+		
+		//y up
+		if ( y < n_y - 1)
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y+1,n_y)]*rx[idx(c,n_c,x,n_x,y,n_y)];
+
+		//x up
+		if ( x < n_x - 1)
+			grad_val += 2.0f*dy[idx(c,n_c,x+1,n_x,y,n_y)]*rx[idx(c,n_c,x,n_x,y,n_y)];
+
+		du[idx(c,n_c,x,n_x,y,n_y)] = tau*grad_val + (1.0f-tau)*du[idx(c,n_c,x,n_x,y,n_y)];
+	}
+}
+
+void get_gradient_for_u_channels_first(const float* dy, const float* rx, float* du, const int n_x, const int n_c, const float tau){
+	for(int c = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++){
+		float grad_val = 0.0f;
+		//x down
+		if( x > 0 )
+			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x)]*rx[idx(c,n_c,x-1,n_x)];
+		
+		//x up
+		if ( x < n_x - 1)
+			grad_val += 2.0f*dy[idx(c,n_c,x+1,n_x)]*rx[idx(c,n_c,x,n_x)];
+
+		du[idx(c,n_c,x,n_x)] = tau*grad_val + (1.0f-tau)*du[idx(c,n_c,x,n_x)];
+	}
+}
+
 void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c, const float tau){
 	for(int x = 0; x < n_x; x++)
 	for(int y = 0; y < n_y; y++)
@@ -567,6 +862,72 @@ void get_reg_gradients(const float* g, const float* u, float* g_rx, const int n_
 	}
 
 }
+
+void get_reg_gradients_channels_first(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c, const float tau){
+	for(int c = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++)
+	for(int z = 0; z < n_z; z++){
+		
+		//for z
+		if( z < n_z - 1 ){
+			float up_contra = (2.0f*u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			float dn_contra = (2.0f*u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)];
+			g_rz[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += tau * (up_contra + dn_contra);
+		}
+
+		//for y
+		if( y < n_y - 1 ){
+			float up_contra = (2.0f*u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			float dn_contra = (2.0f*u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)];
+			g_ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += tau * (up_contra + dn_contra);
+		}
+
+		//for x
+		if( x < n_x - 1){
+			float up_contra = (2.0f*u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			float dn_contra = (2.0f*u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)];
+			g_rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += tau * (up_contra + dn_contra);
+		}
+	}
+
+}
+
+void get_reg_gradients_channels_first(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c, const float tau){
+	for(int c = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++)
+	for(int y = 0; y < n_y; y++){
+
+		//for y
+		if( y < n_y - 1 ){
+			float up_contra = (2.0f*u[idx(c,n_c,x,n_x,y+1,n_y)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y)];
+			float dn_contra = (2.0f*u[idx(c,n_c,x,n_x,y,n_y)]-1.0f) * g[idx(c,n_c,x,n_x,y+1,n_y)];
+			g_ry[idx(c,n_c,x,n_x,y,n_y)] += tau * (up_contra + dn_contra);
+		}
+
+		//for x
+		if( x < n_x - 1){
+			float up_contra = (2.0f*u[idx(c,n_c,x+1,n_x,y,n_y)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y)];
+			float dn_contra = (2.0f*u[idx(c,n_c,x,n_x,y,n_y)]-1.0f) * g[idx(c,n_c,x+1,n_x,y,n_y)];
+			g_rx[idx(c,n_c,x,n_x,y,n_y)] += tau * (up_contra + dn_contra);
+		}
+	}
+
+}
+
+void get_reg_gradients_channels_first(const float* g, const float* u, float* g_rx, const int n_x, const int n_c, const float tau){
+	for(int c = 0; c < n_c; c++)
+	for(int x = 0; x < n_x; x++){
+
+		//for x
+		if( x < n_x - 1){
+			float up_contra = (2.0f*u[idx(c,n_c,x+1,n_x)]-1.0f) * g[idx(c,n_c,x,n_x)];
+			float dn_contra = (2.0f*u[idx(c,n_c,x,n_x)]-1.0f) * g[idx(c,n_c,x+1,n_x)];
+			g_rx[idx(c,n_c,x,n_x)] += tau * (up_contra + dn_contra);
+		}
+	}
+
+}
 	
 
 void compute_source_flow( const float* u, float* ps, const float* pt, const float* div, const float icc, const int n_c, const int n_s){
@@ -616,9 +977,29 @@ void compute_source_sink_multipliers( float* erru, float* u, float* ps, float* p
             if(erru[i] < 0.0f)
                 erru[i] = -erru[i];
         }
-        
     }
-    
+}
+
+void compute_source_sink_multipliers_channels_first( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_c, const int n_s){
+
+    for(int s = 0; s < n_s; s++){
+        ps[s] = icc;
+        for(int c = 0; c < n_c; c++)
+            ps[s] += pt[idx(c,n_c,s,n_s)] + div[idx(c,n_c,s,n_s)] - u[idx(c,n_c,s,n_s)] * icc;
+        ps[s] /= n_c;
+        
+        for (int c = 0; c < n_c; c++) {
+            int i = idx(c,n_c,s,n_s);
+            pt[i] = ps[s] - div[i] + u[i] * icc;
+            if( pt[i] > -d[i] )
+                pt[i] = -d[i];
+            
+            erru[i] = cc * (ps[s] - div[i] - pt[i]);
+            u[i] += erru[i];
+            if(erru[i] < 0.0f)
+                erru[i] = -erru[i];
+        }
+    }
 }
 
 void compute_source_sink_multipliers_binary( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_s){
@@ -648,41 +1029,46 @@ void compute_capacity_potts(float* g, const float* u, const float* ps, const flo
             g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
 }
 
+void compute_capacity_potts_channels_first(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc){
+    for(int c = 0, cs = 0; c < n_c; c++)
+        for(int s = 0; s < n_s; s++, cs++)
+            g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
+}
+
 void compute_capacity_binary(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const float tau, const float icc){
     for(int s = 0; s < n_s; s++)
 		g[s] = tau * (div[s] + pt[s] - ps[s] - u[s] * icc);
 }
 
 void compute_flows(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z){
-    const int n_s = n_x*n_y*n_z;
-    
+	
     for(int x = 0, s = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++)
     for(int z = 0; z < n_z; z++, s++){
         for(int c = 0; c < n_c; c++){
             int cs = idxc(x,n_x,y,n_y,z,n_z,c,n_c);
-            if (x != 0) {
-                int sxm = idxc(x-1,n_x,y,n_y,z,n_z,c,n_c);
+            if (x < n_x-1) {
+                int sxm = idxc(x+1,n_x,y,n_y,z,n_z,c,n_c);
                 px[cs] += g[cs] - g[sxm];
                 if (px[cs] > rx[cs])
                     px[cs] = rx[cs];
-                if (px[cs] < -rx[cs])
+                else if (px[cs] < -rx[cs])
                     px[cs] = -rx[cs];
             }
-            if (y != 0){
-                int sym = idxc(x,n_x,y-1,n_y,z,n_z,c,n_c);
+            if (y < n_y-1){
+                int sym = idxc(x,n_x,y+1,n_y,z,n_z,c,n_c);
                 py[cs] += g[cs] - g[sym];
                 if (py[cs] > ry[cs])
                     py[cs] = ry[cs];
-                if (py[cs] < -ry[cs])
+                else if (py[cs] < -ry[cs])
                     py[cs] = -ry[cs];
             }
-            if (z != 0){
-                int szm = idxc(x,n_x,y,n_y,z-1,n_z,c,n_c);
+            if (z < n_z-1){
+                int szm = idxc(x,n_x,y,n_y,z+1,n_z,c,n_c);
                 pz[cs] += g[cs] - g[szm];
                 if (pz[cs] > rz[cs])
                     pz[cs] = rz[cs];
-                if (pz[cs] < -rz[cs])
+                else if (pz[cs] < -rz[cs])
                     pz[cs] = -rz[cs];
             }
         }
@@ -694,16 +1080,16 @@ void compute_flows(const float* g, float* div, float* px, float* py, float* pz, 
         for(int c = 0; c < n_c; c++){
             int cs = idxc(x,n_x,y,n_y,z,n_z,c,n_c);
             div[cs] = -px[cs]-py[cs]-pz[cs];
-            if (x < n_x-1) {
-                int sxm = idxc(x+1,n_x,y,n_y,z,n_z,c,n_c);
+            if (x > 0) {
+                int sxm = idxc(x-1,n_x,y,n_y,z,n_z,c,n_c);
                 div[cs] += px[sxm];
             }
-            if (y < n_y-1){
-                int sym = idxc(x,n_x,y+1,n_y,z,n_z,c,n_c);
+            if (y > 0){
+                int sym = idxc(x,n_x,y-1,n_y,z,n_z,c,n_c);
                 div[cs] += py[sym];
             }
-            if (z < n_z-1){
-                int szm = idxc(x,n_x,y,n_y,z+1,n_z,c,n_c);
+            if (z > 0){
+                int szm = idxc(x,n_x,y,n_y,z-1,n_z,c,n_c);
                 div[cs] += pz[szm];
             }
         }
@@ -713,26 +1099,25 @@ void compute_flows(const float* g, float* div, float* px, float* py, float* pz, 
 
 
 void compute_flows(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y){
-    const int n_s = n_x*n_y;
-    
+	
     for(int x = 0, s = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++,s++){
         for(int c = 0; c < n_c; c++){
             int cs = idxc(x,n_x,y,n_y,c,n_c);
-            if (x != 0) {
-                int sxm = idxc(x-1,n_x,y,n_y,c,n_c);
+            if (x < n_x-1) {
+                int sxm = idxc(x+1,n_x,y,n_y,c,n_c);
                 px[cs] += g[cs] - g[sxm];
                 if (px[cs] > rx[cs])
                     px[cs] = rx[cs];
-                if (px[cs] < -rx[cs])
+                else if (px[cs] < -rx[cs])
                     px[cs] = -rx[cs];
             }
-            if (y != 0){
-                int sym = idxc(x,n_x,y-1,n_y,c,n_c);
+            if (y < n_y-1){
+                int sym = idxc(x,n_x,y+1,n_y,c,n_c);
                 py[cs] += g[cs] - g[sym];
                 if (py[cs] > ry[cs])
                     py[cs] = ry[cs];
-                if (py[cs] < -ry[cs])
+                else if (py[cs] < -ry[cs])
                     py[cs] = -ry[cs];
             }
         }
@@ -743,12 +1128,12 @@ void compute_flows(const float* g, float* div, float* px, float* py, const float
         for(int c = 0; c < n_c; c++){
             int cs = idxc(x,n_x,y,n_y,c,n_c);
             div[cs] = -px[cs]-py[cs];
-            if (x < n_x-1) {
-                int sxm = idxc(x+1,n_x,y,n_y,c,n_c);
+            if (x > 0) {
+                int sxm = idxc(x-1,n_x,y,n_y,c,n_c);
                 div[cs] += px[sxm];
             }
-            if (y < n_y-1){
-                int sym = idxc(x,n_x,y+1,n_y,c,n_c);
+            if (y > 0){
+                int sym = idxc(x,n_x,y-1,n_y,c,n_c);
                 div[cs] += py[sym];
             }
         }
@@ -757,17 +1142,16 @@ void compute_flows(const float* g, float* div, float* px, float* py, const float
 }
 
 void compute_flows(const float* g, float* div, float* px, const float* rx, const int n_c, const int n_x){
-    const int n_s = n_x;
     
     for(int x = 0, s = 0; x < n_x; x++, s++){
         for(int c = 0; c < n_c; c++){
             int cs = idxc(x,n_x,c,n_c);
-            if (x != 0) {
-                int sxm = idxc(x-1,n_x,c,n_c);
+            if (x != n_x-1) {
+                int sxm = idxc(x+1,n_x,c,n_c);
                 px[cs] += g[cs] - g[sxm];
                 if (px[cs] > rx[cs])
                     px[cs] = rx[cs];
-                if (px[cs] < -rx[cs])
+                else if (px[cs] < -rx[cs])
                     px[cs] = -rx[cs];
             }
         }
@@ -777,8 +1161,8 @@ void compute_flows(const float* g, float* div, float* px, const float* rx, const
         for(int c = 0; c < n_c; c++){
             int cs = idxc(x,n_x,c,n_c);
             div[cs] = -px[cs];
-            if (x < n_x-1) {
-                int sxm = idxc(x+1,n_x,c,n_c);
+            if (x > 0) {
+                int sxm = idxc(x-1,n_x,c,n_c);
                 div[cs] += px[sxm];
             }
         }
@@ -787,30 +1171,29 @@ void compute_flows(const float* g, float* div, float* px, const float* rx, const
 }
 
 void compute_flows_channels_first(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z){
-    const int n_s = n_x*n_y*n_z;
-    
+
     for(int c = 0, cs = 0; c < n_c; c++)
     for(int x = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++)
     for(int z = 0; z < n_z; z++, cs++){
-        if (x != 0) {
-            int sxm = cs - n_y*n_z;
+        if (x < n_x-1) {
+            int sxm = cs + n_y*n_z;
             px[cs] += g[cs] - g[sxm];
             if (px[cs] > rx[cs])
                 px[cs] = rx[cs];
             if (px[cs] < -rx[cs])
                 px[cs] = -rx[cs];
         }
-        if (y != 0){
-            int sym = cs - n_z;
+        if (y < n_y-1){
+            int sym = cs + n_z;
             py[cs] += g[cs] - g[sym];
             if (py[cs] > ry[cs])
                 py[cs] = ry[cs];
             if (py[cs] < -ry[cs])
                 py[cs] = -ry[cs];
         }
-        if (z != 0){
-            int szm = cs - 1;
+        if (z < n_z-1){
+            int szm = cs + 1;
             pz[cs] += g[cs] - g[szm];
             if (pz[cs] > rz[cs])
                 pz[cs] = rz[cs];
@@ -824,16 +1207,16 @@ void compute_flows_channels_first(const float* g, float* div, float* px, float* 
     for(int y = 0; y < n_y; y++)
     for(int z = 0; z < n_z; z++,cs++){
         div[cs] = -px[cs]-py[cs]-pz[cs];
-        if (x < n_x-1) {
-            int sxm = cs + n_y*n_z;
+        if (x > 0) {
+            int sxm = cs - n_y*n_z;
             div[cs] += px[sxm];
         }
-        if (y < n_y-1){
-            int sym = cs + n_z;;
+        if (y > 0){
+            int sym = cs - n_z;;
             div[cs] += py[sym];
         }
-        if (z < n_z-1){
-            int szm = cs + 1;
+        if (z > 0){
+            int szm = cs - 1;
             div[cs] += pz[szm];
         }
     }
@@ -842,21 +1225,20 @@ void compute_flows_channels_first(const float* g, float* div, float* px, float* 
 
 
 void compute_flows_channels_first(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y){
-    const int n_s = n_x*n_y;
-    
+
     for(int c = 0, cs = 0; c < n_c; c++)
     for(int x = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++,cs++){
-        if (x != 0) {
-            int sxm = cs - n_y;
+        if (x < n_x-1) {
+            int sxm = cs + n_y;
             px[cs] += g[cs] - g[sxm];
             if (px[cs] > rx[cs])
                 px[cs] = rx[cs];
             if (px[cs] < -rx[cs])
                 px[cs] = -rx[cs];
         }
-        if (y != 0){
-            int sym = cs - 1;
+        if (y < n_y-1){
+            int sym = cs + 1;
             py[cs] += g[cs] - g[sym];
             if (py[cs] > ry[cs])
                 py[cs] = ry[cs];
@@ -869,12 +1251,12 @@ void compute_flows_channels_first(const float* g, float* div, float* px, float* 
     for(int x = 0; x < n_x; x++)
     for(int y = 0; y < n_y; y++,cs++){
         div[cs] = -px[cs]-py[cs];
-        if (x < n_x-1) {
-            int sxm = cs + n_y;
+        if (x > 0) {
+            int sxm = cs - n_y;
             div[cs] += px[sxm];
         }
-        if (y < n_y-1){
-            int sym = cs + 1;
+        if (y > 0){
+            int sym = cs - 1;
             div[cs] += py[sym];
         }
     }
@@ -882,12 +1264,11 @@ void compute_flows_channels_first(const float* g, float* div, float* px, float* 
 }
 
 void compute_flows_channels_first(const float* g, float* div, float* px, const float* rx, const int n_c, const int n_x){
-    const int n_s = n_x;
-    
+
     for(int c = 0, cs = 0; c < n_c; c++)
     for(int x = 0; x < n_x; x++,cs++){
-        if (x != 0) {
-            int sxm = cs - 1;
+        if (x < n_x-1) {
+            int sxm = cs + 1;
             px[cs] += g[cs] - g[sxm];
             if (px[cs] > rx[cs])
                 px[cs] = rx[cs];
@@ -899,12 +1280,22 @@ void compute_flows_channels_first(const float* g, float* div, float* px, const f
     for(int c = 0, cs = 0; c < n_c; c++)
     for(int x = 0; x < n_x; x++,cs++){
         div[cs] = -px[cs];
-        if (x < n_x-1) {
-            int sxm = cs + 1;
+        if (x > 0) {
+            int sxm = cs - 1;
             div[cs] += px[sxm];
         }
     }
             
+}
+
+void init_flows_binary(const float* d, float* ps, float* pt, const int n_s){
+    for(int s = 0; s < n_s; s++){
+		float d_val = d[s];
+		if (d_val > 0.0f)
+			ps[s] = d_val;
+		else
+			pt[s] = -d_val;
+	}
 }
 
 void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s){
@@ -924,6 +1315,25 @@ void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n
     }
             
 }
+
+void init_flows_channels_first(const float* d, float* ps, float* pt, const int n_c, const int n_s){
+    for(int s = 0; s < n_s; s++){
+        float max_d = -std::numeric_limits<float>::infinity();
+        for(int c = 0; c < n_c; c++){
+            int cs = idx(c,n_c,s,n_s);
+            if( max_d < d[cs] )
+                max_d = d[cs];
+        }
+        //cs -= n_c;
+        ps[s] = -max_d;
+        for(int c = 0; c < n_c; c++){
+            int cs = idx(c,n_c,s,n_s);
+            pt[cs] = -max_d;
+        }
+    }
+            
+}
+
 void init_flows(const float* d, float* ps, const int n_c, const int n_s){
     for(int s = 0; s < n_s; s++){
         float max_d = -std::numeric_limits<float>::infinity();

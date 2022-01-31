@@ -3,10 +3,6 @@
 #ifndef HMF_AUGLAG_CPU_SOLVER_H
 #define HMF_AUGLAG_CPU_SOLVER_H
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
 #include "hmf_trees.h"
 
 class HMF_AUGLAG_CPU_SOLVER_BASE
@@ -15,18 +11,19 @@ private:
 
 protected:
     TreeNode const* const* bottom_up_list;
+    const bool channels_first;
     const int b;
     const int n_c;
     const int n_r;
     const int n_s;
-    const float* const data;
-    float* const u;
+    const float* data;
+    float* data_b;
+    float* u;
     float* ps;
     float* pt;
     float* u_tmp;
     float* div;
     float* g;
-    float* data_b;
     
     // optimization constants
     const float tau = 0.1f;
@@ -42,7 +39,9 @@ protected:
     void block_iter();
     
 public:
+    ~HMF_AUGLAG_CPU_SOLVER_BASE();
     HMF_AUGLAG_CPU_SOLVER_BASE(
+        const bool channels_first,
         TreeNode** bottom_up_list,
         const int batch,
         const int n_s,
@@ -50,8 +49,6 @@ public:
         const int n_r,
         const float* data_cost,
         float* u) ;
-        
-    ~HMF_AUGLAG_CPU_SOLVER_BASE();
     
     void operator()();
 };

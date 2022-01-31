@@ -7,12 +7,14 @@
 #include "cpu_kernels.h"
 
 BINARY_MEANPASS_CPU_SOLVER_BASE::BINARY_MEANPASS_CPU_SOLVER_BASE(
+    const float channels_first,
     const int batch,
     const int n_s,
     const int n_c,
     const float* data_cost,
 	const float* init_u,
     float* u ) :
+channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
@@ -28,12 +30,12 @@ u(u)
 }
 
 //perform one iteration of the algorithm
-float BINARY_MEANPASS_CPU_SOLVER_BASE::block_iter(int iter, bool last){
+float BINARY_MEANPASS_CPU_SOLVER_BASE::block_iter(int parity, bool last){
 	float max_change = 0.0f;
 	calculate_regularization();
 	inc(data, r_eff, n_s*n_c);
 	sigmoid(r_eff, r_eff, n_s*n_c);
-    parity_merge_buffer(r_eff,u,iter&1);
+    parity_merge_buffer(r_eff, u, parity);
 	if(last)
 		max_change = update_with_convergence(u, r_eff, n_s*n_c, tau);
 	else
@@ -45,6 +47,8 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
         
 	// allocate intermediate variables
 	float max_change = 0.0f;
+	float max_change_1 = 0.0f;
+	float max_change_2 = 0.0f;
 	r_eff = new float[n_s*n_c];
 
 	//initialize variables
@@ -58,18 +62,22 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
-        for (int iter = 0; iter < min_iter; iter++)
-            max_change = block_iter(iter, iter == min_iter-1);
+        for (int iter = 0; iter < min_iter; iter++){
+            max_change_1 = block_iter(0, iter == min_iter-1);
+            max_change_2 = block_iter(1, iter == min_iter-1);
+			max_change = (max_change_1 > max_change_2) ? max_change_1 : max_change_2;
+		}
 
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "BINARY_MEANPASS_CPU_SOLVER_BASE Iter " << i << ": " << max_change_1 << " " << max_change_2 << std::endl;
         if (max_change < tau*beta)
             break;
     }
 
     //run one last block, just to be safe
-    for (int iter = 0; iter < min_iter; iter++)
-        block_iter(iter, false);
-
+    for (int iter = 0; iter < min_iter; iter++){
+		block_iter(0, false);
+		block_iter(1, false);
+	}
 
 	//calculate the effective regularization
 	calculate_regularization();
@@ -88,12 +96,14 @@ BINARY_MEANPASS_CPU_SOLVER_BASE::~BINARY_MEANPASS_CPU_SOLVER_BASE(){
 
 
 BINARY_MEANPASS_CPU_GRADIENT_BASE::BINARY_MEANPASS_CPU_GRADIENT_BASE(
+    const float channels_first,
     const int batch,
     const int n_s,
     const int n_c,
 	const float* u,
 	const float* g,
 	float* g_d ) :
+channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
@@ -109,8 +119,8 @@ u(0)
 
 //perform one iteration of the algorithm
 void BINARY_MEANPASS_CPU_GRADIENT_BASE::block_iter(){
-	//untangle softmax derivative
-	untangle_softmax(g_u, u, d_y, n_s, n_c);
+	//untangle sigmoid derivative
+	untangle_sigmoid(g_u, u, d_y, n_s*n_c);
 	
 	// populate data gradient
 	inc(d_y, g_data, tau, n_s*n_c);
@@ -129,7 +139,8 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
 	//initialize variables
 	init_vars();
 	sigmoid(logits, u, n_s*n_c);
-	clear(d_y, g_u, g_data, n_s*n_c);
+	clear(g_u, n_s*n_c);
+	copy(grad,d_y,n_s*n_c);
 	
 	//get initial gradient for the data and regularization terms
 	copy(grad,g_data,n_s*n_c);
@@ -147,7 +158,7 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = maxabs(g_u,n_s*n_c);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		std::cout << "BINARY_MEANPASS_CPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
         if (max_change < beta)
             break;
     }

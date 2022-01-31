@@ -3,20 +3,16 @@
 #ifndef HMF_AUGLAG_GPU_SOLVER_H
 #define HMF_AUGLAG_GPU_SOLVER_H
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
 #include "hmf_trees.h"
-
-using GPUDevice = Eigen::GpuDevice;
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 class HMF_AUGLAG_GPU_SOLVER_BASE
 {
 private:
     
 protected:
-    const GPUDevice & dev;
+    const cudaStream_t & dev;
     TreeNode const* const* bottom_up_list;
     const int b;
     const int n_c;
@@ -48,7 +44,7 @@ protected:
     
 public:
     HMF_AUGLAG_GPU_SOLVER_BASE(
-        const GPUDevice & dev,
+        const cudaStream_t & dev,
         TreeNode** bottom_up_list,
         const int batch,
         const int n_s,

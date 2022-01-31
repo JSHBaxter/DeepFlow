@@ -30,19 +30,32 @@ void div_buffer(float* buffer, const float number, const int n_s);
 void mult_buffer(float* buffer, const float number, const int n_s);
 void unfold_buffer(float* buffer, const int n_s, const int n_c, const int n_r);
 void refold_buffer(float* buffer, const int n_s, const int n_c, const int n_r);
+void sigmoid(const float* bufferin, float* bufferout, const int n_s);
+void exp(const float* bufferin, float* bufferout, const int n_s);
+void softmax_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c);
+void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c);
+float mean(const float* bufferin, const int n_s);
+float mean_square(const float* bufferin, const int n_s);
+float stdev(const float* bufferin, const int n_s);
+float* transpose(const float* bufferin, float* bufferout, const int n_d1, const int n_d2);
 
 //Tree iteration
 void aggregate_bottom_up(const float* bufferin, float* bufferout, const int n_s, const int n_c, const int n_r, const TreeNode* const* bottom_up_list);
 void aggregate_bottom_up(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list);
 void aggregate_top_down(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list);
+void aggregate_bottom_up_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c, const int n_r, const TreeNode* const* bottom_up_list);
+void aggregate_bottom_up_channels_first(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list);
+void aggregate_top_down_channels_first(float* buffer, const int n_s, const int n_r, const TreeNode* const* bottom_up_list);
 
 //Functions speficially for augmented lagrangian
 void compute_source_flow( const float* u, float* ps, const float* pt, const float* div, const float icc, const int n_c, const int n_s);
 void compute_sink_flow( const float* u, const float* ps, float* pt, const float* div, const float* d, const float icc, const int n_c, const int n_s);
 void compute_multipliers( float* erru, float* u, const float* ps, const float* pt, const float* div, const float cc, const int n_c, const int n_s);
 void compute_source_sink_multipliers( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_c, const int n_s);
+void compute_source_sink_multipliers_channels_first( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_c, const int n_s);
 void compute_source_sink_multipliers_binary( float* erru, float* u, float* ps, float* pt, const float* div, const float* d, const float cc, const float icc, const int n_s);
 void compute_capacity_potts(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc);
+void compute_capacity_potts_channels_first(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc);
 void compute_capacity_binary(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const float tau, const float icc);
 void compute_flows(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z);
 void compute_flows(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y);
@@ -50,7 +63,9 @@ void compute_flows(const float* g, float* div, float* px, const float* rx, const
 void compute_flows_channels_first(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float * rz, const int n_c, const int n_x, const int n_y, const int n_z);
 void compute_flows_channels_first(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y);
 void compute_flows_channels_first(const float* g, float* div, float* px, const float* rx, const int n_c, const int n_x);
+void init_flows_binary(const float* d, float* ps, float* pt, const int n_s);
 void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s);
+void init_flows_channels_first(const float* d, float* ps, float* pt, const int n_c, const int n_s);
 void init_flows(const float* d, float* ps, const int n_c, const int n_s);
 void init_flows_channels_first(const float* d, float* ps, const int n_c, const int n_s);
 
@@ -58,29 +73,42 @@ void init_flows_channels_first(const float* d, float* ps, const int n_c, const i
 void parity_mask(float* buffer, const int n_x, const int n_c, const int parity);
 void parity_mask(float* buffer, const int n_x, const int n_y, const int n_c, const int parity);
 void parity_mask(float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
+void parity_mask_channels_first(float* buffer, const int n_x, const int n_c, const int parity);
+void parity_mask_channels_first(float* buffer, const int n_x, const int n_y, const int n_c, const int parity);
+void parity_mask_channels_first(float* buffer, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
 void parity_merge(float* buffer, const float* other, const int n_x, const int n_c, const int parity);
 void parity_merge(float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity);
 void parity_merge(float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
-void softmax_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c);
-void softmax(const float* bufferin, float* bufferout, const int n_s, const int n_c);
+void parity_merge_channels_first(float* buffer, const float* other, const int n_x, const int n_c, const int parity);
+void parity_merge_channels_first(float* buffer, const float* other, const int n_x, const int n_y, const int n_c, const int parity);
+void parity_merge_channels_first(float* buffer, const float* other, const int n_x, const int n_y, const int n_z, const int n_c, const int parity);
 void softmax_update(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
 float softmax_with_convergence(const float* bufferin, float* bufferout, const int n_s, const int n_c, const float alpha);
-void sigmoid(const float* bufferin, float* bufferout, const int n_s);
 void update(float* buffer, const float* update, const int n_s, const float alpha);
 float update_with_convergence(float* buffer, const float* update, const int n_s, const float alpha);
 
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* rz, const float* u, const int n_x, const int n_y, const int n_z, const int n_c);
 void calculate_r_eff(float* r_eff, const float* rx, const float* ry, const float* u, const int n_x, const int n_y, const int n_c);
 void calculate_r_eff(float* r_eff, const float* rx, const float* u, const int n_x, const int n_c);
+void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* ry, const float* rz, const float* u, const int n_x, const int n_y, const int n_z, const int n_c);
+void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* ry, const float* u, const int n_x, const int n_y, const int n_c);
+void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* u, const int n_x, const int n_c);
 
 //Functions for mean field backward calculation
 void untangle_softmax(const float* g, const float* u, float* dy, const int n_s, const int n_c);
+void untangle_softmax_channels_first(const float* g, const float* u, float* dy, const int n_s, const int n_c);
 void untangle_sigmoid(const float* g, const float* u, float* dy, const int n_s);
 void get_gradient_for_u(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
 void get_gradient_for_u(const float* dy, const float* rx, const float* ry, float* du, const int n_x, const int n_y, const int n_c, const float tau);
 void get_gradient_for_u(const float* dy, const float* rxs, float* du, const int n_x, const int n_c, const float tau);
+void get_gradient_for_u_channels_first(const float* dy, const float* rx, const float* ry, const float* rz, float* du, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
+void get_gradient_for_u_channels_first(const float* dy, const float* rx, const float* ry, float* du, const int n_x, const int n_y, const int n_c, const float tau);
+void get_gradient_for_u_channels_first(const float* dy, const float* rxs, float* du, const int n_x, const int n_c, const float tau);
 void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
 void get_reg_gradients(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c, const float tau);
 void get_reg_gradients(const float* g, const float* u, float* g_rx, const int n_x, const int n_c, const float tau);
+void get_reg_gradients_channels_first(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c, const float tau);
+void get_reg_gradients_channels_first(const float* g, const float* u, float* g_rx, float* g_ry, const int n_x, const int n_y, const int n_c, const float tau);
+void get_reg_gradients_channels_first(const float* g, const float* u, float* g_rx, const int n_x, const int n_c, const float tau);
 
 #endif //CPU_KERNELS

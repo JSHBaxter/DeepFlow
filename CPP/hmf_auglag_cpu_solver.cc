@@ -6,7 +6,12 @@
 #include "cpu_kernels.h"
 #include "hmf_trees.h"
 
+HMF_AUGLAG_CPU_SOLVER_BASE::~HMF_AUGLAG_CPU_SOLVER_BASE(){
+    delete ps;
+}
+
 HMF_AUGLAG_CPU_SOLVER_BASE::HMF_AUGLAG_CPU_SOLVER_BASE(
+    const bool channels_first,
     TreeNode** bottom_up_list,
     const int batch,
     const int n_s,
@@ -14,59 +19,62 @@ HMF_AUGLAG_CPU_SOLVER_BASE::HMF_AUGLAG_CPU_SOLVER_BASE(
     const int n_r,
     const float* data_cost,
     float* u ) :
+channels_first(channels_first),
 bottom_up_list(bottom_up_list),
 b(batch),
 n_c(n_c),
 n_r(n_r),
 n_s(n_s),
 data(data_cost),
-ps(0),
-u_tmp(0),
-pt(0),
-div(0),
-g(0),
-data_b(0),
-u(u)
+u(u),
+ps(new float[n_s+4*n_r*n_s+n_c*n_s]),
+u_tmp(ps+n_s),
+pt(u_tmp+n_s*n_r),
+div(pt+n_s*n_r),
+g(div+n_s*n_r),
+data_b(g+n_s*n_r)
 {
-    //std::cout << n_s << " " << n_c << " " << n_r << std::endl;
+    // invert data term from a positive benefit to a negative cost (to save on mult's later)
+    if(channels_first)
+        copy(data,data_b,n_c*n_s);
+    else
+        transpose(data,data_b,n_s,n_c);
+    mult_buffer(data_b,-1.0f,n_s*n_c);
 }
 
 //perform one iteration of the algorithm
 void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
     
-    //calculate the capacity and then update flows
+    //calculate the capacity and then update flows (note we don't need to cover the source node)
     for(int n_n = 0; n_n < n_r; n_n++){
         const TreeNode* n = bottom_up_list[n_n];
+	    //std::cout << "TreeNode ptr: " << n << std::endl;
         int r = n->r;
-        if( n->parent->parent == NULL )
-            compute_capacity_potts(g+r*n_s, u_tmp+r*n_s, ps, pt+r*n_s, div+r*n_s, n_s, 1, tau, icc);
-        else
-            compute_capacity_potts(g+r*n_s, u_tmp+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, div+r*n_s, n_s, 1, tau, icc);
+        if( n->parent->parent == NULL ){
+    	    //std::cout << "Calc capacities" << g+r*n_s << " " << u_tmp+r*n_s << " " << ps << " " << pt+r*n_s << " " << div+r*n_s << " " << std::endl;
+            compute_capacity_binary(g+r*n_s, u_tmp+r*n_s, ps, pt+r*n_s, div+r*n_s, n_s, tau, icc);
+        }else{
+    	    //std::cout << "Calc capacities" << g+r*n_s << " " << u_tmp+r*n_s << " " << pt+n->parent->r*n_s << " " << pt+r*n_s << " " << div+r*n_s << " " << std::endl;
+            compute_capacity_binary(g+r*n_s, u_tmp+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, div+r*n_s, n_s, tau, icc);
+        }
     }
     update_spatial_flow_calc();
-                 
-	//std::cout << "Printing flows" << std::endl;
-    //for(int n_n = 0; n_n < n_r+1; n_n++){
-    //    const TreeNode* n = bottom_up_list[n_r-n_n];
-    //    float* n_pt_buf = pt+n->r*n_s;
-    //    if(n->r == -1)
-	//		print_buffer(ps, n_s);
-	//	else
-	//		print_buffer(n_pt_buf, n_s);
-	//}
-	//std::cout << std::endl;
 
-    //update source and sink multipliers top down
+    //update source and sink multipliers bottom up
     for(int n_n = 0; n_n < n_r+1; n_n++){
-        const TreeNode* n = bottom_up_list[n_r-n_n];
+        const TreeNode* n = bottom_up_list[n_n];
         float* n_pt_buf = pt+n->r*n_s;
         float* n_g_buf = g+n->r*n_s;
         float* n_div_buf = div+n->r*n_s;
         float* n_u_buf = u_tmp+n->r*n_s;
 
+        //if we are finished the leaves,
+        if(n_n == n_c)
+            constrain(pt+n_s*(n_r-n_c),data_b,n_s*n_c);
+        
         //if we are the source node
         if(n->r == -1){
-			//std::cout << "Source " << n->r << " " << n->d << std::endl;
+	    //std::cout << "Source " << n->r << " " << n->d << std::endl;
             set(ps, icc, n_s);
             for(int c = 0; c < n->c; c++){
                 const TreeNode* nc = n->children[c];
@@ -87,7 +95,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 
         //if we are a branch node
         else if(n->c > 0){
-			//std::cout << "Branch " << n->r << " " << n->d << std::endl;
+	    //std::cout << "Branch " << n->r << " " << n->d << std::endl;
             const TreeNode* p = n->parent;
             float* p_pt_buf = pt+p->r*n_s;
             if( p->r == -1 )
@@ -117,8 +125,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 
         //if we are a leaf node
         else{
-			//std::cout << "Leaf " << n->r << " " << n->d << std::endl;
-            const float* n_d_buf = data_b+n->r*n_s;
+            //std::cout << "Leaf " << n->r << " " << n->d << std::endl;
             const TreeNode* p = n->parent;
             float* p_pt_buf = pt+p->r*n_s;
             if( p->r == -1 )
@@ -131,7 +138,6 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 			//print_buffer(n_u_buf, n_s);
 			//print_buffer(n_pt_buf, n_s);
 			//std::cout << std::endl;
-            constrain(n_pt_buf,n_d_buf,n_s);
         }
     }
     
@@ -163,30 +169,9 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 }
 
 void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
+    int u_tmp_offset = n_s*(n_r-n_c);
 
-    //store intermediate information
-    ps = new float[n_s];
-    u_tmp = new float[n_s*n_r];
-    pt = new float[n_s*n_r];
-    div = new float[n_s*n_r];
-    g = new float[n_s*n_r];
-    data_b = new float[n_s*n_r];
-
-    // transpose input data (makes everything easier)
-    for(int s = 0; s < n_s; s++)
-        for(int c = 0; c < n_c; c++)
-            data_b[c*n_s+s] = -data[s*n_c+c];
-
-	//initialize multipliers
-    clear(u_tmp+n_s*n_c, n_s*(n_r-n_c));
-	softmax_channels_first(data_b, u_tmp, n_s, n_c);
-    for (int l = n_c; l < n_r; l++) {
-        const TreeNode* n = bottom_up_list[l];
-        for(int c = 0; c < n->c; c++)
-            inc(u_tmp+n->children[c]->r*n_s, u_tmp+n->r*n_s, n_s);
-    }
-
-    //initialize variables
+    //initialize flows
     clear(g, div, n_r*n_s);
     clear_spatial_flows();
     clear(pt, n_r*n_s);
@@ -194,6 +179,20 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
     init_flows_channels_first(data_b, ps, n_c, n_s);
     for(int i = 0; i < n_r; i++)
         copy(ps,pt+i*n_s,n_s);
+
+    //initialize multipliers
+    clear(u_tmp, n_s*(n_r-n_c));
+    for(int i = 0, c = 0; c < n_c; c++)
+        for (int s = 0; s < n_s; s++, i++)
+            if (ps[s] == data_b[i])
+                u_tmp[u_tmp_offset+i] = 1.0f;
+            else
+                u_tmp[u_tmp_offset+i] = 0.0f;
+    for (int l = n_c; l < n_r; l++) {
+        const TreeNode* n = bottom_up_list[l];
+        for(int c = 0; c < n->c; c++)
+            inc(u_tmp+n->children[c]->r*n_s, u_tmp+n->r*n_s, n_s);
+    }
 
     // iterate in blocks
     int min_iter = min_iter_calc();
@@ -207,7 +206,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_r);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+	    //std::cout << "HMF_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -217,20 +216,16 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
         block_iter();
 
     //log output and transpose output back into proper buffer
-    log_buffer(u_tmp, n_s*n_c);
-    for(int s = 0; s < n_s; s++)
-        for(int c = 0; c < n_c; c++)
-            u[s*n_c+c] = u_tmp[c*n_s+s];
+    log_buffer(u_tmp+u_tmp_offset,n_s*n_c);
+    if( !channels_first ){
+        for(int s = 0; s < n_s; s++)
+            for(int c = 0; c < n_c; c++)
+                u[s*n_c+c] = u_tmp[u_tmp_offset+c*n_s+s];
+    }else{
+        copy(u_tmp+u_tmp_offset,u,n_s*n_c);
+    }
         
-    //deallocate temporary buffers
-    delete u_tmp; u_tmp = 0;
-    delete pt; pt = 0;
-    delete ps; ps = 0;
-    delete g; g = 0;
-    delete div; div = 0;
-    delete data_b; data_b = 0;
+    //finishing tasks
     clean_up();
 }
 
-HMF_AUGLAG_CPU_SOLVER_BASE::~HMF_AUGLAG_CPU_SOLVER_BASE(){
-}

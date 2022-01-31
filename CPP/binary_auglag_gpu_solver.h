@@ -3,19 +3,16 @@
 #ifndef BINARY_AUGLAG_GPU_SOLVER_H
 #define BINARY_AUGLAG_GPU_SOLVER_H
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/platform/default/logging.h"
-#include "tensorflow/core/framework/shape_inference.h"
-
-using GPUDevice = Eigen::GpuDevice;
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <algorithm>
 
 class BINARY_AUGLAG_GPU_SOLVER_BASE
 {
 private:
     
 protected:
-    const GPUDevice & dev;
+    const cudaStream_t & dev;
     const int b;
     const int n_c;
     const int n_s;
@@ -28,9 +25,9 @@ protected:
     
     // optimization constants
     const float tau = 0.1f;
-    const float beta = 0.005f;
+    const float beta = 0.001f;
     const float epsilon = 10e-5f;
-    const float cc = 0.1f;
+    const float cc = 0.25f;
     const float icc = 1.0f/cc;
     
     virtual int min_iter_calc() = 0;
@@ -40,7 +37,7 @@ protected:
     
 public:
     BINARY_AUGLAG_GPU_SOLVER_BASE(
-        const GPUDevice & dev,
+        const cudaStream_t & dev,
         const int batch,
         const int n_s,
         const int n_c,

@@ -7,12 +7,14 @@
 #include "cpu_kernels.h"
 
 POTTS_MEANPASS_CPU_SOLVER_BASE::POTTS_MEANPASS_CPU_SOLVER_BASE(
+    const bool channels_first,
     const int batch,
     const int n_s,
     const int n_c,
     const float* data_cost,
     const float* init_u,
     float* u ) :
+channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
@@ -32,7 +34,10 @@ float POTTS_MEANPASS_CPU_SOLVER_BASE::block_iter(const int parity, bool last){
 	float max_change = 0.0f;
 	calculate_regularization();
 	inc(data, r_eff, n_s*n_c);
-    softmax(r_eff,r_eff,n_s,n_c);
+    if(channels_first)
+        softmax_channels_first(r_eff,r_eff,n_s,n_c);
+    else
+        softmax(r_eff,r_eff,n_s,n_c);
     parity_merge_buffer(r_eff,u,parity);
 	if(last)
 		max_change = update_with_convergence(u, r_eff, n_s*n_c, tau);
@@ -64,7 +69,7 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
             max_change = block_iter(iter&1, iter == min_iter-1);
 
 		//std::cout << "Iter " << i << ": " << max_change << std::endl;
-        if (max_change < beta)
+        if (max_change < tau*beta)
             break;
     }
 
@@ -90,12 +95,14 @@ POTTS_MEANPASS_CPU_SOLVER_BASE::~POTTS_MEANPASS_CPU_SOLVER_BASE(){
 
 
 POTTS_MEANPASS_CPU_GRADIENT_BASE::POTTS_MEANPASS_CPU_GRADIENT_BASE(
+    const bool channels_first,
     const int batch,
     const int n_s,
     const int n_c,
 	const float* u,
 	const float* g,
 	float* g_d ) :
+channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
@@ -112,7 +119,10 @@ u(0)
 //perform one iteration of the algorithm
 void POTTS_MEANPASS_CPU_GRADIENT_BASE::block_iter(){
 	//untangle softmax derivative
-	untangle_softmax(g_u, u, d_y, n_s, n_c);
+    if(channels_first)
+	    untangle_softmax_channels_first(g_u, u, d_y, n_s, n_c);
+    else
+	    untangle_softmax(g_u, u, d_y, n_s, n_c);
 	
 	// populate data gradient
 	inc(d_y, g_data, tau, n_s*n_c);
@@ -130,8 +140,12 @@ void POTTS_MEANPASS_CPU_GRADIENT_BASE::operator()(){
 
 	//initialize variables
 	init_vars();
-	softmax(logits, u, n_s, n_c);
-	clear(d_y, g_u, g_data, n_s*n_c);
+    if(channels_first)
+	    softmax_channels_first(logits, u, n_s, n_c);
+    else
+	    softmax(logits, u, n_s, n_c);
+	clear(g_u, g_data, n_s*n_c);
+	copy(grad,d_y, n_s*n_c);
 	
 	//get initial gradient for the data and regularization terms
 	copy(grad,g_data,n_s*n_c);
@@ -149,7 +163,7 @@ void POTTS_MEANPASS_CPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = maxabs(g_u,n_s*n_c);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "POTTS_MEANPASS_CPU_GRADIENT_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < beta)
             break;
     }
