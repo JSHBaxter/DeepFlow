@@ -145,7 +145,7 @@ void BINARY_MEANPASS_GPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = max_of_buffer(dev, g_u, n_s*n_c);
-		std::cout << "BINARY_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
+		//std::cout << "BINARY_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
         if (max_change < beta)
             break;
     }

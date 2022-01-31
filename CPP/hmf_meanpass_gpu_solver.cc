@@ -11,7 +11,7 @@ HMF_MEANPASS_GPU_SOLVER_BASE::HMF_MEANPASS_GPU_SOLVER_BASE(
     const int n_c,
     const int n_r,
     const float* const data_cost,
-	const float* const init_u,
+    const float* const init_u,
     float* const u,
     float** full_buff,
     float** img_buff) :
@@ -26,12 +26,11 @@ u(u),
 r_eff(full_buff[0]),
 u_full(full_buff[1])
 {
-	std::cout << n_s << " " << n_c << " " << n_r << std::endl;
-	//initialize variables
-	if(init_u)
-		copy_buffer(dev, init_u, u, n_s*n_c);
-	else
-		softmax(dev, data, NULL, u, n_s, n_c);
+    //initialize variables
+    if(init_u)
+    copy_buffer(dev, init_u, u, n_s*n_c);
+    else
+    softmax(dev, data, NULL, u, n_s, n_c);
     
     //get pointers to parents' u buffer
     float** tmp_u_ind = new float* [n_r];
@@ -73,12 +72,12 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(const int parity){
         for(int c = 0; c < n->c; c++)
             inc_buffer(dev, u_full+n->children[c]->r*n_s, u_full+n->r*n_s, n_s);
     }
-	//print_buffer(dev, r_eff, n_s*n_r);
+    //print_buffer(dev, r_eff, n_s*n_r);
     //aggregate_bottom_up(dev, u_ind, u_full, u, n_s, n_c, n_r);
 
     //calculate the effective regularization (overwrites own r_eff)
     update_spatial_flow_calc();
-	//print_buffer(dev, r_eff, n_s*n_r);
+    //print_buffer(dev, r_eff, n_s*n_r);
 
     //calculate the aggregate effective regularization (overwrites own r_eff)
     for (int l = n_r-1; l >= 0; l--) {
@@ -86,7 +85,7 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::block_iter(const int parity){
         for(int c = 0; c < n->c; c++)
             inc_buffer(dev, r_eff+n->r*n_s, r_eff+n->children[c]->r*n_s, n_s);
     }
-	//print_buffer(dev, r_eff, n_s*n_r);
+    //print_buffer(dev, r_eff, n_s*n_r);
 
     // get new probability estimates, and normalize
     // (copy into u_full as tmp space (prevent race condition) then store answer in r_eff)
@@ -183,29 +182,29 @@ tmp(full_buff[3])
 
 void HMF_MEANPASS_GPU_GRADIENT_BASE::block_iter(){
 
-		//process gradients 
-		untangle_softmax(dev, du+n_s*(n_r-n_c), u+n_s*(n_r-n_c), dy+n_s*(n_r-n_c), n_s, n_c);
+    //process gradients 
+    untangle_softmax(dev, du+n_s*(n_r-n_c), u+n_s*(n_r-n_c), dy+n_s*(n_r-n_c), n_s, n_c);
 
-		//add into data term gradient
-		inc_mult_buffer(dev, dy+n_s*(n_r-n_c), g_data, n_s*n_c, tau);
+    //add into data term gradient
+    inc_mult_buffer(dev, dy+n_s*(n_r-n_c), g_data, n_s*n_c, tau);
 
         //expand gradients upwards
-		clear_buffer(dev, dy, n_s*(n_r-n_c));
-		for (int l = n_c; l < n_r; l++) {
-			const TreeNode* n = bottom_up_list[l];
-			for(int c = 0; c < n->c; c++)
-				inc_buffer(dev, dy+n->children[c]->r*n_s, dy+n->r*n_s, n_s);
-		}
+    clear_buffer(dev, dy, n_s*(n_r-n_c));
+    for (int l = n_c; l < n_r; l++) {
+        const TreeNode* n = bottom_up_list[l];
+        for(int c = 0; c < n->c; c++)
+        inc_buffer(dev, dy+n->children[c]->r*n_s, dy+n->r*n_s, n_s);
+    }
     
-		//get gradients for the regularization terms
-		get_reg_gradients_and_push(tau);
+    //get gradients for the regularization terms
+    get_reg_gradients_and_push(tau);
 
-		//collapse back down to leaves
-		for (int l = n_r-1; l >= n_c; l--) {
-			const TreeNode* n = bottom_up_list[l];
-			for(int c = 0; c < n->c; c++)
-				inc_buffer(dev, du+n->r*n_s, du+n->children[c]->r*n_s, n_s);
-		}
+    //collapse back down to leaves
+    for (int l = n_r-1; l >= n_c; l--) {
+        const TreeNode* n = bottom_up_list[l];
+        for(int c = 0; c < n->c; c++)
+        inc_buffer(dev, du+n->r*n_s, du+n->children[c]->r*n_s, n_s);
+    }
 }
 
 void HMF_MEANPASS_GPU_GRADIENT_BASE::operator()(){
@@ -214,7 +213,7 @@ void HMF_MEANPASS_GPU_GRADIENT_BASE::operator()(){
     //get initial maximum value of teh gradient for convgencence purposes
     const float init_grad_max = max_of_buffer(dev, grad, n_s*n_c);
     
-	clear_variables();
+    clear_variables();
     int min_iter = min_iter_calc();
     if( min_iter < 10 )
         min_iter = 10;
@@ -251,11 +250,11 @@ void HMF_MEANPASS_GPU_GRADIENT_BASE::operator()(){
         for(int c = 0; c < n->c; c++)
             inc_buffer(dev, du+n->r*n_s, du+n->children[c]->r*n_s, n_s);
     }
-	
+    
     for(int i = 0; i < max_loop; i++){
-		//push gradients back a number of iterations (first iteration has tau=1, the rest a smaller tau)
-		for(int iter = 0; iter < min_iter; iter++)
-			block_iter();
+    //push gradients back a number of iterations (first iteration has tau=1, the rest a smaller tau)
+    for(int iter = 0; iter < min_iter; iter++)
+        block_iter();
         
         float max_change = max_of_buffer(dev, du+u_tmp_offset, n_c*n_s);
         //std::cout << "HMF_MEANPASS_GPU_GRADIENT_BASE Iter " << i << " " << max_change << std::endl;
