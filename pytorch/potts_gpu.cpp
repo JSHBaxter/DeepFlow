@@ -13,6 +13,7 @@
 
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
+namespace py = pybind11;
 #include <c10/cuda/CUDAStream.h>
 
 #include <iostream>
@@ -210,7 +211,6 @@ void potts_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx,  torch::Tensor 
 	//create and run the solver
 	int data_sizes [1] = {n_x};
 	for(int b = 0; b < n_b; b++){
-		std::cout << b << std::endl;
 		
 		auto solver_auglag = POTTS_AUGLAG_GPU_SOLVER_1D(dev, b, n_c, data_sizes, data_buf+b*n_s, rx_buf+b*n_s, u_init_buf, buffers_full, buffers_img);
 		solver_auglag();
@@ -445,7 +445,7 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	//get input buffers
 	float* rx_buf = rx.data_ptr<float>();
 	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = ry.data_ptr<float>();
+	float* rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -466,7 +466,7 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	float* g_data_buf = g_data.data_ptr<float>();
 	float* g_rx_buf = g_rx.data_ptr<float>();
 	float* g_ry_buf = g_ry.data_ptr<float>();
-	float* g_rz_buf = g_ry.data_ptr<float>();
+	float* g_rz_buf = g_rz.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [3] = {n_x,n_y,n_z};
@@ -481,14 +481,14 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 }
 
 
-PYBIND11_MODULE(potts_gpu, m) {
-  m.def("auglag_1d_forward", &potts_auglag_1d_gpu, "potts_gpu auglag_1d_forward");
-  m.def("auglag_2d_forward", &potts_auglag_2d_gpu, "potts_gpu auglag_2d_forward");
-  m.def("auglag_3d_forward", &potts_auglag_3d_gpu, "potts_gpu auglag_3d_forward");
-  m.def("meanpass_1d_forward", &potts_meanpass_1d_gpu, "potts_gpu meanpass_1d_forward");
-  m.def("meanpass_2d_forward", &potts_meanpass_2d_gpu, "potts_gpu meanpass_2d_forward");
-  m.def("meanpass_3d_forward", &potts_meanpass_3d_gpu, "potts_gpu meanpass_3d_forward");
-  m.def("meanpass_1d_backward", &potts_meanpass_1d_gpu_back, "potts_gpu meanpass_1d_backward");
-  m.def("meanpass_2d_backward", &potts_meanpass_2d_gpu_back, "potts_gpu meanpass_2d_backward");
-  m.def("meanpass_3d_backward", &potts_meanpass_3d_gpu_back, "potts_gpu meanpass_3d_backward");
+void potts_gpu_bindings(py::module & m) {
+  m.def("potts_gpu_auglag_1d_forward", &potts_auglag_1d_gpu, "deepflow potts_gpu_auglag_1d_forward");
+  m.def("potts_gpu_auglag_2d_forward", &potts_auglag_2d_gpu, "deepflow potts_gpu_auglag_2d_forward");
+  m.def("potts_gpu_auglag_3d_forward", &potts_auglag_3d_gpu, "deepflow potts_gpu_auglag_3d_forward");
+  m.def("potts_gpu_meanpass_1d_forward", &potts_meanpass_1d_gpu, "deepflow potts_gpu_meanpass_1d_forward");
+  m.def("potts_gpu_meanpass_2d_forward", &potts_meanpass_2d_gpu, "deepflow potts_gpu_meanpass_2d_forward");
+  m.def("potts_gpu_meanpass_3d_forward", &potts_meanpass_3d_gpu, "deepflow potts_gpu_meanpass_3d_forward");
+  m.def("potts_gpu_meanpass_1d_backward", &potts_meanpass_1d_gpu_back, "deepflow potts_gpu_meanpass_1d_backward");
+  m.def("potts_gpu_meanpass_2d_backward", &potts_meanpass_2d_gpu_back, "deepflow potts_gpu_meanpass_2d_backward");
+  m.def("potts_gpu_meanpass_3d_backward", &potts_meanpass_3d_gpu_back, "deepflow potts_gpu_meanpass_3d_backward");
 }

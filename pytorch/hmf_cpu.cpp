@@ -13,6 +13,7 @@
 
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
+namespace py = pybind11;
 
 #include <iostream>
 
@@ -366,7 +367,7 @@ void hmf_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	//get input buffers
 	float* rx_buf = rx.data_ptr<float>();
 	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = ry.data_ptr<float>();
+	float* rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 
@@ -387,15 +388,14 @@ void hmf_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
     TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-
-PYBIND11_MODULE(hmf_cpu, m) {
-  m.def("auglag_1d_forward", &hmf_auglag_1d_cpu, "hmf_cpu auglag_1d_forward");
-  m.def("auglag_2d_forward", &hmf_auglag_2d_cpu, "hmf_cpu auglag_2d_forward");
-  m.def("auglag_3d_forward", &hmf_auglag_3d_cpu, "hmf_cpu auglag_3d_forward");
-  m.def("meanpass_1d_forward", &hmf_meanpass_1d_cpu, "hmf_cpu meanpass_1d_forward");
-  m.def("meanpass_2d_forward", &hmf_meanpass_2d_cpu, "hmf_cpu meanpass_2d_forward");
-  m.def("meanpass_3d_forward", &hmf_meanpass_3d_cpu, "hmf_cpu meanpass_3d_forward");
-  m.def("meanpass_1d_backward", &hmf_meanpass_1d_cpu_back, "hmf_cpu meanpass_1d_backward");
-  m.def("meanpass_2d_backward", &hmf_meanpass_2d_cpu_back, "hmf_cpu meanpass_2d_backward");
-  m.def("meanpass_3d_backward", &hmf_meanpass_3d_cpu_back, "hmf_cpu meanpass_3d_backward");
+void hmf_cpu_bindings(py::module & m) {
+  m.def("hmf_cpu_auglag_1d_forward", &hmf_auglag_1d_cpu, "deepflow hmf_cpu_auglag_1d_forward");
+  m.def("hmf_cpu_auglag_2d_forward", &hmf_auglag_2d_cpu, "deepflow hmf_cpu_auglag_2d_forward");
+  m.def("hmf_cpu_auglag_3d_forward", &hmf_auglag_3d_cpu, "deepflow hmf_cpu_auglag_3d_forward");
+  m.def("hmf_cpu_meanpass_1d_forward", &hmf_meanpass_1d_cpu, "deepflow hmf_cpu_meanpass_1d_forward");
+  m.def("hmf_cpu_meanpass_2d_forward", &hmf_meanpass_2d_cpu, "deepflow hmf_cpu_meanpass_2d_forward");
+  m.def("hmf_cpu_meanpass_3d_forward", &hmf_meanpass_3d_cpu, "deepflow hmf_cpu_meanpass_3d_forward");
+  m.def("hmf_cpu_meanpass_1d_backward", &hmf_meanpass_1d_cpu_back, "deepflow hmf_cpu_meanpass_1d_backward");
+  m.def("hmf_cpu_meanpass_2d_backward", &hmf_meanpass_2d_cpu_back, "deepflow hmf_cpu_meanpass_2d_backward");
+  m.def("hmf_cpu_meanpass_3d_backward", &hmf_meanpass_3d_cpu_back, "deepflow hmf_cpu_meanpass_3d_backward");
 }

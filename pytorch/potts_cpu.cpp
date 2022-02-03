@@ -13,7 +13,7 @@
 
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
-
+namespace py = pybind11;
 #include <iostream>
 
 void potts_auglag_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out) {
@@ -25,8 +25,8 @@ void potts_auglag_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float* data_buf = data.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
 
 	//make output tensor  
 	float* out_buf = out.data_ptr<float>();
@@ -49,9 +49,9 @@ void potts_auglag_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float* data_buf = data.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
+	const float* ry_buf = ry.data_ptr<float>();
 
 	//make output tensor  
 	float* out_buf = out.data_ptr<float>();
@@ -75,10 +75,10 @@ void potts_auglag_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int n_s = n_c*n_x*n_y*n_z;
     
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float* data_buf = data.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
+	const float* ry_buf = ry.data_ptr<float>();
+	const float* rz_buf = rz.data_ptr<float>();
 
 	//make output tensor  
 	float* out_buf = out.data_ptr<float>();
@@ -100,8 +100,8 @@ void potts_meanpass_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor o
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float* data_buf = data.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
 	float* u_init_buf = new float[n_s];
@@ -136,7 +136,7 @@ void potts_meanpass_1d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 
@@ -162,9 +162,9 @@ void potts_meanpass_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float* data_buf = data.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
+	const float* ry_buf = ry.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
 	float* u_init_buf = new float[n_s];
@@ -199,8 +199,8 @@ void potts_meanpass_2d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
+	const float* ry_buf = ry.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 
@@ -231,10 +231,10 @@ void potts_meanpass_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float* data_buf = data.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
+	const float* ry_buf = ry.data_ptr<float>();
+	const float* rz_buf = rz.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
 	float* u_init_buf = new float[n_s];
@@ -269,9 +269,9 @@ void potts_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = ry.data_ptr<float>();
+	const float* rx_buf = rx.data_ptr<float>();
+	const float* ry_buf = ry.data_ptr<float>();
+	const float* rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 
@@ -289,14 +289,14 @@ void potts_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	}
 }
 
-PYBIND11_MODULE(potts_cpu, m) {
-  m.def("auglag_1d_forward", &potts_auglag_1d_cpu, "potts_cpu auglag_1d_forward");
-  m.def("auglag_2d_forward", &potts_auglag_2d_cpu, "potts_cpu auglag_2d_forward");
-  m.def("auglag_3d_forward", &potts_auglag_3d_cpu, "potts_cpu auglag_3d_forward");
-  m.def("meanpass_1d_forward", &potts_meanpass_1d_cpu, "potts_cpu meanpass_1d_forward");
-  m.def("meanpass_2d_forward", &potts_meanpass_2d_cpu, "potts_cpu meanpass_2d_forward");
-  m.def("meanpass_3d_forward", &potts_meanpass_3d_cpu, "potts_cpu meanpass_3d_forward");
-  m.def("meanpass_1d_backward", &potts_meanpass_1d_cpu_back, "potts_cpu meanpass_1d_backward");
-  m.def("meanpass_2d_backward", &potts_meanpass_2d_cpu_back, "potts_cpu meanpass_2d_backward");
-  m.def("meanpass_3d_backward", &potts_meanpass_3d_cpu_back, "potts_cpu meanpass_3d_backward");
+void potts_cpu_bindings(py::module & m) {
+  m.def("potts_cpu_auglag_1d_forward", &potts_auglag_1d_cpu, "deepflow potts_cpu_auglag_1d_forward");
+  m.def("potts_cpu_auglag_2d_forward", &potts_auglag_2d_cpu, "deepflow potts_cpu_auglag_2d_forward");
+  m.def("potts_cpu_auglag_3d_forward", &potts_auglag_3d_cpu, "deepflow potts_cpu_auglag_3d_forward");
+  m.def("potts_cpu_meanpass_1d_forward", &potts_meanpass_1d_cpu, "deepflow potts_cpu_meanpass_1d_forward");
+  m.def("potts_cpu_meanpass_2d_forward", &potts_meanpass_2d_cpu, "deepflow potts_cpu_meanpass_2d_forward");
+  m.def("potts_cpu_meanpass_3d_forward", &potts_meanpass_3d_cpu, "deepflow potts_cpu_meanpass_3d_forward");
+  m.def("potts_cpu_meanpass_1d_backward", &potts_meanpass_1d_cpu_back, "deepflow potts_cpu_meanpass_1d_backward");
+  m.def("potts_cpu_meanpass_2d_backward", &potts_meanpass_2d_cpu_back, "deepflow potts_cpu_meanpass_2d_backward");
+  m.def("potts_cpu_meanpass_3d_backward", &potts_meanpass_3d_cpu_back, "deepflow potts_cpu_meanpass_3d_backward");
 }

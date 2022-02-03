@@ -12,6 +12,7 @@
 
 #include <torch/extension.h>
 #include <pybind11/pybind11.h>
+namespace py = pybind11;
 #include <c10/cuda/CUDAStream.h>
 
 #include <iostream>
@@ -554,7 +555,7 @@ void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	//get input buffers
 	float* rx_buf = rx.data_ptr<float>();
 	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = ry.data_ptr<float>();
+	float* rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -574,7 +575,7 @@ void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	float* g_data_buf = g_data.data_ptr<float>();
 	float* g_rx_buf = g_rx.data_ptr<float>();
 	float* g_ry_buf = g_ry.data_ptr<float>();
-	float* g_rz_buf = g_ry.data_ptr<float>();
+	float* g_rz_buf = g_rz.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [3] = {n_x,n_y,n_z};
@@ -590,14 +591,14 @@ void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 }
 
 
-PYBIND11_MODULE(hmf_gpu, m) {
-  m.def("auglag_1d_forward", &hmf_auglag_1d_gpu, "hmf_gpu auglag_1d_forward");
-  m.def("auglag_2d_forward", &hmf_auglag_2d_gpu, "hmf_gpu auglag_2d_forward");
-  m.def("auglag_3d_forward", &hmf_auglag_3d_gpu, "hmf_gpu auglag_3d_forward");
-  m.def("meanpass_1d_forward", &hmf_meanpass_1d_gpu, "hmf_gpu meanpass_1d_forward");
-  m.def("meanpass_2d_forward", &hmf_meanpass_2d_gpu, "hmf_gpu meanpass_2d_forward");
-  m.def("meanpass_3d_forward", &hmf_meanpass_3d_gpu, "hmf_gpu meanpass_3d_forward");
-  m.def("meanpass_1d_backward", &hmf_meanpass_1d_gpu_back, "hmf_gpu meanpass_1d_backward");
-  m.def("meanpass_2d_backward", &hmf_meanpass_2d_gpu_back, "hmf_gpu meanpass_2d_backward");
-  m.def("meanpass_3d_backward", &hmf_meanpass_3d_gpu_back, "hmf_gpu meanpass_3d_backward");
+void hmf_gpu_bindings(py::module & m) {
+  m.def("hmf_gpu_auglag_1d_forward", &hmf_auglag_1d_gpu, "deepflow hmf_gpu_auglag_1d_forward");
+  m.def("hmf_gpu_auglag_2d_forward", &hmf_auglag_2d_gpu, "deepflow hmf_gpu_auglag_2d_forward");
+  m.def("hmf_gpu_auglag_3d_forward", &hmf_auglag_3d_gpu, "deepflow hmf_gpu_auglag_3d_forward");
+  m.def("hmf_gpu_meanpass_1d_forward", &hmf_meanpass_1d_gpu, "deepflow hmf_gpu_meanpass_1d_forward");
+  m.def("hmf_gpu_meanpass_2d_forward", &hmf_meanpass_2d_gpu, "deepflow hmf_gpu_meanpass_2d_forward");
+  m.def("hmf_gpu_meanpass_3d_forward", &hmf_meanpass_3d_gpu, "deepflow hmf_gpu_meanpass_3d_forward");
+  m.def("hmf_gpu_meanpass_1d_backward", &hmf_meanpass_1d_gpu_back, "deepflow hmf_gpu_meanpass_1d_backward");
+  m.def("hmf_gpu_meanpass_2d_backward", &hmf_meanpass_2d_gpu_back, "deepflow hmf_gpu_meanpass_2d_backward");
+  m.def("hmf_gpu_meanpass_3d_backward", &hmf_meanpass_3d_gpu_back, "deepflow potts_gpu_meanpass_3d_backward");
 }
