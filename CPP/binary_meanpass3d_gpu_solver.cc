@@ -1,9 +1,10 @@
 
 #include "binary_meanpass3d_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <algorithm>
 
 int BINARY_MEANPASS_GPU_SOLVER_3D::min_iter_calc(){
-	return n_x+n_y+n_z;
+	return std::max(n_x,std::max(n_y,n_z));
 }
 
 void BINARY_MEANPASS_GPU_SOLVER_3D::init_vars(){}
@@ -16,7 +17,7 @@ void BINARY_MEANPASS_GPU_SOLVER_3D::parity_mask_buffer(float* buffer, const int 
 	parity_mask(dev,buffer,n_x,n_y,n_z,n_c,parity);
 }
 
-void BINARY_MEANPASS_GPU_SOLVER_3D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+void BINARY_MEANPASS_GPU_SOLVER_3D::parity_merge_buffer(float* buffer, const float * const other, const int parity){
 	parity_mask(dev,buffer,other,n_x,n_y,n_z,n_c,parity);
 }
 
@@ -27,11 +28,11 @@ BINARY_MEANPASS_GPU_SOLVER_3D::BINARY_MEANPASS_GPU_SOLVER_3D(
 	const int batch,
     const int n_c,
     const int sizes[3],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* ry_cost,
-	const float* rz_cost,
-	const float* init_u,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const ry_cost,
+	const float * const rz_cost,
+	const float * const init_u,
 	float* u,
 	float** buffers_full
 ):
@@ -45,7 +46,7 @@ rz(rz_cost)
 {}
 
 int BINARY_MEANPASS_GPU_GRADIENT_3D::min_iter_calc(){
-	return n_x+n_y+n_z;
+	return std::max(n_x,std::max(n_y,n_z));
 }
 
 void BINARY_MEANPASS_GPU_GRADIENT_3D::init_vars(){
@@ -66,11 +67,11 @@ BINARY_MEANPASS_GPU_GRADIENT_3D::BINARY_MEANPASS_GPU_GRADIENT_3D(
 	const int batch,
     const int n_c,
     const int sizes[3],
-	const float* u,
-	const float* g,
-	const float* rx_cost,
-	const float* ry_cost,
-	const float* rz_cost,
+	const float * const u,
+	const float * const g,
+	const float * const rx_cost,
+	const float * const ry_cost,
+	const float * const rz_cost,
 	float* g_d,
 	float* g_rx,
 	float* g_ry,

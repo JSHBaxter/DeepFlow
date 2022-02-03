@@ -16,7 +16,7 @@ protected:
     const int b;
     const int n_c;
     const int n_s;
-    const float* data;
+    const float * const data;
     float* u;
     float* ps;
     float* pt;
@@ -41,7 +41,7 @@ public:
         const int batch,
         const int n_s,
         const int n_c,
-        const float* data_cost,
+        const float * const data_cost,
         float* u,
         float** full_buff,
         float** img_buff);

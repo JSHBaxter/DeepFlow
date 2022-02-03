@@ -13,7 +13,7 @@ protected:
     const int b;
     const int n_c;
     const int n_s;
-    const float* const data;
+    const float * const data;
     float* const u;
     float* r_eff;
     
@@ -26,7 +26,7 @@ protected:
     virtual void init_vars() = 0;
     virtual void calculate_regularization() = 0;
     virtual void parity_mask_buffer(float* buffer, const int parity) = 0;
-    virtual void parity_merge_buffer(float* buffer, const float* other, const int parity) = 0;
+    virtual void parity_merge_buffer(float* buffer, const float * const other, const int parity) = 0;
     virtual void clean_up() = 0;
     void block_iter(int parity);
     
@@ -36,8 +36,8 @@ public:
         const int batch,
         const int n_s,
         const int n_c,
-        const float* data_cost,
-        const float* init_u,
+        const float * const data_cost,
+        const float * const init_u,
         float* u,
 		float** full_buffs) ;
         
@@ -56,8 +56,8 @@ protected:
     const int b;
     const int n_c;
     const int n_s;
-    const float* const logits;
-    const float* const grad;
+    const float * const logits;
+    const float * const grad;
     float* const g_data;
     float* u;
 	float* d_y;
@@ -80,8 +80,8 @@ public:
 		const int batch,
 		const int n_s,
 		const int n_c,
-		const float* u,
-		const float* g,
+		const float * const u,
+		const float * const g,
 		float* g_d,
 		float** full_buffs);
         

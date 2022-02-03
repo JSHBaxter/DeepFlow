@@ -1,12 +1,13 @@
 #include <math.h>
 #include <iostream>
 #include <limits>
+#include <algorithm>
 
 #include "binary_meanpass3d_cpu_solver.h"
 #include "cpu_kernels.h"
 
 int BINARY_MEANPASS_CPU_SOLVER_3D::min_iter_calc(){
-	return n_x+n_y+n_z;
+	return std::max(n_x,std::max(n_y,n_z));
 }
 
 void BINARY_MEANPASS_CPU_SOLVER_3D::init_vars(){}
@@ -25,7 +26,7 @@ void BINARY_MEANPASS_CPU_SOLVER_3D::parity_mask_buffer(float* buffer, const int 
 	    parity_mask(buffer,n_x,n_y,n_z,n_c,parity);
 }
 
-void BINARY_MEANPASS_CPU_SOLVER_3D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+void BINARY_MEANPASS_CPU_SOLVER_3D::parity_merge_buffer(float* buffer, const float * const other, const int parity){
     if(channels_first)
 	    parity_merge_channels_first(buffer,other,n_x,n_y,n_z,n_c,parity);
     else
@@ -39,11 +40,11 @@ BINARY_MEANPASS_CPU_SOLVER_3D::BINARY_MEANPASS_CPU_SOLVER_3D(
 	const int batch,
     const int n_c,
     const int sizes[3],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* ry_cost,
-	const float* rz_cost,
-	const float* init_u,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const ry_cost,
+	const float * const rz_cost,
+	const float * const init_u,
 	float* u 
 ):
 BINARY_MEANPASS_CPU_SOLVER_BASE(channels_first, batch, sizes[0]*sizes[1]*sizes[2], n_c, data_cost, init_u, u),
@@ -56,7 +57,7 @@ rz(rz_cost)
 {}
 
 int BINARY_MEANPASS_CPU_GRADIENT_3D::min_iter_calc(){
-	return n_x+n_y+n_z;
+	return std::max(n_x,std::max(n_y,n_z));
 }
 
 void BINARY_MEANPASS_CPU_GRADIENT_3D::init_vars(){
@@ -80,11 +81,11 @@ BINARY_MEANPASS_CPU_GRADIENT_3D::BINARY_MEANPASS_CPU_GRADIENT_3D(
 	const int batch,
     const int n_c,
     const int sizes[3],
-	const float* u,
-	const float* g,
-	const float* rx_cost,
-	const float* ry_cost,
-	const float* rz_cost,
+	const float * const u,
+	const float * const g,
+	const float * const rx_cost,
+	const float * const ry_cost,
+	const float * const rz_cost,
 	float* g_d,
 	float* g_rx,
 	float* g_ry,

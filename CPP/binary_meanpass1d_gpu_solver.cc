@@ -16,7 +16,7 @@ void BINARY_MEANPASS_GPU_SOLVER_1D::parity_mask_buffer(float* buffer, const int 
 	parity_mask(dev,buffer,n_x,n_c,parity);
 }
 
-void BINARY_MEANPASS_GPU_SOLVER_1D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+void BINARY_MEANPASS_GPU_SOLVER_1D::parity_merge_buffer(float* buffer, const float * const other, const int parity){
 	parity_mask(dev,buffer,other,n_x,n_c,parity);
 }
 
@@ -27,9 +27,9 @@ BINARY_MEANPASS_GPU_SOLVER_1D::BINARY_MEANPASS_GPU_SOLVER_1D(
 	const int batch,
     const int n_c,
 	const int sizes[1],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* init_u,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const init_u,
 	float* u,
 	float** buffers_full
 ):
@@ -58,9 +58,9 @@ BINARY_MEANPASS_GPU_GRADIENT_1D::BINARY_MEANPASS_GPU_GRADIENT_1D(
 	const int batch,
     const int n_c,
 	const int sizes[1],
-	const float* u,
-	const float* g,
-	const float* rx_cost,
+	const float * const u,
+	const float * const g,
+	const float * const rx_cost,
 	float* g_d,
 	float* g_rx,
 	float** full_buffs

@@ -9,9 +9,9 @@ private:
     const int n_x;
     const int n_y;
     const int n_z;
-    const float* rx;
-    const float* ry;
-    const float* rz;
+    const float * const rx;
+    const float * const ry;
+    const float * const rz;
 	float* px;
 	float* py;
 	float* pz;
@@ -27,10 +27,10 @@ public:
         const int batch,
         const int n_c,
         const int sizes[3],
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
+        const float * const data_cost,
+        const float * const rx_cost,
+        const float * const ry_cost,
+        const float * const rz_cost,
         float* u,
 		float** buffers_full,
 		float** buffers_img

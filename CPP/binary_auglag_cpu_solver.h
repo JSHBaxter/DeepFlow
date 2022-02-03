@@ -13,7 +13,7 @@ protected:
     const int b;
     const int n_c;
     const int n_s;
-    const float* const data;
+    const float * const data;
     float* const u;
     float* ps;
     float* pt;
@@ -39,7 +39,7 @@ public:
         const int batch,
         const int n_s,
         const int n_c,
-        const float* data_cost,
+        const float * const data_cost,
         float* u) ;
         
     ~BINARY_AUGLAG_CPU_SOLVER_BASE();

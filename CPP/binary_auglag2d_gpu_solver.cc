@@ -20,9 +20,9 @@ BINARY_AUGLAG_GPU_SOLVER_2D::BINARY_AUGLAG_GPU_SOLVER_2D(
 	const int batch,
     const int n_c,
 	const int sizes[2],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* ry_cost,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const ry_cost,
 	float* u,
 	float** buffers_full,
 	float** buffers_img

@@ -658,19 +658,19 @@ void get_gradient_for_u(const float* dy, const float* rx, const float* ry, const
 
 		//y down
 		if( y > 0 )
-			grad_val += 2.0f*dy[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)]*rz[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)];
+			grad_val += 2.0f*dy[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)]*ry[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)];
 
 		//x down
 		if( x > 0 )
-			grad_val += 2.0f*dy[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]*ry[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)];
+			grad_val += 2.0f*dy[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]*rx[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)];
 
 		//z up
 		if( z < n_z - 1)
-			grad_val += 2.0f*dy[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]*ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			grad_val += 2.0f*dy[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]*rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
 
 		//y up
 		if ( y < n_y - 1)
-			grad_val += 2.0f*dy[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]*rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			grad_val += 2.0f*dy[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]*ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
 
 		//x up
 		if ( x < n_x - 1)
@@ -691,11 +691,11 @@ void get_gradient_for_u(const float* dy, const float* rx, const float* ry, float
 
 		//x down
 		if( x > 0 )
-			grad_val += 2.0f*dy[idxc(x-1,n_x,y,n_y,c,n_c)]*ry[idxc(x-1,n_x,y,n_y,c,n_c)];
+			grad_val += 2.0f*dy[idxc(x-1,n_x,y,n_y,c,n_c)]*rx[idxc(x-1,n_x,y,n_y,c,n_c)];
 		
 		//y up
 		if ( y < n_y - 1)
-			grad_val += 2.0f*dy[idxc(x,n_x,y+1,n_y,c,n_c)]*rx[idxc(x,n_x,y,n_y,c,n_c)];
+			grad_val += 2.0f*dy[idxc(x,n_x,y+1,n_y,c,n_c)]*ry[idxc(x,n_x,y,n_y,c,n_c)];
 
 		//x up
 		if ( x < n_x - 1)
@@ -734,19 +734,19 @@ void get_gradient_for_u_channels_first(const float* dy, const float* rx, const f
 
 		//y down
 		if( y > 0 )
-			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)]*rz[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)];
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)]*ry[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)];
 
 		//x down
 		if( x > 0 )
-			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)]*ry[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)];
+			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)]*rx[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)];
 
 		//z up
 		if( z < n_z - 1)
-			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]*ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]*rz[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
 
 		//y up
 		if ( y < n_y - 1)
-			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]*rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]*ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
 
 		//x up
 		if ( x < n_x - 1)
@@ -767,11 +767,11 @@ void get_gradient_for_u_channels_first(const float* dy, const float* rx, const f
 
 		//x down
 		if( x > 0 )
-			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x,y,n_y)]*ry[idx(c,n_c,x-1,n_x,y,n_y)];
+			grad_val += 2.0f*dy[idx(c,n_c,x-1,n_x,y,n_y)]*rx[idx(c,n_c,x-1,n_x,y,n_y)];
 		
 		//y up
 		if ( y < n_y - 1)
-			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y+1,n_y)]*rx[idx(c,n_c,x,n_x,y,n_y)];
+			grad_val += 2.0f*dy[idx(c,n_c,x,n_x,y+1,n_y)]*ry[idx(c,n_c,x,n_x,y,n_y)];
 
 		//x up
 		if ( x < n_x - 1)
@@ -1285,7 +1285,7 @@ void compute_flows_channels_first(const float* g, float* div, float* px, const f
             div[cs] += px[sxm];
         }
     }
-            
+
 }
 
 void init_flows_binary(const float* d, float* ps, float* pt, const int n_s){

@@ -9,7 +9,7 @@ class BINARY_AUGLAG_CPU_SOLVER_1D : public BINARY_AUGLAG_CPU_SOLVER_BASE
 private:
     const BINARY_AUGLAG_CPU_SOLVER_1D* self;
     const int n_x;
-    const float* rx;
+    const float * const rx;
 	float* px;
 
 protected:
@@ -24,8 +24,8 @@ public:
         const int batch,
         const int n_c,
         const int sizes[1],
-        const float* data_cost,
-        const float* rx_cost,
+        const float * const data_cost,
+        const float * const rx_cost,
         float* u 
 	);
 };

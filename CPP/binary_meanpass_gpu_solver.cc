@@ -11,10 +11,10 @@ BINARY_MEANPASS_GPU_SOLVER_BASE::BINARY_MEANPASS_GPU_SOLVER_BASE(
     const int batch,
     const int n_s,
     const int n_c,
-    const float* data_cost,
-	const float* init_u,
+    const float * const data_cost,
+    const float * const init_u,
     float* u,
-	float** full_buffs) :
+    float** full_buffs) :
 dev(dev),
 b(batch),
 n_c(n_c),
@@ -87,14 +87,14 @@ BINARY_MEANPASS_GPU_SOLVER_BASE::~BINARY_MEANPASS_GPU_SOLVER_BASE(){
 
 
 BINARY_MEANPASS_GPU_GRADIENT_BASE::BINARY_MEANPASS_GPU_GRADIENT_BASE(
-	const cudaStream_t & dev,
+    const cudaStream_t & dev,
     const int batch,
     const int n_s,
     const int n_c,
-	const float* u,
-	const float* g,
-	float* g_d,
-	float** full_buffs) :
+    const float * const u,
+    const float * const g,
+    float* g_d,
+    float** full_buffs) :
 dev(dev),
 b(batch),
 n_c(n_c),

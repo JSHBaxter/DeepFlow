@@ -24,6 +24,7 @@ void HMF_AUGLAG_CPU_SOLVER_1D::clean_up(){
 
 HMF_AUGLAG_CPU_SOLVER_1D::~HMF_AUGLAG_CPU_SOLVER_1D(){
     delete px;
+    if(!channels_first) delete rx_b;
 }
 
 HMF_AUGLAG_CPU_SOLVER_1D::HMF_AUGLAG_CPU_SOLVER_1D(
@@ -46,7 +47,7 @@ HMF_AUGLAG_CPU_SOLVER_BASE(channels_first,
                            u),
 n_x(sizes[0]),
 rx(rx_cost),
-px(new float [(channels_first ? 1 : 2)*n_s*n_r]),
-rx_b( channels_first ? rx : transpose(rx,px+n_r*n_s,n_s,n_r) )
+px(new float [n_s*n_r]),
+rx_b( channels_first ? rx : transpose(rx,new float [n_s*n_r],n_s,n_r) )
 {}
 

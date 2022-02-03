@@ -8,8 +8,8 @@ class BINARY_AUGLAG_CPU_SOLVER_2D : public BINARY_AUGLAG_CPU_SOLVER_BASE
 private:
     const int n_x;
     const int n_y;
-    const float* rx;
-    const float* ry;
+    const float * const rx;
+    const float * const ry;
 	float* px;
 	float* py;
 
@@ -26,9 +26,9 @@ public:
         const int batch,
         const int n_c,
         const int sizes[2],
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
+        const float * const data_cost,
+        const float * const rx_cost,
+        const float * const ry_cost,
         float* u 
 	);
 };

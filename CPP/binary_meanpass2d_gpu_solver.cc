@@ -2,9 +2,10 @@
 #include "binary_meanpass2d_gpu_solver.h"
 #include "gpu_kernels.h"
 #include <iostream>
+#include <algorithm>
 
 int BINARY_MEANPASS_GPU_SOLVER_2D::min_iter_calc(){
-	return n_x+n_y;
+	return std::max(n_x,n_y);
 }
 
 void BINARY_MEANPASS_GPU_SOLVER_2D::init_vars(){}
@@ -17,7 +18,7 @@ void BINARY_MEANPASS_GPU_SOLVER_2D::parity_mask_buffer(float* buffer, const int 
 	parity_mask(dev,buffer,n_x,n_y,n_c,parity);
 }
 
-void BINARY_MEANPASS_GPU_SOLVER_2D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+void BINARY_MEANPASS_GPU_SOLVER_2D::parity_merge_buffer(float* buffer, const float * const other, const int parity){
 	parity_mask(dev,buffer,other,n_x,n_y,n_c,parity);
 }
 
@@ -28,10 +29,10 @@ BINARY_MEANPASS_GPU_SOLVER_2D::BINARY_MEANPASS_GPU_SOLVER_2D(
 	const int batch,
     const int n_c,
 	const int sizes[2],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* ry_cost,
-	const float* init_u,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const ry_cost,
+	const float * const init_u,
 	float* u,
 	float** buffers_full
 ):
@@ -41,14 +42,11 @@ n_y(sizes[1]),
 rx(rx_cost),
 ry(ry_cost)
 {
-	std::cout << n_x << std::endl;
-	std::cout << n_y << std::endl;
-	std::cout << n_c << std::endl;
 }
 
 
 int BINARY_MEANPASS_GPU_GRADIENT_2D::min_iter_calc(){
-	return n_x+n_y;
+	return std::max(n_x,n_y);
 }
 
 void BINARY_MEANPASS_GPU_GRADIENT_2D::init_vars(){
@@ -68,10 +66,10 @@ BINARY_MEANPASS_GPU_GRADIENT_2D::BINARY_MEANPASS_GPU_GRADIENT_2D(
 	const int batch,
     const int n_c,
 	const int sizes[2],
-	const float* u,
-	const float* g,
-	const float* rx_cost,
-	const float* ry_cost,
+	const float * const u,
+	const float * const g,
+	const float * const rx_cost,
+	const float * const ry_cost,
 	float* g_d,
 	float* g_rx,
 	float* g_ry,

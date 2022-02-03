@@ -10,19 +10,20 @@ BINARY_AUGLAG_CPU_SOLVER_BASE::BINARY_AUGLAG_CPU_SOLVER_BASE(
     const int batch,
     const int n_s,
     const int n_c,
-    const float* data_cost,
+    const float * const data_cost,
     float* u ) :
 channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
 data(data_cost),
-ps(0),
-pt(0),
-div(0),
-g(0),
+ps(new float[4*n_s*n_c]),
+pt(ps+n_s*n_c),
+div(pt+n_s*n_c),
+g(div+n_s*n_c),
 u(u)
 {
+    //std::cout << "BINARY_AUGLAG_CPU_SOLVER_BASE\t" << n_s << " " << n_c << " " << data << " " << ps << " " << pt << " " << div << " " << g << " " << u << std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -37,12 +38,6 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 }
 
 void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
-
-    //store intermediate information
-    ps = new float[n_s*n_c];
-    pt = new float[n_s*n_c];
-    div = new float[n_s*n_c];
-    g = new float[n_s*n_c];
 
     //initialize variables
 	sigmoid(data, u, n_s*n_c);
@@ -78,12 +73,9 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
     log_buffer(u, n_s*n_c);
         
     //deallocate temporary buffers
-    delete pt; pt = 0;
-    delete ps; ps = 0;
-    delete g; g = 0;
-    delete div; div = 0;
     clean_up();
 }
 
 BINARY_AUGLAG_CPU_SOLVER_BASE::~BINARY_AUGLAG_CPU_SOLVER_BASE(){
+    delete ps;
 }

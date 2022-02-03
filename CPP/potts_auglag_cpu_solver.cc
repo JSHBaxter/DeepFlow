@@ -22,7 +22,7 @@ div(0),
 g(0),
 u(u)
 {
-    //std::cout << n_s << " " << n_c << std::endl;
+    std::cout << n_s << " " << n_c << std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -46,10 +46,10 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
 
     //store intermediate information
-    ps = new float[n_s];
-    pt = new float[n_s*n_c];
-    div = new float[n_s*n_c];
-    g = new float[n_s*n_c];
+    ps = new float[n_s+3*n_s*n_c];
+    pt = ps + n_s;
+    div = pt + n_s*n_c;
+    g = div + n_s*n_c;;
 
     //initialize variables
     if(channels_first)
@@ -90,10 +90,10 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
     log_buffer(u, n_s*n_c);
         
     //deallocate temporary buffers
-    delete pt; pt = 0;
     delete ps; ps = 0;
-    delete g; g = 0;
-    delete div; div = 0;
+    pt = 0;
+    g = 0;
+    div = 0;
     clean_up();
 }
 

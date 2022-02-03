@@ -8,7 +8,7 @@ BINARY_AUGLAG_GPU_SOLVER_BASE::BINARY_AUGLAG_GPU_SOLVER_BASE(
     const int batch,
     const int n_s,
     const int n_c,
-    const float* data_cost,
+    const float * const data_cost,
     float* u,
     float** full_buff,
     float** img_buff) :

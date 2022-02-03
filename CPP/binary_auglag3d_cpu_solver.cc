@@ -31,10 +31,10 @@ BINARY_AUGLAG_CPU_SOLVER_3D::BINARY_AUGLAG_CPU_SOLVER_3D(
 	const int batch,
     const int n_c,
 	const int sizes[3],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* ry_cost,
-	const float* rz_cost,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const ry_cost,
+	const float * const rz_cost,
 	float* u 
 ):
 BINARY_AUGLAG_CPU_SOLVER_BASE(channels_first,batch, sizes[0]*sizes[1]*sizes[2], n_c, data_cost, u),

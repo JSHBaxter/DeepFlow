@@ -1,5 +1,6 @@
 #include "binary_auglag1d_cpu_solver.h"
 #include "cpu_kernels.h"
+#include <iostream>
 
 int BINARY_AUGLAG_CPU_SOLVER_1D::min_iter_calc(){
     return n_x;
@@ -26,12 +27,14 @@ BINARY_AUGLAG_CPU_SOLVER_1D::BINARY_AUGLAG_CPU_SOLVER_1D(
     const int batch,
     const int n_c,
     const int sizes[1],
-    const float* data_cost,
-    const float* rx_cost,
+    const float * const data_cost,
+    const float * const rx_cost,
     float* u 
 ):
 BINARY_AUGLAG_CPU_SOLVER_BASE(channels_first,batch, sizes[0], n_c, data_cost, u),
 n_x(sizes[0]),
 rx(rx_cost),
 px(0)
-{}
+{ 
+        //std::cout << "BINARY_AUGLAG_CPU_SOLVER_1D\t" << n_x << " " << n_c << " " << rx << std::endl;
+}

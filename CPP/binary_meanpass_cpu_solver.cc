@@ -11,18 +11,19 @@ BINARY_MEANPASS_CPU_SOLVER_BASE::BINARY_MEANPASS_CPU_SOLVER_BASE(
     const int batch,
     const int n_s,
     const int n_c,
-    const float* data_cost,
-	const float* init_u,
+    const float * const data_cost,
+    const float * const init_u,
     float* u ) :
 channels_first(channels_first),
 b(batch),
 n_c(n_c),
 n_s(n_s),
 data(data_cost),
-r_eff(0),
+r_eff(new float[n_s*n_c]),
 u(u)
 {
-    //std::cout << n_s << " " << n_c << std::endl;
+    //std::cout << "BINARY_MEANPASS_CPU_SOLVER_BASE\t" << n_s << " " << n_c << " " << data << " " << r_eff << " " << u << std::endl;
+
 	if(init_u)
 		copy(init_u, u, n_s*n_c);
 	else
@@ -49,7 +50,6 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 	float max_change = 0.0f;
 	float max_change_1 = 0.0f;
 	float max_change_2 = 0.0f;
-	r_eff = new float[n_s*n_c];
 
 	//initialize variables
 	init_vars();
@@ -87,11 +87,11 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 		u[i] = data[i]+r_eff[i];
         
     //deallocate temporary buffers
-    delete r_eff; r_eff = 0;
     clean_up();
 }
 
 BINARY_MEANPASS_CPU_SOLVER_BASE::~BINARY_MEANPASS_CPU_SOLVER_BASE(){
+    delete r_eff; r_eff = 0;
 }
 
 
@@ -100,9 +100,9 @@ BINARY_MEANPASS_CPU_GRADIENT_BASE::BINARY_MEANPASS_CPU_GRADIENT_BASE(
     const int batch,
     const int n_s,
     const int n_c,
-	const float* u,
-	const float* g,
-	float* g_d ) :
+    const float * const u,
+    const float * const g,
+    float* g_d ) :
 channels_first(channels_first),
 b(batch),
 n_c(n_c),
@@ -110,11 +110,11 @@ n_s(n_s),
 grad(g),
 logits(u),
 g_data(g_d),
-d_y(0),
-g_u(0),
-u(0)
+d_y(new float[n_s*n_c]),
+g_u(new float[n_s*n_c]),//d_y+n_s*n_c),
+u(new float[n_s*n_c])//g_u+n_s*n_c)
 {
-    //std::cout << n_s << " " << n_c << std::endl;
+    //std::cout << "BINARY_MEANPASS_CPU_GRADIENT_BASE\t" << n_s << " " << n_c << " " << grad << " " << logits << " " << g_data << " " << d_y << " " << g_u << " " << this->u << std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -130,11 +130,6 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::block_iter(){
 }
 
 void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
-        
-	// allocate intermediate variables
-	u = new float[n_s*n_c];
-	d_y = new float[n_s*n_c];
-	g_u = new float[n_s*n_c];
 
 	//initialize variables
 	init_vars();
@@ -166,13 +161,12 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++)
         block_iter();
-        
-    //deallocate temporary buffers
-    delete u; u = 0;
-    delete d_y; d_y = 0;
-    delete g_u; g_u = 0;
+    
     clean_up();
 }
 
 BINARY_MEANPASS_CPU_GRADIENT_BASE::~BINARY_MEANPASS_CPU_GRADIENT_BASE(){
+    delete d_y; d_y = 0;
+    delete g_u; g_u = 0;
+    delete u; u = 0;
 }

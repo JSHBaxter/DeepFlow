@@ -9,16 +9,16 @@ private:
     const int n_x;
     const int n_y;
     const int n_z;
-    const float* rx;
-    const float* ry;
-    const float* rz;
+    const float * const rx;
+    const float * const ry;
+    const float * const rz;
 	
 protected:
     int min_iter_calc();
     void init_vars();
     void calculate_regularization();
     void parity_mask_buffer(float* buffer, const int parity);
-    void parity_merge_buffer(float* buffer, const float* other, const int parity);
+    void parity_merge_buffer(float* buffer, const float * const other, const int parity);
     void clean_up();
 	
 public:
@@ -27,11 +27,11 @@ public:
         const int batch,
         const int n_c,
         const int sizes[3],
-        const float* data_cost,
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
-		const float* init_u,
+        const float * const data_cost,
+        const float * const rx_cost,
+        const float * const ry_cost,
+        const float * const rz_cost,
+		const float * const init_u,
         float* u 
 	);
 };
@@ -42,9 +42,9 @@ private:
     const int n_x;
     const int n_y;
     const int n_z;
-    const float* const rx;
-    const float* const ry;
-    const float* const rz;
+    const float * const rx;
+    const float * const ry;
+    const float * const rz;
     float* const g_rx;
     float* const g_ry;
     float* const g_rz;
@@ -61,11 +61,11 @@ public:
         const int batch,
         const int n_c,
         const int sizes[3],
-        const float* u,
-        const float* g,
-        const float* rx_cost,
-        const float* ry_cost,
-        const float* rz_cost,
+        const float * const u,
+        const float * const g,
+        const float * const rx_cost,
+        const float * const ry_cost,
+        const float * const rz_cost,
         float* g_d,
         float* g_rx,
         float* g_ry,

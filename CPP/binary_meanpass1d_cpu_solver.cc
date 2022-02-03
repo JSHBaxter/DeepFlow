@@ -25,7 +25,7 @@ void BINARY_MEANPASS_CPU_SOLVER_1D::parity_mask_buffer(float* buffer, const int 
         parity_mask(buffer,n_x,n_c,parity);
 }
 
-void BINARY_MEANPASS_CPU_SOLVER_1D::parity_merge_buffer(float* buffer, const float* other, const int parity){
+void BINARY_MEANPASS_CPU_SOLVER_1D::parity_merge_buffer(float* buffer, const float * const other, const int parity){
     if(channels_first)
 	    parity_merge_channels_first(buffer,other,n_x,n_c,parity);
     else
@@ -39,15 +39,17 @@ BINARY_MEANPASS_CPU_SOLVER_1D::BINARY_MEANPASS_CPU_SOLVER_1D(
 	const int batch,
     const int n_c,
 	const int sizes[1],
-	const float* data_cost,
-	const float* rx_cost,
-	const float* init_u,
+	const float * const data_cost,
+	const float * const rx_cost,
+	const float * const init_u,
 	float* u 
 ):
 BINARY_MEANPASS_CPU_SOLVER_BASE(channels_first, batch, sizes[0], n_c, data_cost, init_u, u),
 n_x(sizes[0]),
 rx(rx_cost)
-{}
+{
+    //std::cout << "BINARY_MEANPASS_CPU_SOLVER_1D\t" << n_x << " " << n_c << " " << rx << " " << std::endl;
+}
 
 int BINARY_MEANPASS_CPU_GRADIENT_1D::min_iter_calc(){
 	return n_x;
@@ -74,9 +76,9 @@ BINARY_MEANPASS_CPU_GRADIENT_1D::BINARY_MEANPASS_CPU_GRADIENT_1D(
 	const int batch,
     const int n_c,
 	const int sizes[1],
-	const float* u,
-	const float* g,
-	const float* rx_cost,
+	const float * const u,
+	const float * const g,
+	const float * const rx_cost,
 	float* g_d,
 	float* g_rx
 ) :
@@ -84,4 +86,6 @@ BINARY_MEANPASS_CPU_GRADIENT_BASE(channels_first, batch, sizes[0], n_c, u, g, g_
 n_x(sizes[0]),
 rx(rx_cost),
 g_rx(g_rx)
-{}
+{ 
+    //std::cout << "BINARY_MEANPASS_CPU_GRADIENT_1D\t" << n_x << " " << n_c << " " << rx << " " << g_rx << std::endl;
+}

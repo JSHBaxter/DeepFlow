@@ -8,6 +8,11 @@
 
 HMF_AUGLAG_CPU_SOLVER_BASE::~HMF_AUGLAG_CPU_SOLVER_BASE(){
     delete ps;
+    delete pt;
+    delete u_tmp;
+    delete div;
+    delete g;
+    delete data_b;
 }
 
 HMF_AUGLAG_CPU_SOLVER_BASE::HMF_AUGLAG_CPU_SOLVER_BASE(
@@ -27,12 +32,12 @@ n_r(n_r),
 n_s(n_s),
 data(data_cost),
 u(u),
-ps(new float[n_s+4*n_r*n_s+n_c*n_s]),
-u_tmp(ps+n_s),
-pt(u_tmp+n_s*n_r),
-div(pt+n_s*n_r),
-g(div+n_s*n_r),
-data_b(g+n_s*n_r)
+ps(new float[n_s]),
+u_tmp(new float[n_r*n_s]),
+pt(new float[n_r*n_s]),
+div(new float[n_r*n_s]),
+g(new float[n_r*n_s]),
+data_b(new float[n_c*n_s])
 {
     // invert data term from a positive benefit to a negative cost (to save on mult's later)
     if(channels_first)
