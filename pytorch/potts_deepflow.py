@@ -1,8 +1,6 @@
 import torch
 
-import potts_cpu
-if torch.cuda.is_available():
-    import potts_gpu
+import deepflow
 
 import sys
 
@@ -10,14 +8,12 @@ class Potts_MAP1d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx):
-        print(potts_gpu)
-        print(potts_cpu)
         if len(d.shape) == 3 and len(rx.shape) == 3:
             output = torch.zeros_like(d)
             if d.is_cuda:
-                potts_gpu.auglag_1d_forward(d,rx, output)
+                deepflow.potts_gpu_auglag_1d_forward(d,rx, output)
             else:
-                potts_cpu.auglag_1d_forward(d,rx, output)
+                deepflow.potts_cpu_auglag_1d_forward(d,rx, output)
             return output
         else:
             sys.stderr.write("Gave enough smoothness terms for 1D deepflow, but wrong dimensionality. \n")
@@ -37,9 +33,9 @@ class Potts_MAP2d(torch.autograd.Function):
         if len(d.shape) == 4 and len(rx.shape) == 4 and len(ry.shape) == 4:
             output = torch.zeros_like(d)
             if d.is_cuda:
-                potts_gpu.auglag_2d_forward(d,rx, ry, output)
+                deepflow.potts_gpu_auglag_2d_forward(d,rx, ry, output)
             else:
-                potts_cpu.auglag_2d_forward(d,rx, ry, output)
+                deepflow.potts_cpu_auglag_2d_forward(d,rx, ry, output)
             return output
         else:
             sys.stderr.write("Gave enough smoothness terms for 2D deepflow, but wrong dimensionality. \n")
@@ -59,9 +55,9 @@ class Potts_MAP3d(torch.autograd.Function):
         if len(d.shape) == 5 and len(rx.shape) == 5 and len(ry.shape) == 5 and len(rz.shape) == 5:
             output = torch.zeros_like(d)
             if d.is_cuda:
-                potts_gpu.auglag_3d_forward(d,rx, ry, rz, output)
+                deepflow.potts_gpu_auglag_3d_forward(d,rx, ry, rz, output)
             else:
-                potts_cpu.auglag_3d_forward(d,rx, ry, rz, output)
+                deepflow.potts_cpu_auglag_3d_forward(d,rx, ry, rz, output)
             return output
         else:
             sys.stderr.write("Gave enough smoothness terms for 3D deepflow, but wrong dimensionality. \n")
@@ -82,9 +78,9 @@ class Potts_Mean1d(torch.autograd.Function):
         if len(d.shape) == 3 and len(rx.shape) == 3:
             output = torch.zeros_like(d)
             if d.is_cuda:
-                potts_gpu.meanpass_1d_forward(d,rx, output)
+                deepflow.potts_gpu_meanpass_1d_forward(d,rx, output)
             else:
-                potts_cpu.meanpass_1d_forward(d,rx, output)
+                deepflow.potts_cpu_meanpass_1d_forward(d,rx, output)
             ctx.save_for_backward(output,d,rx)
             return output
         else:
@@ -101,9 +97,9 @@ class Potts_Mean1d(torch.autograd.Function):
         u = u.clone()
         rx = rx.clone()
         if d.is_cuda:
-            potts_gpu.meanpass_1d_backward(grad_output, u, rx, grad_d, grad_rx)
+            deepflow.potts_gpu_meanpass_1d_backward(grad_output, u, rx, grad_d, grad_rx)
         else:
-            potts_cpu.meanpass_1d_backward(grad_output, u, rx, grad_d, grad_rx)
+            deepflow.potts_cpu_meanpass_1d_backward(grad_output, u, rx, grad_d, grad_rx)
         return grad_d, grad_rx
 
 class Potts_Mean2d(torch.autograd.Function):
@@ -113,9 +109,9 @@ class Potts_Mean2d(torch.autograd.Function):
         if len(d.shape) == 4 and len(rx.shape) == 4 and len(ry.shape) == 4:
             output = torch.zeros_like(d)
             if d.is_cuda:
-                potts_gpu.meanpass_2d_forward(d,rx, ry, output)
+                deepflow.potts_gpu_meanpass_2d_forward(d,rx, ry, output)
             else:
-                potts_cpu.meanpass_2d_forward(d,rx, ry, output)
+                deepflow.potts_cpu_meanpass_2d_forward(d,rx, ry, output)
             ctx.save_for_backward(output,d,rx,ry)
             return output
         else:
@@ -134,9 +130,9 @@ class Potts_Mean2d(torch.autograd.Function):
         rx = rx.clone()
         ry = ry.clone()
         if d.is_cuda:
-            potts_gpu.meanpass_2d_backward(grad_output, u, rx, ry, grad_d, grad_rx, grad_ry)
+            deepflow.potts_gpu_meanpass_2d_backward(grad_output, u, rx, ry, grad_d, grad_rx, grad_ry)
         else:
-            potts_cpu.meanpass_2d_backward(grad_output, u, rx, ry, grad_d, grad_rx, grad_ry)
+            deepflow.potts_cpu_meanpass_2d_backward(grad_output, u, rx, ry, grad_d, grad_rx, grad_ry)
         return grad_d, grad_rx, grad_ry
         
 class Potts_Mean3d(torch.autograd.Function):
@@ -146,9 +142,9 @@ class Potts_Mean3d(torch.autograd.Function):
         if len(d.shape) == 5 and len(rx.shape) == 5 and len(ry.shape) == 5 and len(rz.shape) == 5:
             output = torch.zeros_like(d)
             if d.is_cuda:
-                potts_gpu.meanpass_3d_forward(d,rx, ry, rz, output)
+                deepflow.potts_gpu_meanpass_3d_forward(d,rx, ry, rz, output)
             else:
-                potts_cpu.meanpass_3d_forward(d,rx, ry, rz, output)
+                deepflow.potts_cpu_meanpass_3d_forward(d,rx, ry, rz, output)
             ctx.save_for_backward(output,d,rx,ry,rz)
             return output
         else:
@@ -169,8 +165,8 @@ class Potts_Mean3d(torch.autograd.Function):
         ry = ry.clone()
         rz = rz.clone()
         if d.is_cuda:
-            potts_gpu.meanpass_3d_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz)
+            deepflow.potts_gpu_meanpass_3d_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz)
         else:
-            potts_cpu.meanpass_3d_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz)
+            deepflow.potts_cpu_meanpass_3d_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz)
         return grad_d, grad_rx, grad_ry, grad_rz
         
