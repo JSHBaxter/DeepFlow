@@ -9,16 +9,18 @@ from binary_deepflow import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
 from binary_deepflow import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
 
 b=1
-c=4
-x=4096
+c=5
+x=2**12
 epsilon = 0.01
+
+def get_size_into(d):
+    x_used = int(x**(1/d)+0.001)
+    return tuple( [b,c]+[x_used for i in range(d)] ), tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
 def test_no_smoothness(d,device,asserter):
     print("Testing (no smoothness) \t Dim: " +str(d)+ " \t Dev: " + device)
-    x_used = int(x**(1/d))
 
-    size_info = tuple( [b,c]+[x_used for i in range(d)] )
-    size_red_info = tuple( [1,c]+[x_used for i in range(d)] )
+    size_info, size_red_info, axes = get_size_into(d)
 
     data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
     data_w = np.random.normal(0,1,size=size_info).astype(np.float32)
@@ -51,6 +53,7 @@ def test_no_smoothness(d,device,asserter):
         om = Binary_Mean3d.apply(t,rx,ry,rz)
     loss = torch.sum(w*om)
     loss.backward()
+    
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
     ot_np = t.grad.detach().cpu().numpy()
@@ -75,11 +78,8 @@ def test_no_smoothness(d,device,asserter):
 
 def test_smoothness_dom(d,device,asserter):
     print("Testing (smoothness dom.) \t Dim: " +str(d)+ " \t Dev: " + device)
-    x_used = int(x**(1/d))
 
-    size_info = tuple( [b,c]+[x_used for i in range(d)] )
-    size_red_info = tuple( [1,c]+[x_used for i in range(d)] )
-    axes = tuple([i+2 for i in range(d)])
+    size_info, size_red_info, axes = get_size_into(d)
 
     data_t = 0.1*np.random.normal(0,1,size=size_info).astype(np.float32)
     data_t += epsilon / np.sum(data_t,axis=axes,keepdims=True)
@@ -125,12 +125,10 @@ def test_smoothness_dom(d,device,asserter):
 
 def test_device_equivalence(d,device_list,asserter):
     print("Testing (dev equiv.) \t Dim: " +str(d)+ " \t Dev:",device_list)
-    x_used = int(x**(1/d))
 
-    size_info = tuple( [b,c]+[x_used for i in range(d)] )
-    size_red_info = tuple( [1,c]+[x_used for i in range(d)] )
+    size_info, size_red_info, axes = get_size_into(d)
 
-    data_t = 0*np.random.normal(0,1,size=size_info).astype(np.float32)
+    data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
     data_w = np.random.normal(0,1,size=size_info).astype(np.float32)
     data_rx = (0.25*np.random.uniform(size=size_info)+0.00001).astype(np.float32)
     if d > 1:

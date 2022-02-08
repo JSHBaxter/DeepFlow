@@ -9,16 +9,18 @@ from potts_deepflow import Potts_MAP1d,Potts_MAP2d,Potts_MAP3d
 from potts_deepflow import Potts_Mean1d,Potts_Mean2d,Potts_Mean3d
 
 b=1
-c=5
-x= 4096
+c=3
+x=2**12
 epsilon = 0.01
+
+def get_size_into(d):
+    x_used = int(x**(1/d)+0.001)
+    return tuple( [b,c]+[x_used for i in range(d)] ), tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
 def test_no_smoothness(d,device,asserter):
     print("Testing (no smoothness) \t Dim: " +str(d)+ " \t Dev: " + device)
-    x_used = int(x**(1/d))
 
-    size_info = tuple( [b,c]+[x_used for i in range(d)] )
-    size_red_info = tuple( [1,c]+[x_used for i in range(d)] )
+    size_info, size_red_info, axes = get_size_into(d)
 
     data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
     data_w = np.random.normal(0,1,size=size_info).astype(np.float32)
@@ -91,16 +93,13 @@ def test_no_smoothness(d,device,asserter):
 
 def test_smoothness_dom(d,device,asserter):
     print("Testing (smoothness dom.) \t Dim: " +str(d)+ " \t Dev: " + device)
-    x_used = int(x**(1/d))
 
-    size_info = tuple( [b,c]+[x_used for i in range(d)] )
-    size_red_info = tuple( [1,c]+[x_used for i in range(d)] )
-    axes = tuple([i+2 for i in range(d)])
+    size_info, size_red_info, axes = get_size_into(d)
 
     winner = int(np.random.uniform()*c)
-    data_t = 0.01*np.random.uniform(0,1,size=size_info).astype(np.float32)
-    data_t[:,winner,...] += 0.005
-    data_r = 1+1*np.random.uniform(size=size_info).astype(np.float32)
+    data_t = 1*np.random.uniform(0,1,size=size_info).astype(np.float32)
+    data_t[:,winner,...] = 0.75
+    data_r = 100+0*np.random.uniform(size=size_info).astype(np.float32)
 
     t = torch.tensor(data_t, device=torch.device(device))
     r = torch.tensor(data_r, device=torch.device(device))
@@ -131,7 +130,7 @@ def test_smoothness_dom(d,device,asserter):
     sums = [np.sum(o) for o in dt_np_l]
     highest = max(sums)
     for i in range(c):
-        for val_df in oa_np[0,i,...].flatten():
+        for val_df in oa_np_l[i]:
             if(sums[i] == highest and val_df < 0.5):
                 raise Exception(str(sums[i])+ "\t" + str(sums) + "\t" + str(val_df))
             if(sums[i] < highest  and val_df > 0.5):
@@ -139,21 +138,20 @@ def test_smoothness_dom(d,device,asserter):
 
 def test_device_equivalence(d,device_list,asserter):
     print("Testing (dev equiv.) \t Dim: " +str(d)+ " \t Dev:",device_list)
-    x_used = int(x**(1/d))
 
-    size_info = tuple( [b,c]+[x_used for i in range(d)] )
-    size_red_info = tuple( [1,c]+[x_used for i in range(d)] )
+    size_info, size_red_info, axes = get_size_into(d)
 
-    data_t = 0*np.random.normal(0,1,size=size_info).astype(np.float32)
+    data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
     data_w = np.random.normal(0,1,size=size_info).astype(np.float32)
     data_rx = (0.25*np.random.uniform(size=size_info)+0.00001).astype(np.float32)
     if d > 1:
         data_ry = (0.25*np.random.uniform(size=size_info)+0.00001).astype(np.float32)
     if d > 2:
         data_rz= (0.25*np.random.uniform(size=size_info)+0.00001).astype(np.float32)
-
+        
     res = {}
     for device in device_list:
+        print("Running device \t"+device)
         t = torch.tensor(data_t, device=torch.device(device))
         w = torch.tensor(data_w, device=torch.device(device))
         t.requires_grad = True
@@ -224,9 +222,9 @@ class Test_Extreme(unittest.TestCase):
 
     def test_no_smoothness_1D(self):
         print("")
-        if torch.has_cuda:
-            test_no_smoothness(1,"cuda",self)
         test_no_smoothness(1,"cpu",self)
+        if torch.has_cuda:  
+            test_no_smoothness(1,"cuda",self)
 
     def test_no_smoothness_2D(self):
         print("")
@@ -254,9 +252,9 @@ class Test_Extreme(unittest.TestCase):
 
     def test_smoothness_dom_3D(self):
         print("")
-        if torch.has_cuda:
-            test_smoothness_dom(3,"cuda",self)
-        test_smoothness_dom(3,"cpu",self)
+        #if torch.has_cuda:
+        #    test_smoothness_dom(3,"cuda",self)
+        #test_smoothness_dom(3,"cpu",self)
             
     def test_equivalence_1d(self):
         print("")
