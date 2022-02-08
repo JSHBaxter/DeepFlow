@@ -23,8 +23,10 @@ void HMF_AUGLAG_CPU_SOLVER_1D::clean_up(){
 }
 
 HMF_AUGLAG_CPU_SOLVER_1D::~HMF_AUGLAG_CPU_SOLVER_1D(){
-    delete px;
-    if(!channels_first) delete rx_b;
+    std::cout << "Subclass destructor" << std::endl;
+    delete[] px;
+    if(!channels_first) delete[] rx_b;
+    std::cout << "\t... finished" << std::endl;
 }
 
 HMF_AUGLAG_CPU_SOLVER_1D::HMF_AUGLAG_CPU_SOLVER_1D(

@@ -34,7 +34,7 @@ protected:
     const float tau = 0.1f;
     const float beta = 0.001f;
     const float epsilon = 10e-5f;
-    const float cc = 10.0f;//0.25f;
+    const float cc = 10.0f;
     const float icc = 1.0f/cc;
     
     virtual int min_iter_calc() = 0;

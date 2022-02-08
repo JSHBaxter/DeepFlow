@@ -7,12 +7,14 @@
 #include "hmf_trees.h"
 
 HMF_AUGLAG_CPU_SOLVER_BASE::~HMF_AUGLAG_CPU_SOLVER_BASE(){
-    delete ps;
-    delete pt;
-    delete u_tmp;
-    delete div;
-    delete g;
-    delete data_b;
+    std::cout << "Base class destructor" << std::endl;
+    delete[] ps;
+    delete[] pt;
+    delete[] u_tmp;
+    delete[] div;
+    delete[] g;
+    delete[] data_b;
+    std::cout << "\t... finished" << std::endl;
 }
 
 HMF_AUGLAG_CPU_SOLVER_BASE::HMF_AUGLAG_CPU_SOLVER_BASE(

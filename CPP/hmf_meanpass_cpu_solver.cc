@@ -21,8 +21,8 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
     data(data_cost),
     u(u),
     data_b(channels_first ? data_cost : transpose(data_cost, new float[n_s*n_c], n_s, n_c) ),
-    u_tmp(new float[2*n_s*n_r]),
-    r_eff(u_tmp + n_s*n_r)
+    u_tmp(new float[n_s*n_r]),
+    r_eff(new float[n_s*n_r])
 {
 	//std::cout << n_s << " " << n_c << " " << n_r << std::endl;
 	//initialize variables
@@ -37,8 +37,9 @@ HMF_MEANPASS_CPU_SOLVER_BASE::HMF_MEANPASS_CPU_SOLVER_BASE(
 }
 
 HMF_MEANPASS_CPU_SOLVER_BASE::~HMF_MEANPASS_CPU_SOLVER_BASE(){
-    delete u_tmp;
-    if(!channels_first) delete data_b;
+    delete[] u_tmp;
+    delete[] r_eff;
+    if(!channels_first) delete[] data_b;
 }
 
 float HMF_MEANPASS_CPU_SOLVER_BASE::block_iter(const int parity, bool last){
@@ -125,9 +126,6 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
     }
     
     //deallocate temporary buffers
-    if(!channels_first) delete data_b;
-    delete u_tmp;
-    delete r_eff;
     clean_up();
 }
 
@@ -150,13 +148,15 @@ HMF_MEANPASS_CPU_GRADIENT_BASE::HMF_MEANPASS_CPU_GRADIENT_BASE(
     g_data(g_d),
     logits(u),
     grad(g),
-    dy(new float[3*n_s*n_r]),
-    g_u(dy + n_s*n_r),
-    u(g_u + n_s*n_r)
+    dy(new float[n_s*n_r]),
+    g_u(new float[n_s*n_r]),
+    u(new float[n_s*n_r])
     {}
 
 HMF_MEANPASS_CPU_GRADIENT_BASE::~HMF_MEANPASS_CPU_GRADIENT_BASE(){
-    delete dy;
+    delete[] dy;
+    delete[] g_u;
+    delete[] u;
 }
 
 void HMF_MEANPASS_CPU_GRADIENT_BASE::block_iter(){
@@ -249,8 +249,5 @@ void HMF_MEANPASS_CPU_GRADIENT_BASE::operator()(){
     }
     
     clean_up();
-    delete u; u = 0;
-    delete dy; dy = 0;
-    delete g_u; g_u = 0;
     
 }

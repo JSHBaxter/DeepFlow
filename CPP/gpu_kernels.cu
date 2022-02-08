@@ -42,7 +42,7 @@ void print_buffer(const cudaStream_t& dev, const float* buffer, const int n_s){
 	float* c_buffer = (float*) malloc(n_s*sizeof(float));
 	get_from_gpu(dev, buffer, c_buffer, n_s*sizeof(float));
 	for(int i = 0; i < n_s; i++)
-		printf("%f",c_buffer[i]);
+		printf("%f ",c_buffer[i]);
 	printf("\n");
 	free(c_buffer);
 }
@@ -840,7 +840,7 @@ void copy_buffer_clip(const cudaStream_t& dev, const float* source, float* dest,
 __global__ void inc_kernel(const float* inc, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float val = (i < n_s) ? acc[i] : 0.0f;
-    float increment = inc[i];
+    float increment = (i < n_s) ? inc[i] : 0.0f;
     val += increment;
     if(i < n_s)
         acc[i] = val;
@@ -854,8 +854,10 @@ void inc_buffer(const cudaStream_t& dev, const float* inc, float* acc, const int
 __global__ void inc_inc_minc_kernel(const float* inc1, const float* inc2, const float* minc, const float multi, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float val = (i < n_s) ? acc[i] : 0.0f;
-    float increment = ((i < n_s) ? inc1[i]*inc2[i] : 0.0f); + multi*((i < n_s) ? minc[i] : 0.0f);
-    val += increment;
+    float increment1 = (i < n_s) ? inc1[i] : 0.0f;
+    float increment2 = (i < n_s) ? inc2[i] : 0.0f;
+    float minincrement = (i < n_s) ? minc[i] : 0.0f;
+    val += increment1 + increment2 + multi*minincrement;
     if(i < n_s)
         acc[i] = val;
 }
@@ -1603,12 +1605,14 @@ void untangle_sigmoid(const cudaStream_t& dev, const float* du_i, const float* u
 
 __device__ float get_gradient_for_u_kernel_dn(const float* dy, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d){
     float multiplier = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? dy[c*n_s+i-a] : 0.0f;
-    float inc = 2.0f * ((c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? multiplier*r[c*n_s+i-a] : 0.0f );
+    float inc = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? r[c*n_s+i-a] : 0.0f;
+    inc = 2.0f * multiplier * inc;
     return (d > 0) ? inc: 0.0f;
 }
 __device__ float get_gradient_for_u_kernel_up(const float* dy, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d, const int n_d){
     float multiplier = (c*n_s+i+a < n_c*n_s) ? dy[c*n_s+i+a] : 0.0f;
-    float inc = 2.0f*((c*n_s+i < n_c*n_s) ? multiplier*r[c*n_s+i] : 0.0f);
+    float inc = (c*n_s+i < n_c*n_s) ? r[c*n_s+i] : 0.0f;
+    inc = 2.0f * multiplier * inc;
     return (d < n_d-1) ? inc: 0.0f;
 }
 

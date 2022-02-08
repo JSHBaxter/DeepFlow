@@ -91,8 +91,7 @@ void HMF_MEANPASS_CPU_GRADIENT_2D::clean_up(){
 
 void HMF_MEANPASS_CPU_GRADIENT_2D::get_reg_gradients_and_push(float tau){
     get_reg_gradients_channels_first(dy, u, g_rx, g_ry, n_x, n_y, n_r, tau);
-    clear(g_u,n_s*(n_r-n_c));
-    get_gradient_for_u_channels_first(dy+n_s*(n_r-n_c), rx+n_s*(n_r-n_c), ry+n_s*(n_r-n_c), g_u+n_s*(n_r-n_c), n_x, n_y, n_c, tau);
+    get_gradient_for_u_channels_first(dy, rx, ry, g_u, n_x, n_y, n_r, tau);
 }
 
 HMF_MEANPASS_CPU_GRADIENT_2D::~HMF_MEANPASS_CPU_GRADIENT_2D(){

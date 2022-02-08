@@ -52,7 +52,7 @@ rx_b(channels_first ? rx_cost : transpose(rx_cost, new float[n_s*n_r], n_s, n_r)
 {}
 
 HMF_MEANPASS_CPU_SOLVER_1D::~HMF_MEANPASS_CPU_SOLVER_1D(){
-    if(!channels_first) delete rx_b;
+    if(!channels_first) delete[] rx_b;
 }
 
 int HMF_MEANPASS_CPU_GRADIENT_1D::min_iter_calc(){
@@ -71,18 +71,17 @@ void HMF_MEANPASS_CPU_GRADIENT_1D::clean_up(){
             for(int r = 0; r < n_r; r++)
                 tmp_space[s*n_r+r] = g_rx[r*n_s+s];
         copy(tmp_space,g_rx,n_s*n_r);
-        delete tmp_space;
+        delete[] tmp_space;
     }
 }
 
 void HMF_MEANPASS_CPU_GRADIENT_1D::get_reg_gradients_and_push(float tau){
     get_reg_gradients_channels_first(dy, u, g_rx, n_x, n_r, tau);
-    clear(g_u,n_s*(n_r-n_c));
-    get_gradient_for_u_channels_first(dy+n_s*(n_r-n_c), rx_b+n_s*(n_r-n_c), g_u+n_s*(n_r-n_c), n_x, n_c, tau);
+    get_gradient_for_u_channels_first(dy, rx, g_u, n_x, n_r, tau);
 }
 
 HMF_MEANPASS_CPU_GRADIENT_1D::~HMF_MEANPASS_CPU_GRADIENT_1D(){
-    if(!channels_first) delete rx_b;
+    if(!channels_first) delete[] rx_b;
 }
 
 HMF_MEANPASS_CPU_GRADIENT_1D::HMF_MEANPASS_CPU_GRADIENT_1D(

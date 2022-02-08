@@ -70,8 +70,7 @@ void HMF_MEANPASS_GPU_GRADIENT_3D::clear_variables(){
 
 void HMF_MEANPASS_GPU_GRADIENT_3D::get_reg_gradients_and_push(float tau){
     populate_reg_mean_gradients_and_add(dev, dy, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_r, tau);
-    clear_buffer(dev,du,n_s*(n_r-n_c));
-    get_gradient_for_u(dev, dy+n_s*(n_r-n_c), du+n_s*(n_r-n_c), rx+n_s*(n_r-n_c), ry+n_s*(n_r-n_c), rz+n_s*(n_r-n_c), n_x, n_y, n_z, n_c, tau);
+    get_gradient_for_u(dev, dy, du, rx, ry, rz, n_x, n_y, n_z, n_r, tau);
 }
 
 HMF_MEANPASS_GPU_GRADIENT_3D::HMF_MEANPASS_GPU_GRADIENT_3D(
