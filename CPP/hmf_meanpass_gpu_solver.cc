@@ -103,7 +103,9 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
     
     for(int i = 0; i < max_loop; i++){    
         //run the solver a set block of iterations
@@ -215,9 +217,11 @@ void HMF_MEANPASS_GPU_GRADIENT_BASE::operator()(){
     
     clear_variables();
     int min_iter = min_iter_calc();
-    if( min_iter < 10 )
+    if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
     
     //calculate the aggregate probabilities
     clear_buffer(dev, u, n_s*(n_r-n_c));

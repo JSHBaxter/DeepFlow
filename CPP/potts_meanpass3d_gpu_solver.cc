@@ -2,9 +2,11 @@
 #include "potts_meanpass3d_gpu_solver.h"
 #include "gpu_kernels.h"
 #include <algorithm>
+#include <cmath>
+#include <iostream>
 
 int POTTS_MEANPASS_GPU_SOLVER_3D::min_iter_calc(){
-    return std::max(std::max(n_x,n_y), n_z);
+    return (int) std::sqrt(n_x+n_y+n_z);
 }
 void POTTS_MEANPASS_GPU_SOLVER_3D::init_vars(){}
 
@@ -46,7 +48,7 @@ rz(rz_cost)
 {}
 
 int POTTS_MEANPASS_GPU_GRADIENT_3D::min_iter_calc(){
-    return std::max(std::max(n_x,n_y), n_z);
+    return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void POTTS_MEANPASS_GPU_GRADIENT_3D::init_vars(){

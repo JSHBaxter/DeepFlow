@@ -1,9 +1,11 @@
 
 #include "potts_meanpass1d_cpu_solver.h"
 #include "cpu_kernels.h"
+#include <iostream>
+#include <cmath>
 
 int POTTS_MEANPASS_CPU_SOLVER_1D::min_iter_calc(){
-    return n_x;
+    return (int) std::sqrt(n_x);
 }
 
 void POTTS_MEANPASS_CPU_SOLVER_1D::init_vars(){}
@@ -44,10 +46,12 @@ POTTS_MEANPASS_CPU_SOLVER_1D::POTTS_MEANPASS_CPU_SOLVER_1D(
 POTTS_MEANPASS_CPU_SOLVER_BASE(channels_first, batch, sizes[0], n_c, data_cost, init_u, u),
 n_x(sizes[0]),
 rx(rx_cost)
-{}
+{
+    //std::cout << n_x << " " << n_c << " " << rx << std::endl;
+}
 
 int POTTS_MEANPASS_CPU_GRADIENT_1D::min_iter_calc(){
-    return n_x;
+    return (int) std::sqrt(n_x);
 }
 
 void POTTS_MEANPASS_CPU_GRADIENT_1D::init_vars(){
@@ -81,5 +85,7 @@ POTTS_MEANPASS_CPU_GRADIENT_BASE(channels_first, batch, sizes[0], n_c, u, g, g_d
 n_x(sizes[0]),
 rx(rx_cost),
 g_rx(g_rx)
-{}
+{
+    //std::cout << n_x << " " << n_c << " " << rx << " " << g_rx << std::endl;
+}
 

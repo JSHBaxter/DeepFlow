@@ -1,10 +1,10 @@
-
 #include "potts_auglag2d_gpu_solver.h"
 #include "gpu_kernels.h"
-#include <algorithm>
+#include <cmath>
+
 
 int POTTS_AUGLAG_GPU_SOLVER_2D::min_iter_calc(){
-    return std::max(n_x,n_y);
+    return (int) std::sqrt(n_x+n_y);
 }
 
 void POTTS_AUGLAG_GPU_SOLVER_2D::clear_spatial_flows(){

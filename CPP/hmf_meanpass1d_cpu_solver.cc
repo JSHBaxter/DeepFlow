@@ -3,9 +3,10 @@
 #include <iostream>
 #include "cpu_kernels.h"
 #include "hmf_meanpass1d_cpu_solver.h"
+#include <cmath> 
 
 int HMF_MEANPASS_CPU_SOLVER_1D::min_iter_calc(){
-    return n_x+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x);
 }
 
 void HMF_MEANPASS_CPU_SOLVER_1D::init_reg_info(){
@@ -55,7 +56,7 @@ HMF_MEANPASS_CPU_SOLVER_1D::~HMF_MEANPASS_CPU_SOLVER_1D(){
 }
 
 int HMF_MEANPASS_CPU_GRADIENT_1D::min_iter_calc(){
-    return n_x+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x);
 }
 
 void HMF_MEANPASS_CPU_GRADIENT_1D::init_reg_info(){

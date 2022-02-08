@@ -8,7 +8,7 @@
 #include <algorithm>
 
 int HMF_MEANPASS_GPU_SOLVER_2D::min_iter_calc(){
-    return std::max(n_x,n_y)+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y);
 }
 
 void HMF_MEANPASS_GPU_SOLVER_2D::update_spatial_flow_calc(){
@@ -55,7 +55,7 @@ ry(ry_cost)
 {}
 
 int HMF_MEANPASS_GPU_GRADIENT_2D::min_iter_calc(){
-    return std::max(n_x,n_y)+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y);
 }
 
 void HMF_MEANPASS_GPU_GRADIENT_2D::clear_variables(){

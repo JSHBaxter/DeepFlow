@@ -2,9 +2,11 @@
 #include "potts_meanpass3d_cpu_solver.h"
 #include "cpu_kernels.h"
 #include <algorithm>
+#include <iostream>
+#include <cmath>
 
 int POTTS_MEANPASS_CPU_SOLVER_3D::min_iter_calc(){
-    return std::max(std::max(n_x,n_y), n_z);
+    return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void POTTS_MEANPASS_CPU_SOLVER_3D::init_vars(){}
@@ -52,10 +54,12 @@ n_z(sizes[2]),
 rx(rx_cost),
 ry(ry_cost),
 rz(rz_cost)
-{}
+{
+    //std::cout << n_x << " " << n_y << " " << n_z << " " << n_c << " " << rx << " " << ry << " " << rz << std::endl;
+}
 
 int POTTS_MEANPASS_CPU_GRADIENT_3D::min_iter_calc(){
-    return std::max(std::max(n_x,n_y), n_z);
+    return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void POTTS_MEANPASS_CPU_GRADIENT_3D::init_vars(){
@@ -99,4 +103,6 @@ rz(rz_cost),
 g_rx(g_rx),
 g_ry(g_ry),
 g_rz(g_rz)
-{}
+{
+    //std::cout << n_x << " " << n_y << " " << n_z << " " << n_c << " " << rx << " " << ry << " " << rz <<  " " << g_rx << " " << g_ry  << " " << g_rz << std::endl;
+}

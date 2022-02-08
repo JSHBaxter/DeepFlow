@@ -19,14 +19,14 @@ b(batch),
 n_c(n_c),
 n_s(n_s),
 data(data_cost),
-r_eff(0),
+r_eff(new float[n_s*n_c]),
 u(u)
 {
     if(init_u)
         copy(init_u, u, n_s*n_c);
     else
         softmax(data, u, n_s, n_c);
-    //std::cout << n_s << " " << n_c << std::endl;
+    //std::cout << n_s << " " << n_c  << " " << data << " " << r_eff << " " << u  << std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -52,7 +52,6 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
         
 	// allocate intermediate variables
 	float max_change = 0.0f;
-	r_eff = new float[n_s*n_c];
 
 	//initialize variables
 	init_vars();
@@ -61,14 +60,17 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
             max_change = block_iter(iter&1, iter == min_iter-1);
 
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "POTTS_MEANPASS_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -86,11 +88,11 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
 		u[i] = data[i]+r_eff[i];
         
     //deallocate temporary buffers
-    delete r_eff; r_eff = 0;
     clean_up();
 }
 
 POTTS_MEANPASS_CPU_SOLVER_BASE::~POTTS_MEANPASS_CPU_SOLVER_BASE(){
+    delete [] r_eff;
 }
 
 
@@ -109,11 +111,11 @@ n_s(n_s),
 grad(g),
 logits(u),
 g_data(g_d),
-d_y(0),
-g_u(0),
-u(0)
+d_y(new float[n_s*n_c]),
+g_u(new float[n_s*n_c]),
+u(new float[n_s*n_c])
 {
-    //std::cout << n_s << " " << n_c << std::endl;
+    //std::cout << n_s << " " << n_c  << " " << grad << " " << logits << " " << g_data << " " << d_y << " " << g_u  << " " << this->u << std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -132,11 +134,6 @@ void POTTS_MEANPASS_CPU_GRADIENT_BASE::block_iter(){
 }
 
 void POTTS_MEANPASS_CPU_GRADIENT_BASE::operator()(){
-        
-	// allocate intermediate variables
-	u = new float[n_s*n_c];
-	d_y = new float[n_s*n_c];
-	g_u = new float[n_s*n_c];
 
 	//initialize variables
 	init_vars();
@@ -155,7 +152,10 @@ void POTTS_MEANPASS_CPU_GRADIENT_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
@@ -173,11 +173,11 @@ void POTTS_MEANPASS_CPU_GRADIENT_BASE::operator()(){
         block_iter();
         
     //deallocate temporary buffers
-    delete u; u = 0;
-    delete d_y; d_y = 0;
-    delete g_u; g_u = 0;
     clean_up();
 }
 
 POTTS_MEANPASS_CPU_GRADIENT_BASE::~POTTS_MEANPASS_CPU_GRADIENT_BASE(){
+    delete [] u;
+    delete [] d_y;
+    delete [] g_u;
 }

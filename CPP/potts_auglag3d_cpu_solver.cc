@@ -7,14 +7,13 @@
 #include <algorithm>
 
 int POTTS_AUGLAG_CPU_SOLVER_3D::min_iter_calc(){
-    return std::max(std::max(n_x,n_y), n_z);
+    return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_3D::clear_spatial_flows(){
-    px = new float[n_s*n_c];
-    py = new float[n_s*n_c];
-    pz = new float[n_s*n_c];
-    clear(px, py, pz, n_s*n_c);
+    clear(px, n_s*n_c);
+    clear(py, n_s*n_c);
+    clear(pz, n_s*n_c);
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_3D::update_spatial_flow_calc(){
@@ -25,9 +24,12 @@ void POTTS_AUGLAG_CPU_SOLVER_3D::update_spatial_flow_calc(){
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_3D::clean_up(){
-    if( px ) delete px; px = 0;
-    if( py ) delete py; py = 0;
-    if( pz ) delete pz; pz = 0;
+}
+
+POTTS_AUGLAG_CPU_SOLVER_3D::~POTTS_AUGLAG_CPU_SOLVER_3D(){
+    if( px ) delete [] px;
+    if( py ) delete [] py;
+    if( pz ) delete [] pz;
 }
 
 POTTS_AUGLAG_CPU_SOLVER_3D::POTTS_AUGLAG_CPU_SOLVER_3D(
@@ -48,7 +50,9 @@ n_z(sizes[2]),
 rx(rx_cost),
 ry(ry_cost),
 rz(rz_cost),
-px(0),
-py(0),
-pz(0)
-{}
+px(new float[n_s*n_c]),
+py(new float[n_s*n_c]),
+pz(new float[n_s*n_c])
+{
+    //std::cout << n_x << " " << n_y << " " << n_z << " " << n_c << " " << rx << " " << ry << " " << rz <<  " " << px << " " << py  << " " << pz << std::endl;
+}

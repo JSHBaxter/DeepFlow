@@ -5,9 +5,10 @@
 #include "hmf_trees.h"
 #include "hmf_meanpass3d_cpu_solver.h"
 #include <algorithm>
+#include <cmath>
 
 int HMF_MEANPASS_CPU_SOLVER_3D::min_iter_calc(){
-    return std::max(n_x,std::max(n_y,n_z))+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void HMF_MEANPASS_CPU_SOLVER_3D::init_reg_info(){
@@ -68,7 +69,7 @@ rz_b(channels_first ? rz : transpose(rz, alloc+2*n_s*n_r, n_s, n_r))
 }
 
 int HMF_MEANPASS_CPU_GRADIENT_3D::min_iter_calc(){
-    return std::max(n_x,std::max(n_y,n_z))+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void HMF_MEANPASS_CPU_GRADIENT_3D::init_reg_info(){

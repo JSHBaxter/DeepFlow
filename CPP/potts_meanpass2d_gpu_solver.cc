@@ -2,9 +2,10 @@
 #include "potts_meanpass2d_gpu_solver.h"
 #include "gpu_kernels.h"
 #include <algorithm>
+#include <cmath>
 
 int POTTS_MEANPASS_GPU_SOLVER_2D::min_iter_calc(){
-    return std::max(n_x,n_y);
+    return (int) std::sqrt(n_x+n_y);
 }
 
 void POTTS_MEANPASS_GPU_SOLVER_2D::init_vars(){}
@@ -43,7 +44,7 @@ ry(ry_cost)
 {}
 
 int POTTS_MEANPASS_GPU_GRADIENT_2D::min_iter_calc(){
-    return std::max(n_x,n_y);
+    return (int) std::sqrt(n_x+n_y);
 }
 
 void POTTS_MEANPASS_GPU_GRADIENT_2D::init_vars(){

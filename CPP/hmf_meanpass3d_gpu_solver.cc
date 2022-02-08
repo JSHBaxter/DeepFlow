@@ -6,9 +6,10 @@
 #include "hmf_meanpass3d_gpu_solver.h"
 #include "gpu_kernels.h"
 #include <algorithm>
+#include <cmath>
 
 int HMF_MEANPASS_GPU_SOLVER_3D::min_iter_calc(){
-    return std::max(n_x,std::max(n_y,n_z))+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void HMF_MEANPASS_GPU_SOLVER_3D::update_spatial_flow_calc(){
@@ -58,7 +59,7 @@ rz(rz_cost)
 {}
 
 int HMF_MEANPASS_GPU_GRADIENT_3D::min_iter_calc(){
-    return std::max(n_x,std::max(n_y,n_z))+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void HMF_MEANPASS_GPU_GRADIENT_3D::clear_variables(){

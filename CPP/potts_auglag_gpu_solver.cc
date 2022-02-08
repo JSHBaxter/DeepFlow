@@ -1,6 +1,7 @@
 
 #include "potts_auglag_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <iostream>
 
 POTTS_AUGLAG_GPU_SOLVER_BASE::POTTS_AUGLAG_GPU_SOLVER_BASE(
     const cudaStream_t & dev,
@@ -22,7 +23,7 @@ div(full_buff[1]),
 g(full_buff[2]),
 ps(img_buff[0])
 {
-    //std::cout << n_s << " " << n_c << std::endl;
+    //std::cout << n_s << " " << n_c << " " << data_cost << " " << ps << " " << pt << " " << div << " " << g << " " << u << std::endl;
 }
 
 void POTTS_AUGLAG_GPU_SOLVER_BASE::block_iter(){
@@ -38,21 +39,20 @@ void POTTS_AUGLAG_GPU_SOLVER_BASE::block_iter(){
 void POTTS_AUGLAG_GPU_SOLVER_BASE::operator()(){
 
     //initialize variables
-	softmax(dev, data, 0, u, n_s, n_c);
-    //clear_buffer(dev, u, n_s*n_c);
     clear_spatial_flows();
     clear_buffer(dev, div, n_s*n_c);
-    //clear_buffer(dev, ps, n_s);
-    //clear_buffer(dev, pt, n_s*n_c);
-	find_min_constraint(dev, ps, data, n_c, n_s);
-	rep_buffer(dev, ps, pt, n_c, n_s);
+    init_flows_potts(dev, data, ps, pt, u, n_s, n_c);
     
     // iterate in blocks
     int min_iter = min_iter_calc();
-    if( min_iter < 10 )
+    if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
-
+    //min_iter = 1;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    //max_loop = 0;
+    
     for(int i = 0; i < max_loop; i++){    
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
@@ -60,7 +60,7 @@ void POTTS_AUGLAG_GPU_SOLVER_BASE::operator()(){
 
         //Determine if converged
         float max_change = max_of_buffer(dev, g, n_s*n_c);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+		//std::cout << "POTTS_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

@@ -60,6 +60,7 @@ protected:
     void clean_up();
 
 public:
+
 	BINARY_MEANPASS_GPU_GRADIENT_3D(
         const cudaStream_t & dev,
         const int batch,

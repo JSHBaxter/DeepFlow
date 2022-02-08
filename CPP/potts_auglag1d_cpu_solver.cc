@@ -6,11 +6,10 @@
 #include "cpu_kernels.h"
 
 int POTTS_AUGLAG_CPU_SOLVER_1D::min_iter_calc(){
-    return n_x;
+    return (int) std::sqrt(n_x);
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_1D::clear_spatial_flows(){
-    px = new float[n_s*n_c];
     clear(px, n_s*n_c);
 }
 
@@ -22,7 +21,10 @@ void POTTS_AUGLAG_CPU_SOLVER_1D::update_spatial_flow_calc(){
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_1D::clean_up(){
-    if( px ) delete px; px = 0;
+}
+
+POTTS_AUGLAG_CPU_SOLVER_1D::~POTTS_AUGLAG_CPU_SOLVER_1D(){
+    if( px ) delete [] px;
 }
 
 POTTS_AUGLAG_CPU_SOLVER_1D::POTTS_AUGLAG_CPU_SOLVER_1D(
@@ -37,7 +39,9 @@ POTTS_AUGLAG_CPU_SOLVER_1D::POTTS_AUGLAG_CPU_SOLVER_1D(
 POTTS_AUGLAG_CPU_SOLVER_BASE(channels_first, batch, sizes[0], n_c, data_cost, u),
 n_x(sizes[0]),
 rx(rx_cost),
-px(0)
-{}
+px(new float[n_s*n_c])
+{
+    //std::cout << n_x << " " << n_c << " " << rx << " " << px << std::endl;
+}
 
 

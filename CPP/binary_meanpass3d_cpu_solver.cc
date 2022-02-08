@@ -2,12 +2,13 @@
 #include <iostream>
 #include <limits>
 #include <algorithm>
+#include <cmath>
 
 #include "binary_meanpass3d_cpu_solver.h"
 #include "cpu_kernels.h"
 
 int BINARY_MEANPASS_CPU_SOLVER_3D::min_iter_calc(){
-	return std::max(n_x,std::max(n_y,n_z));
+	return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void BINARY_MEANPASS_CPU_SOLVER_3D::init_vars(){}
@@ -57,7 +58,7 @@ rz(rz_cost)
 {}
 
 int BINARY_MEANPASS_CPU_GRADIENT_3D::min_iter_calc(){
-	return std::max(n_x,std::max(n_y,n_z));
+	return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void BINARY_MEANPASS_CPU_GRADIENT_3D::init_vars(){

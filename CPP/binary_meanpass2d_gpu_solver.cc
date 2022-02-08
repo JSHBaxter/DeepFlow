@@ -3,9 +3,10 @@
 #include "gpu_kernels.h"
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 
 int BINARY_MEANPASS_GPU_SOLVER_2D::min_iter_calc(){
-	return std::max(n_x,n_y);
+	return (int) std::sqrt(n_x+n_y);
 }
 
 void BINARY_MEANPASS_GPU_SOLVER_2D::init_vars(){}
@@ -46,7 +47,7 @@ ry(ry_cost)
 
 
 int BINARY_MEANPASS_GPU_GRADIENT_2D::min_iter_calc(){
-	return std::max(n_x,n_y);
+	return (int) std::sqrt(n_x+n_y);
 }
 
 void BINARY_MEANPASS_GPU_GRADIENT_2D::init_vars(){

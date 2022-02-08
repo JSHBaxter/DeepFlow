@@ -3,9 +3,10 @@
 #include "gpu_kernels.h"
 
 #include <iostream>
+#include <cmath>
 
 int BINARY_AUGLAG_GPU_SOLVER_1D::min_iter_calc(){
-	return n_x;
+	return (int) std::sqrt(n_x);
 }
 
 void BINARY_AUGLAG_GPU_SOLVER_1D::clear_spatial_flows(){

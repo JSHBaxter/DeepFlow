@@ -64,8 +64,8 @@ void compute_flows_channels_first(const float* g, float* div, float* px, float* 
 void compute_flows_channels_first(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_c, const int n_x, const int n_y);
 void compute_flows_channels_first(const float* g, float* div, float* px, const float* rx, const int n_c, const int n_x);
 void init_flows_binary(const float* d, float* ps, float* pt, const int n_s);
-void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s);
-void init_flows_channels_first(const float* d, float* ps, float* pt, const int n_c, const int n_s);
+void init_flows(const float* d, float* ps, float* pt, float* u, const int n_c, const int n_s);
+void init_flows_channels_first(const float* d, float* ps, float* pt, float* u, const int n_c, const int n_s);
 void init_flows(const float* d, float* ps, const int n_c, const int n_s);
 void init_flows_channels_first(const float* d, float* ps, const int n_c, const int n_s);
 

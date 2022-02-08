@@ -46,9 +46,9 @@ void TreeNode::build_tree(TreeNode* &node, TreeNode** &children, TreeNode** &bot
 }
 
 void TreeNode::free_tree(TreeNode* &node, TreeNode** &children, TreeNode** &bottom_up_list, TreeNode** &top_down_list){
-    delete node;
-    delete bottom_up_list;
-    delete children;
+    delete [] node;
+    delete [] bottom_up_list;
+    delete [] children;
 }
 
 void TreeNode::print_list(TreeNode** list, const int n_r){

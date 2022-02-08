@@ -7,7 +7,7 @@
 #include "cpu_kernels.h"
 
 int BINARY_MEANPASS_CPU_SOLVER_2D::min_iter_calc(){
-	return std::max(n_x,n_y);
+	return (int) std::sqrt(n_x+n_y);
 }
 
 void BINARY_MEANPASS_CPU_SOLVER_2D::init_vars(){}
@@ -54,7 +54,7 @@ ry(ry_cost)
 {}
 
 int BINARY_MEANPASS_CPU_GRADIENT_2D::min_iter_calc(){
-	return std::max(n_x,n_y);
+	return (int) std::sqrt(n_x+n_y);
 }
 
 void BINARY_MEANPASS_CPU_GRADIENT_2D::init_vars(){

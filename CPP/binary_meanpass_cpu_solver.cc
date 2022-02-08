@@ -58,7 +58,10 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
@@ -91,7 +94,7 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 }
 
 BINARY_MEANPASS_CPU_SOLVER_BASE::~BINARY_MEANPASS_CPU_SOLVER_BASE(){
-    delete r_eff; r_eff = 0;
+    delete [] r_eff; r_eff = 0;
 }
 
 
@@ -145,7 +148,10 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
@@ -166,7 +172,7 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
 }
 
 BINARY_MEANPASS_CPU_GRADIENT_BASE::~BINARY_MEANPASS_CPU_GRADIENT_BASE(){
-    delete d_y; d_y = 0;
-    delete g_u; g_u = 0;
-    delete u; u = 0;
+    delete [] d_y; d_y = 0;
+    delete [] g_u; g_u = 0;
+    delete [] u; u = 0;
 }

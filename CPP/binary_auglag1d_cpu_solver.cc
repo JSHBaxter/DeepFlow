@@ -1,9 +1,10 @@
 #include "binary_auglag1d_cpu_solver.h"
 #include "cpu_kernels.h"
 #include <iostream>
+#include <cmath>
 
 int BINARY_AUGLAG_CPU_SOLVER_1D::min_iter_calc(){
-    return n_x;
+    return (int) std::sqrt(n_x);
 }
 	
 void BINARY_AUGLAG_CPU_SOLVER_1D::clear_spatial_flows(){
@@ -19,7 +20,7 @@ void BINARY_AUGLAG_CPU_SOLVER_1D::update_spatial_flow_calc(){
 }
 
 void BINARY_AUGLAG_CPU_SOLVER_1D::clean_up(){
-    if( px ) delete px; px = 0;
+    if( px ) delete [] px; px = 0;
 }
 
 BINARY_AUGLAG_CPU_SOLVER_1D::BINARY_AUGLAG_CPU_SOLVER_1D(

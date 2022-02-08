@@ -17,6 +17,7 @@ protected:
     virtual void clean_up();
 
 public:
+    ~POTTS_AUGLAG_CPU_SOLVER_1D();
 	POTTS_AUGLAG_CPU_SOLVER_1D(
         const int channels_first,
         const int batch,

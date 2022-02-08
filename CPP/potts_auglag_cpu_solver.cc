@@ -16,13 +16,13 @@ b(batch),
 n_c(n_c),
 n_s(n_s),
 data(data_cost),
-ps(0),
-pt(0),
-div(0),
-g(0),
+ps(new float[n_s]),
+pt(new float[n_s*n_c]),
+div(new float[n_s*n_c]),
+g(new float[n_s*n_c]),
 u(u)
 {
-    std::cout << n_s << " " << n_c << std::endl;
+    //std::cout << n_s << " " << n_c << " " << data_cost << " " << ps << " " << pt << " " << div << " " << g << " " << u<< std::endl;
 }
 
 //perform one iteration of the algorithm
@@ -44,32 +44,25 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::block_iter(){
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
-
-    //store intermediate information
-    ps = new float[n_s+3*n_s*n_c];
-    pt = ps + n_s;
-    div = pt + n_s*n_c;
-    g = div + n_s*n_c;;
-
-    //initialize variables
-    if(channels_first)
-	    softmax_channels_first(data, u, n_s, n_c);
-    else
-	    softmax(data, u, n_s, n_c);
+    
+    //initialize flows and labels
     clear(g, div, n_c*n_s);
     clear_spatial_flows();
     //clear(pt, n_c*n_s);
     //clear(ps, n_s);
     if(channels_first)
-	    init_flows_channels_first(data, ps, pt, n_s, n_c);
+	    init_flows_channels_first(data, ps, pt, u, n_c, n_s);
     else
-	    init_flows(data, ps, pt, n_s, n_c);
+	    init_flows(data, ps, pt, u, n_c, n_s);
 
     // iterate in blocks
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    
     for(int i = 0; i < max_loop; i++){
 
         //run the solver a set block of iterations
@@ -77,7 +70,7 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_c);
-		//std::cout << "Iter " << i << ": " << max_change << std::endl;
+        //std::cout << "POTTS_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -90,12 +83,12 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
     log_buffer(u, n_s*n_c);
         
     //deallocate temporary buffers
-    delete ps; ps = 0;
-    pt = 0;
-    g = 0;
-    div = 0;
     clean_up();
 }
 
 POTTS_AUGLAG_CPU_SOLVER_BASE::~POTTS_AUGLAG_CPU_SOLVER_BASE(){
+    delete [] ps;
+    delete [] pt;
+    delete [] g;
+    delete [] div;
 }

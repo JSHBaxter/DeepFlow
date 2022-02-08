@@ -1,9 +1,10 @@
 #include "potts_auglag1d_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <cmath>
 
 
 int POTTS_AUGLAG_GPU_SOLVER_1D::min_iter_calc(){
-    return n_x;
+    return (int) std::sqrt(n_x);
 }
 
 void POTTS_AUGLAG_GPU_SOLVER_1D::clear_spatial_flows(){

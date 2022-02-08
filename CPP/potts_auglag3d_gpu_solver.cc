@@ -1,10 +1,10 @@
-
 #include "potts_auglag3d_gpu_solver.h"
 #include "gpu_kernels.h"
-#include <algorithm>
+#include <cmath>
+
 
 int POTTS_AUGLAG_GPU_SOLVER_3D::min_iter_calc(){
-    return std::max(std::max(n_x,n_y), n_z);
+    return (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void POTTS_AUGLAG_GPU_SOLVER_3D::clear_spatial_flows(){
@@ -40,7 +40,9 @@ rz(rz_cost),
 px(buffers_full[3]),
 py(buffers_full[4]),
 pz(buffers_full[5])
-{}
+{
+    //std::cout << n_s << " " << n_c << " " << n_x << " " << n_y << " " << n_z << std::endl;
+}
 
 
 

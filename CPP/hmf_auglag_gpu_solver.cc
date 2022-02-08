@@ -202,17 +202,12 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
 void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
     int u_tmp_offset = n_s*(n_r-n_c);
 	
-    //initialize other variables
+    //initialize flows and labels
     clear_spatial_flows();
     clear_buffer(dev, div, n_s*n_r);
     clear_buffer(dev, g, n_s*n_r);
-    find_min_constraint(dev, ps, data, n_c, n_s);
-    for(int c = 0; c < n_r; c++)
-        copy_buffer(dev, ps, pt+c*n_s, n_s);
-    
-    //initialize labels
-    clear_buffer(dev, u_tmp, n_s*(n_r-n_c));
-    mark_neg_equal(dev, ps, data, u_tmp+u_tmp_offset, n_s, n_c);
+    init_flows_potts(dev, data, ps, pt+u_tmp_offset, u_tmp+u_tmp_offset, n_s, n_c);
+    copy_buffer(dev,pt+u_tmp_offset,pt,n_s*(n_r-n_c));
     for (int l = n_c; l < n_r; l++) {
         const TreeNode* n = bottom_up_list[l];
         for(int c = 0; c < n->c; c++)
@@ -221,9 +216,12 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
     
     // iterate in blocks
     int min_iter = min_iter_calc();
-    if( min_iter < 10 )
+    if (min_iter < 10)
         min_iter = 10;
-    int max_loop = 200;
+    int max_loop = min_iter_calc();
+    if (max_loop < 200)
+        max_loop = 200;
+    
     for(int i = 0; i < max_loop; i++){    
         
         //run the solver a set block of iterations

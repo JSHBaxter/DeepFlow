@@ -7,13 +7,18 @@
 #define NUM_THREADS 256
 #define epsilon 0.00001f
 
-#define CHECK_ERRORS false
+#define CHECK_ERRORS true
+
+void let_device_catchup(const cudaStream_t& dev){
+    cudaError_t cudaerr = cudaStreamSynchronize(dev);
+}
 
 void check_error(const cudaStream_t& dev, const char* string){
     cudaError_t cudaerr = cudaStreamSynchronize(dev);
     if (cudaerr != cudaSuccess){
         printf(string);
         printf(" \"%s\".\n", cudaGetErrorString(cudaerr));
+        exit(-1);
     }
 }
 
@@ -241,23 +246,23 @@ __global__ void update_source_sink_multiplier_potts_kernel(float* ps, float* pt,
     //update source flow
     float ps_t = icc;
     for(int c = 0; c < n_c; c++)
-        ps_t += pt[c*n_s+i]+div[c*n_s+i]-u[c*n_s+i]*icc;
+        ps_t += (c*n_s+i < n_c*n_s) ? (pt[c*n_s+i]+div[c*n_s+i]-u[c*n_s+i]*icc) : 0.0f;
     ps_t /= n_c;
     if( i < n_s )
         ps[i] = ps_t;
     
     //update sink flow
     for(int c = 0; c < n_c; c++){
-        float pt_t = ps_t;
-        pt_t -= div[c*n_s+i];
-        pt_t += u[c*n_s+i]*icc;
-        float d_t = -d[c*n_s+i];
+        float div_t = (c*n_s+i < n_c*n_s) ? div[c*n_s+i] : 0.0f;
+        float u_t = (c*n_s+i < n_c*n_s) ? u[c*n_s+i] : 0.0f;
+        float pt_t = ps_t - div_t + u_t*icc;
+        float d_t = (c*n_s+i < n_c*n_s) ? -d[c*n_s+i] : 0.0f;
         pt_t = (pt_t > d_t) ? d_t : pt_t;
     
         
         //update multiplier
-        float erru_t = cc * (ps_t - div[c*n_s+i] - pt_t);
-        float u_t = u[c*n_s+i] + erru_t;
+        float erru_t = cc * (ps_t - div_t - pt_t);
+        u_t = u_t + erru_t;
         erru_t = (erru_t < 0.0f) ? -erru_t : erru_t;
         
         //output
@@ -281,17 +286,18 @@ __global__ void update_source_sink_multiplier_binary_kernel(float* ps, float* pt
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
     //update source flow and constrain
-	float div_t = div[i];
-	float u_t = u[i];
-	float d_t = d[i];
-    float ps_t = icc+pt[i]+div_t-u_t*icc;
+	float div_t = (i < n_s) ? div[i] : 0.0f;
+	float u_t = (i < n_s) ? u[i] : 0.0f;
+	float d_t = (i < n_s) ? d[i] : 0.0f;
+    float pt_t = (i < n_s) ? pt[i] : 0.0f;
+    float ps_t = icc+pt_t+div_t-u_t*icc;
 	ps_t = (d_t <= 0.0f) ? 0.0f : ps_t;
 	ps_t = (ps_t > d_t && d_t > 0.0f) ? d_t : ps_t;
     if( i < n_s )
         ps[i] = ps_t;
     
     //update sink flow and constrain
-    float pt_t = ps_t-div_t+u_t*icc;
+    pt_t = ps_t-div_t+u_t*icc;
 	pt_t = (d_t >= 0.0f) ? 0.0f : pt_t;
 	pt_t = (pt_t > -d_t && d_t < 0.0f) ? -d_t : pt_t;
     if( i < n_s )
@@ -468,18 +474,18 @@ __global__ void calc_divergence_kernel(float* div, const float* px, const float*
     int x = i_temp % n_x; i_temp /= n_x;
     
     //do z dimension (add just one)
-    float div_t = -pz[i];
-    float more_flow = pz[i-1];
+    float div_t = -((i < n_s) ? pz[i] : 0.0f);
+    float more_flow = (i-1 < n_s && i-1 >= 0) ? pz[i-1] : 0.0f;
     div_t += (z > 0) ? more_flow : 0.0f;
     
     //do y dimension (add n_z)
-    div_t -= py[i];
-    more_flow = py[i-n_z];
+    div_t -= (i < n_s) ? py[i] : 0.0f;
+    more_flow = (i-n_z < n_s && i-n_z >= 0) ? py[i-n_z] : 0.0f;
     div_t += (y > 0) ? more_flow : 0.0f;
     
     //do x dimension (add n_z*n_y)
-    div_t -= px[i];
-    more_flow = px[i-n_z*n_y];
+    div_t -= (i < n_s) ? px[i] : 0.0f;
+    more_flow = (i-n_z*n_y < n_s && i-n_z*n_y >= 0) ? px[i-n_z*n_y] : 0.0f;
     div_t += (x > 0) ? more_flow : 0.0f;
     
     if(i < n_s)
@@ -491,15 +497,15 @@ __global__ void calc_divergence_kernel(float* div, const float* px, const float*
     int i_temp = i;
     int y = i_temp % n_y; i_temp /= n_y;
     int x = i_temp % n_x; i_temp /= n_x;
-    
+
     //do y dimension (add n_z)
-    float div_t = -py[i];
-    float more_flow = py[i-1];
+    float div_t = -((i < n_s) ? py[i] : 0.0f);
+    float more_flow = (i-1 < n_s && i-1 >= 0) ? py[i-1] : 0.0f;
     div_t += (y > 0) ? more_flow : 0.0f;
     
     //do x dimension (add n_z*n_y)
-    div_t -= px[i];
-    more_flow = px[i-n_y];
+    div_t -= (i < n_s) ? px[i] : 0.0f;
+    more_flow = (i-n_y < n_s && i-n_y >= 0) ? px[i-n_y] : 0.0f;
     div_t += (x > 0) ? more_flow : 0.0f;
     
     if(i < n_s)
@@ -510,27 +516,31 @@ __global__ void calc_divergence_kernel(float* div, const float* px, const int n_
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     int i_temp = i;
     int x = i_temp % n_x; i_temp /= n_x;
-    
+
     //do x dimension (add 1)
-    float div_t = -px[i];
-    float more_flow = px[i-1];
+    float div_t = -((i < n_s) ? px[i] : 0.0f);
+    float more_flow = (i-1 < n_s && i-1 >= 0) ? px[i-1] : 0.0f;
     div_t += (x > 0) ? more_flow : 0.0f;
     
     if(i < n_s)
         div[i] = div_t;
 }
 
-__global__ void abs_constrain_kernel(float* b, const float* r, const int n_s){
-    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    
-    float value = b[i];
-    float constraint = r[i];
+
+__device__ void abs_constrain_device(const int i, float* b, const float* r, const int n_s){
+    float value = (i < n_s) ? b[i] : 0.0f;
+    float constraint = (i < n_s) ? r[i] : 0.0f;
     value = (value > constraint) ? constraint: value;
     value = (value < -constraint) ? -constraint: value;
     
     if(i < n_s)
         b[i] = value;
     
+}
+
+__global__ void abs_constrain_kernel(float* b, const float* r, const int n_s){
+    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    abs_constrain_device(i, b, r, n_s);
 }
 
 
@@ -542,8 +552,8 @@ void abs_constrain(const cudaStream_t& dev, float* buffer, const float* constrai
 __global__ void max_neg_constrain_kernel(float* b, const float* r, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
-    float value = b[i];
-    float constraint = r[i];
+    float value = (i < n_s) ? b[i] : 0.0f;
+    float constraint = (i < n_s) ? r[i] : 0.0f;
     value = (value > -constraint) ? -constraint: value;
     
     if(i < n_s)
@@ -558,94 +568,104 @@ void max_neg_constrain(const cudaStream_t& dev, float* buffer, const float* cons
 }
 
 
-__global__ void update_flows_kernel(const float* g, float* px, float* py, float* pz, const int n_x, const int n_y, const int n_z, const int n_s){
+__device__ void update_flows_kernel(const int i, const int x, const int y, const int z, const float* g, float* px, float* py, float* pz, const int n_x, const int n_y, const int n_z, const int n_s){
+    //for z
+    float g_t = ((i < n_s) ? g[i] : 0.0f);
+    float capacity = g_t - ((i+1 < n_s) ? g[i+1] : 0.0f);
+    float newflow = (i < n_s && z < n_z-1) ? pz[i] + capacity : 0.0f;
+    if(i < n_s)
+        pz[i] = newflow;
+    
+    //for y
+    capacity = g_t - ((i+n_z < n_s) ? g[i+n_z] : 0.0f);
+    newflow = (i < n_s && y < n_y-1) ? py[i] + capacity : 0.0f;
+    if(i < n_s)
+        py[i] = newflow;
+    
+    //for x
+    capacity = g_t - ((i+n_y*n_z < n_s) ? g[i+n_y*n_z] : 0.0f);
+    newflow = (i < n_s && x < n_x-1) ? px[i] + capacity : 0.0f;
+    if(i < n_s)
+        px[i] = newflow;
+}
+
+__device__ void update_flows_kernel(const int i, const int x, const int y, const float* g, float* px, float* py, const int n_x, const int n_y, const int n_s){
+    //for y
+    float g_t = ((i < n_s) ? g[i] : 0.0f);
+    float capacity = g_t - ((i+1 < n_s) ? g[i+1] : 0.0f);
+    float newflow = (i < n_s && y < n_y-1) ? py[i] + capacity : 0.0f;
+    if(i < n_s)
+        py[i] = newflow;
+    
+    //for x
+    capacity = g_t - ((i+n_y < n_s) ? g[i+n_y] : 0.0f);
+    newflow = (i < n_s && x < n_x-1) ? px[i] + capacity : 0.0f;
+    if(i < n_s)
+        px[i] = newflow;
+}
+
+__device__ void update_flows_kernel(const int i, const int x, const float* g, float* px, const int n_x, const int n_s){
+    //for x
+    float capacity = ((i < n_s) ? g[i] : 0.0f) - ((i+1 < n_s) ? g[i+1] : 0.0f);
+    float newflow = (i < n_s && x < n_x-1) ? px[i] + capacity : 0.0f;
+    if(i < n_s)
+        px[i] = newflow;
+}
+
+__global__ void update_spatial_flows_3d_kernel(const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     int i_temp = i;
     int z = i_temp % n_z; i_temp /= n_z;
     int y = i_temp % n_y; i_temp /= n_y;
     int x = i_temp % n_x; i_temp /= n_x;
     
-    //for z
-    float g_t = g[i];
-    float capacity = g_t-g[i+1];
-    float newflow = (z < n_z-1) ? pz[i] + capacity : 0.0f;
-    if(i < n_s)
-        pz[i] = newflow;
-    
-    //for y
-    capacity = g_t-g[i+n_z];
-    newflow = (y < n_y-1) ? py[i] + capacity : 0.0f;
-    if(i < n_s)
-        py[i] = newflow;
-    
-    //for x
-    capacity = g_t-g[i+n_y*n_z];
-    newflow = (x < n_x-1) ? px[i] + capacity : 0.0f;
-    if(i < n_s)
-        px[i] = newflow;
+    update_flows_kernel(i,x,y,z, g, px, py, pz, n_x, n_y, n_z, n_s);
+    abs_constrain_device(i, px, rx, n_s);
+    abs_constrain_device(i, py, ry, n_s);
+    abs_constrain_device(i, pz, rz, n_s);
 }
 
-__global__ void update_flows_kernel(const float* g, float* px, float* py, const int n_x, const int n_y, const int n_s){
+__global__ void update_spatial_flows_2d_kernel(const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     int i_temp = i;
     int y = i_temp % n_y; i_temp /= n_y;
     int x = i_temp % n_x; i_temp /= n_x;
     
-    //for y
-    float g_t = g[i];
-    float capacity = g_t-g[i+1];
-    float newflow = (y < n_y-1) ? py[i] + capacity : 0.0f;
-    if(i < n_s)
-        py[i] = newflow;
-    
-    //for x
-    capacity = g_t-g[i+n_y];
-    newflow = (x < n_x-1) ? px[i] + capacity : 0.0f;
-    if(i < n_s)
-        px[i] = newflow;
+    update_flows_kernel(i,x,y, g, px, py, n_x, n_y, n_s);
+    abs_constrain_device(i, px, rx, n_s);
+    abs_constrain_device(i, py, ry, n_s);
 }
 
-__global__ void update_flows_kernel(const float* g, float* px, const int n_x, const int n_s){
+__global__ void update_spatial_flows_1d_kernel(const float* g, float* div, float* px, const float* rx, const int n_x, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     int i_temp = i;
     int x = i_temp % n_x; i_temp /= n_x;
     
-    //for x
-    float capacity = g[i]-g[i+1];
-    float newflow = (x < n_x-1) ? px[i] + capacity : 0.0f;
-    if(i < n_s)
-        px[i] = newflow;
+    update_flows_kernel(i, x, g, px, n_x, n_s);
+    abs_constrain_device(i, px, rx, n_s);
 }
-
-
 
 void update_spatial_flows(const cudaStream_t& dev, const float* g, float* div, float* px, float* py, float* pz, const float* rx, const float* ry, const float* rz, const int n_x, const int n_y, const int n_z, const int n_s){
-    update_flows_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, px, py, pz, n_x, n_y, n_z, n_s);
-    abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(px, rx, n_s);
-    abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(py, ry, n_s);
-    abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(pz, rz, n_s);
+    update_spatial_flows_3d_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, div, px, py, pz, rx, ry, rz, n_x, n_y, n_z, n_s);
     calc_divergence_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(div, px, py, pz, n_x, n_y, n_z, n_s);
-    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
+    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows_3d_kernel launch failed with error");
 }
 void update_spatial_flows(const cudaStream_t& dev, const float* g, float* div, float* px, float* py, const float* rx, const float* ry, const int n_x, const int n_y, const int n_s){
-    update_flows_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, px, py, n_x, n_y, n_s);
-    abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(px, rx, n_s);
-    abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(py, ry, n_s);
+    update_spatial_flows_2d_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, div, px, py, rx, ry, n_x, n_y, n_s);
     calc_divergence_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(div, px, py, n_x, n_y, n_s);
-    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
+    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows_2d_kernel launch failed with error");
 }
 void update_spatial_flows(const cudaStream_t& dev, const float* g, float* div, float* px, const float* rx, const int n_x, const int n_s){
-    update_flows_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, px, n_x, n_s);
-    abs_constrain_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(px, rx, n_s);
+    update_spatial_flows_1d_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, div, px, rx, n_x, n_s);
     calc_divergence_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(div, px, n_x, n_s);
-    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows launch failed with error");
+    if(CHECK_ERRORS) check_error(dev, "update_spatial_flows_1d_kernel launch failed with error");
 }
 
 __global__ void calc_capacity_potts_kernel(float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float ps_t = ps[i];
+    float ps_t = (i < n_s) ? ps[i] : 0.0f;
     for(int c = 0; c < n_c; c++){
-        float g_t = div[i+c*n_s] + pt[i+c*n_s] - ps_t - icc * u[i+c*n_s];
+        float g_t = (i+c*n_s < n_c*n_s) ? div[i+c*n_s] + pt[i+c*n_s] - ps_t - icc * u[i+c*n_s] : 0.0f;
         g_t *= tau;
         if(i < n_s)
             g[i+c*n_s] = g_t;
@@ -659,7 +679,7 @@ void calc_capacity_potts(const cudaStream_t& dev, float* g, const float* div, co
 
 __global__ void calc_capacity_binary_kernel(float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const float icc, const float tau){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float g_t = div[i] + pt[i] - ps[i] - icc * u[i];
+    float g_t = (i < n_s) ? div[i] + pt[i] - ps[i] - icc * u[i] : 0.0f;
     g_t *= tau;
 	if(i < n_s)
 		g[i] = g_t;
@@ -673,7 +693,7 @@ void calc_capacity_binary(const cudaStream_t& dev, float* g, const float* div, c
 __global__ void calc_capacity_potts_source_separate_kernel(float* g, const float* div, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     for(int c = 0; c < n_c; c++){
-        float g_t = div[i+c*n_s] + pt[i+c*n_s] - icc * u[i+c*n_s];
+        float g_t = (i+c*n_s < n_c*n_s) ? div[i+c*n_s] + pt[i+c*n_s] - icc * u[i+c*n_s] : 0.0f;
         g_t *= tau;
         if(i < n_s)
             g[i+c*n_s] = g_t;
@@ -776,113 +796,9 @@ float max_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s)
     return max_value;
 }
 
-
-__global__ void populate_data_gradient_kernel(const float* g, const float* u, float* output, const int n_s){
-    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float g_t = g[i];
-    float u_t = u[i];
-    bool not_stigma = ( ((u_t >= 1.0f - epsilon) && (g_t < 0.0f)) || ((u_t <= epsilon) && (g_t > 0.0f)) );
-    float grad = not_stigma ? 0.0f: g_t;
-    if( i < n_s )
-        output[i] = grad;
-}
-
-
-void populate_data_gradient(const cudaStream_t& dev, const float* g, const float* u, float* output, const int n_s){
-    populate_data_gradient_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, u, output, n_s);
-    if(CHECK_ERRORS) check_error(dev, "populate_data_gradient launch failed with error");
-}
-
-
-__device__ float figure_out_conditions(const float g_t, const float gn_t, const float u_t, const float un_t){
-    float sign = 0.0f;
-    sign = ( u_t > un_t + epsilon) ?  1.0f: sign;
-    sign = ( u_t + epsilon < un_t) ? -1.0f: sign;
-    float eq = (sign == 0.0f) ? 1.0f: 0.0f;
-    float tau0_0 = (u_t  <= epsilon      && g_t > 0.0f) ? 1.0f: 0.0f;
-    float tau1_0 = (u_t  >= 1.0f-epsilon && g_t < 0.0f) ? 1.0f: 0.0f;
-    float tau0_1 = (un_t <= epsilon      && gn_t > 0.0f) ? 1.0f: 0.0f;
-    float tau1_1 = (un_t >= 1.0f-epsilon && gn_t < 0.0f) ? 1.0f: 0.0f;
-    float stigma_0 = ((1.0f - tau0_0) * (1.0f - tau1_0));
-    float stigma_1 = ((1.0f - tau0_1) * (1.0f - tau1_1));
-    float grad = stigma_0 * stigma_1 * (sign*(gn_t-g_t) + eq*abs(gn_t-g_t))
-               + stigma_1 * (tau1_0 - tau0_0) * gn_t
-               + stigma_0 * (tau1_1 - tau0_1) * g_t;
-    return grad;
-}
-
-
-__global__ void populate_reg_gradient_kernel(const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_s){
-    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    int i_temp = i;
-    int z = i_temp % n_z; i_temp /= n_z;
-    int y = i_temp % n_y; i_temp /= n_y;
-    int x = i_temp % n_x; i_temp /= n_x;
-    
-    //do z first
-    float g_t = g[i];
-    float u_t = u[i];
-    float gn_t = g[i+1];
-    float un_t = u[i+1];
-    float grad = figure_out_conditions(g_t, gn_t, u_t, un_t);
-    grad = (z == n_z-1) ? 0.0f: grad;
-    if( i < n_s )
-        g_rz[i] = grad;
-    
-    //do y
-    g_t = g[i];
-    u_t = u[i];
-    gn_t = g[i+n_z];
-    un_t = u[i+n_z];
-    grad = figure_out_conditions(g_t, gn_t, u_t, un_t);
-    grad = (y == n_y-1) ? 0.0f: grad;
-    if( i < n_s )
-        g_ry[i] = grad;
-    
-    //do x
-    g_t = g[i];
-    u_t = u[i];
-    gn_t = g[i+n_z*n_y];
-    un_t = u[i+n_z*n_y];
-    grad = figure_out_conditions(g_t, gn_t, u_t, un_t);
-    grad = (x == n_x-1) ? 0.0f: grad;
-    if( i < n_s )
-        g_rx[i] = grad;
-}
-
-
-
-void populate_reg_gradients(const cudaStream_t& dev, const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c){
-    int n_s = n_x*n_y*n_z*n_c;
-    populate_reg_gradient_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, u, g_rx, g_ry, g_rz, n_x, n_y, n_z, n_s);
-    if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
-}
-
-
-__global__ void softmax_gradient_kernel(const float* g, const float* u, float* g_d, const int n_s, const int n_c){
-    int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    for(int c = 0; c < n_c; c++){
-        float derivative = 0.0f;
-        float u_c1 = u[c*n_s+i];
-        for(int c2 = 0; c2 < n_c; c2++){
-            float u_c2 = u[c2*n_s+i];
-            derivative += u_c1 * ( c == c2 ? (1.0f-u_c2) : (-u_c2) ) * g[c2*n_s+i];
-        }
-        if(i < n_s)
-            g_d[c*n_s+i] = derivative;
-    }
-}
-
-
-
-void softmax_gradient(const cudaStream_t& dev, const float* g, const float* u, float* g_d, const int n_s, const int n_c){
-    softmax_gradient_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(g, u, g_d, n_s, n_c);
-    if(CHECK_ERRORS) check_error(dev, "populate_reg_gradient launch failed with error");
-}
-
 __global__ void copy_kernel(const float* source, float* dest, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = source[i];
+    float val = (i < n_s) ? source[i] : 0.0f;
     if(i < n_s)
         dest[i] = val;
 }
@@ -895,7 +811,7 @@ void copy_buffer(const cudaStream_t& dev, const float* source, float* dest, cons
 
 __global__ void copy_clean_kernel(const float* source, float* dest, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = source[i];
+    float val = (i < n_s) ? source[i] : 0.0f;
     val = isfinite(val) ? val: 0.0f;
     if(i < n_s)
         dest[i] = val;
@@ -908,7 +824,7 @@ void copy_buffer_clean(const cudaStream_t& dev, const float* source, float* dest
 
 __global__ void copy_clip_kernel(const float* source, float* dest, const int n_s, const float clip){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = source[i];
+    float val = (i < n_s) ? source[i] : 0.0f;
     val = isfinite(val) ? val: 0.0f;
     val = val < -clip ? -clip: val;
     val = val >  clip ?  clip: val;
@@ -923,7 +839,7 @@ void copy_buffer_clip(const cudaStream_t& dev, const float* source, float* dest,
 
 __global__ void inc_kernel(const float* inc, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = acc[i];
+    float val = (i < n_s) ? acc[i] : 0.0f;
     float increment = inc[i];
     val += increment;
     if(i < n_s)
@@ -937,8 +853,8 @@ void inc_buffer(const cudaStream_t& dev, const float* inc, float* acc, const int
 
 __global__ void inc_inc_minc_kernel(const float* inc1, const float* inc2, const float* minc, const float multi, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = acc[i];
-    float increment = inc1[i] + inc2[i] + multi*minc[i];
+    float val = (i < n_s) ? acc[i] : 0.0f;
+    float increment = ((i < n_s) ? inc1[i]*inc2[i] : 0.0f); + multi*((i < n_s) ? minc[i] : 0.0f);
     val += increment;
     if(i < n_s)
         acc[i] = val;
@@ -951,8 +867,8 @@ void inc_inc_minc_buffer(const cudaStream_t& dev, const float* inc1, const float
 
 __global__ void ninc_kernel(const float* inc, float* acc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = acc[i];
-    float increment = inc[i];
+    float val = (i < n_s) ? acc[i] : 0.0f;
+    float increment = (i < n_s) ? inc[i] : 0.0f;
     val -= increment;
     if(i < n_s)
         acc[i] = val;
@@ -965,8 +881,8 @@ void ninc_buffer(const cudaStream_t& dev, const float* inc, float* acc, const in
 
 __global__ void inc_mult_kernel(const float* inc, float* acc, const int n_s, const float multi){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = acc[i];
-    float increment = multi*inc[i];
+    float val = (i < n_s) ? acc[i] : 0.0f;
+    float increment = multi * ((i < n_s) ? inc[i] : 0.0f);
     val += increment;
     if(i < n_s)
         acc[i] = val;
@@ -979,8 +895,8 @@ void inc_mult_buffer(const cudaStream_t& dev, const float* inc, float* acc, cons
 
 __global__ void inc2_mult_kernel(const float* inc_m1, const float* inc_m2, float* acc, const int n_s, const float multi){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float val = acc[i];
-    float increment = multi*inc_m1[i]*inc_m2[i];
+    float val = (i < n_s) ? acc[i] : 0.0f;
+    float increment = multi*((i < n_s) ? inc_m1[i]*inc_m2[i] : 0.0f);
     val += increment;
     if(i < n_s)
         acc[i] = val;
@@ -1080,9 +996,9 @@ __global__ void softmax_kernel(const float* e1, float* u, const int n_s, const i
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
     //find maxmum cost
-    float max_cost = e1[i];
+    float max_cost = (i < n_c*n_s) ? e1[i] : -1.0/0.0f;
     for(int c = 1; c < n_c; c++){
-        float cost = e1[c*n_s+i];
+        float cost = (c*n_s+i < n_c*n_s) ? e1[c*n_s+i] : 0.0f;
         if(cost > max_cost)
             max_cost = cost;
     }
@@ -1090,11 +1006,11 @@ __global__ void softmax_kernel(const float* e1, float* u, const int n_s, const i
     //find accumulator
     float accum = 0.0f;
     for(int c = 0; c < n_c; c++)
-        accum += exp(e1[c*n_s+i]-max_cost);
+        accum += exp( ((c*n_s+i < n_c*n_s) ? e1[c*n_s+i] : 0.0f) -max_cost);
     
     //apply and normalize
     for(int c = 0; c < n_c; c++){
-        float value = exp(e1[c*n_s+i]-max_cost) / accum;
+        float value = exp( ((c*n_s+i < n_c*n_s) ? e1[c*n_s+i] : 0.0f) -max_cost) / accum;
         if(i < n_s)
             u[c*n_s+i] = value;
     }
@@ -1104,9 +1020,9 @@ __global__ void softmax_kernel(const float* e1, const float* e2, float* u, const
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
     //find maxmum cost
-    float max_cost = e1[i]+e2[i];
+    float max_cost = (i < n_c*n_s) ?  (e1[i]+e2[i]) : -1.0/0.0f;
     for(int c = 1; c < n_c; c++){
-        float cost = e1[c*n_s+i]+e2[c*n_s+i];
+        float cost = (c*n_s+i < n_c*n_s) ? (e1[c*n_s+i]+e2[c*n_s+i]) : 0.0f;
         if(cost > max_cost)
             max_cost = cost;
     }
@@ -1114,11 +1030,11 @@ __global__ void softmax_kernel(const float* e1, const float* e2, float* u, const
     //find accumulator
     float accum = 0.0f;
     for(int c = 0; c < n_c; c++)
-        accum += exp(e1[c*n_s+i]+e2[c*n_s+i]-max_cost);
+        accum += exp(((c*n_s+i < n_c*n_s) ? (e1[c*n_s+i]+e2[c*n_s+i]) : 0.0f)-max_cost);
     
     //apply and normalize
     for(int c = 0; c < n_c; c++){
-        float value = exp(e1[c*n_s+i]+e2[c*n_s+i]-max_cost) / accum;
+        float value = exp(((c*n_s+i < n_c*n_s) ? (e1[c*n_s+i]+e2[c*n_s+i]) : 0.0f)-max_cost) / accum;
         //value = (value < epsilon) ? epsilon : value;
         //value = (value > 1.0f-epsilon) ? 1.0f-epsilon : value;
         if(i < n_s)
@@ -1171,7 +1087,7 @@ void neg_softmax(const cudaStream_t& dev, const float* e, float* u, const int n_
 __global__ void sigmoid_kernel(const float* e1, const float* e2, float* u, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
-    float cost = e1[i]+e2[i];
+    float cost = ((i < n_s) ? e1[i] : 0.0f) + ((i < n_s) ? e2[i] : 0.0f);
 	float value = 1.0f / (1.0f + exp(-cost));
 	if(i < n_s)
 		u[i] = value;
@@ -1180,7 +1096,7 @@ __global__ void sigmoid_kernel(const float* e1, const float* e2, float* u, const
 __global__ void sigmoid_kernel(const float* e1, float* u, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
-    float cost = e1[i];
+    float cost = (i < n_s) ? e1[i] : 0.0f;
 	float value = 1.0f / (1.0f + exp(-cost));
 	if(i < n_s)
 		u[i] = value;
@@ -1218,22 +1134,22 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
     int n_s = n_x*n_y*n_z;
     for(int c = 0; c < n_c; c++){
         //for z
-        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
-        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
         float derivative = (z < n_z-1) ? up_contra + dn_contra : 0.0f;
         if(i < n_s)
             g_rz[c*n_s+i] = derivative;
         
         //for y
-        up_contra = (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i];
-        dn_contra = (2.0f*u[c*n_s+i] -1.0f)* g[c*n_s+i+n_z];
+        up_contra = (c*n_s+i+n_z < n_c*n_s) ? (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_z < n_c*n_s) ? (2.0f*u[c*n_s+i] -1.0f)* g[c*n_s+i+n_z] : 0.0f;
         derivative = (y < n_y-1) ? up_contra + dn_contra : 0.0f;
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i];
-        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y];
+        up_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y] : 0.0f;
         derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
@@ -1248,15 +1164,15 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
     int n_s = n_x*n_y;
     for(int c = 0; c < n_c; c++){
         //for y
-        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
-        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
         float derivative = (y < n_y-1) ? up_contra + dn_contra : 0.0f;
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i];
-        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y];
+        up_contra = (c*n_s+i+n_y < n_c*n_s) ? (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_y < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y] : 0.0f;
         derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
@@ -1270,8 +1186,8 @@ __global__ void populate_reg_mean_gradients_kernel(const float* g, const float* 
     int n_s = n_x;
     for(int c = 0; c < n_c; c++){
         //for x
-        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
-        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
         float derivative = (x < n_x-1) ? up_contra + dn_contra: 0.0f;
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
@@ -1305,23 +1221,23 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     int n_s = n_x*n_y*n_z;
     for(int c = 0; c < n_c; c++){
         //for z
-        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
-        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
-        float derivative = g_rz[c*n_s+i] + tau*(( (z < n_z-1) ? up_contra + dn_contra : 0.0f));
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
+        float derivative = ((c*n_s+i < n_c*n_s) ? g_rz[c*n_s+i] : 0.0f) + tau*(( (z < n_z-1) ? up_contra + dn_contra : 0.0f));
         if(i < n_s)
             g_rz[c*n_s+i] = derivative;
         
         //for y
-        up_contra = (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i];
-        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z];
-        derivative = g_ry[c*n_s+i] + tau*(( (y < n_y-1) ? up_contra + dn_contra : 0.0f));
+        up_contra = (c*n_s+i+n_z < n_c*n_s) ? (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_z < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z] : 0.0f;
+        derivative = ((c*n_s+i < n_c*n_s) ? g_ry[c*n_s+i] : 0.0f) + tau*(( (y < n_y-1) ? up_contra + dn_contra : 0.0f));
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i];
-        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y];
-        derivative = g_rx[c*n_s+i] + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
+        up_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y] : 0.0f;
+        derivative = ((c*n_s+i < n_c*n_s) ? g_rx[c*n_s+i] : 0.0f) + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
     }
@@ -1336,16 +1252,16 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     for(int c = 0; c < n_c; c++){
         
         //for y
-        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
-        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
-        float derivative = g_ry[c*n_s+i] + tau*(( (y < n_y-1) ? up_contra + dn_contra : 0.0f));
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
+        float derivative = ((c*n_s+i < n_c*n_s) ? g_ry[c*n_s+i] : 0.0f) + tau*(( (y < n_y-1) ? up_contra + dn_contra : 0.0f));
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i];
-        dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y];
-        derivative = g_rx[c*n_s+i] + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
+        up_contra = (c*n_s+i+n_y < n_c*n_s) ? (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_y < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y] : 0.0f;
+        derivative = ((c*n_s+i < n_c*n_s) ? g_rx[c*n_s+i] : 0.0f) + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
     }
@@ -1358,9 +1274,9 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     int n_s = n_x;
     for(int c = 0; c < n_c; c++){
         //for x
-        float up_contra = (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i];
-        float dn_contra = (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1];
-        float derivative = g_rx[c*n_s+i] + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
+        float derivative = ((c*n_s+i < n_c*n_s) ? g_rx[c*n_s+i] : 0.0f) + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
     }
@@ -1386,8 +1302,8 @@ void populate_reg_mean_gradients_and_add(const cudaStream_t& dev, const float* g
 
 __global__ void change_to_diff_kernel(float* t, float* d, const int n_s, const float tau){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float old_val = t[i];
-    float new_val = d[i];
+    float old_val = (i < n_s) ? t[i] : 0.0f;
+    float new_val = (i < n_s) ? d[i] : 0.0f;
     float diff = tau*(new_val-old_val);
     new_val = old_val + diff;
     if(i < n_s){
@@ -1409,7 +1325,7 @@ __global__ void parity_mask_kernel(float* buffer, const int n_x, const int n_y, 
     int x = i_temp % n_x;
     int n_s = n_x*n_y*n_z*n_c;
     
-    float value = buffer[i];
+    float value = (i < n_s) ? buffer[i] : 0.0f;
     value *= (parity ^ x ^ y ^ z) & 1;
     if(i < n_s)
         buffer[i] = value;
@@ -1422,7 +1338,7 @@ __global__ void parity_mask_kernel(float* buffer, const int n_x, const int n_y, 
     int x = i_temp % n_x;
     int n_s = n_x*n_y*n_c;
     
-    float value = buffer[i];
+    float value = (i < n_s) ? buffer[i] : 0.0f;
     value *= (parity ^ x ^ y) & 1;
     if(i < n_s)
         buffer[i] = value;
@@ -1434,7 +1350,7 @@ __global__ void parity_mask_kernel(float* buffer, const int n_x, const int n_c, 
     int x = i_temp % n_x;
     int n_s = n_x*n_c;
     
-    float value = buffer[i];
+    float value = (i < n_s) ? buffer[i] : 0.0f;
     value *= (parity ^ x) & 1;
     if(i < n_s)
         buffer[i] = value;
@@ -1448,8 +1364,8 @@ __global__ void parity_mask_kernel(float* buffer, const float* other, const int 
     int x = i_temp % n_x;
     int n_s = n_x*n_y*n_z*n_c;
     
-    float value = buffer[i];
-    float other_value = other[i];
+    float value = (i < n_s) ? buffer[i] : 0.0f;
+    float other_value =  (i < n_s) ? other[i] : 0.0f;
     value *= (parity ^ x ^ y ^ z) & 1;
     value += other_value * ((parity ^ x ^ y ^ z ^ 1) & 1);
     if(i < n_s)
@@ -1463,8 +1379,8 @@ __global__ void parity_mask_kernel(float* buffer, const float* other, const int 
     int x = i_temp % n_x;
     int n_s = n_x*n_y*n_c;
     
-    float value = buffer[i];
-    float other_value = other[i];
+    float value = (i < n_s) ? buffer[i] : 0.0f;
+    float other_value =  (i < n_s) ? other[i] : 0.0f;
     value *= (parity ^ x ^ y) & 1;
     value += other_value * ((parity ^ x ^ y ^1) & 1);
     if(i < n_s)
@@ -1477,8 +1393,8 @@ __global__ void parity_mask_kernel(float* buffer, const float* other, const int 
     int x = i_temp % n_x;
     int n_s = n_x*n_c;
     
-    float value = buffer[i];
-    float other_value = other[i];
+    float value = (i < n_s) ? buffer[i] : 0.0f;
+    float other_value =  (i < n_s) ? other[i] : 0.0f;
     value *= (parity ^ x) & 1;
     value += other_value * ((parity ^ x ^ 1) & 1);
     if(i < n_s)
@@ -1516,14 +1432,16 @@ void parity_mask(const cudaStream_t& dev, float* buffer, const float* other, con
     if(CHECK_ERRORS) check_error(dev, "parity_mask (1D -merge) launch failed with error");
 }
 
-__device__ float get_effective_reg_kernel_up(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){
-        float ut = 2.0f*u[c*n_s+i+a]-1.0f;
-        float rt = r[c*n_s+i];
+__device__ float get_effective_reg_kernel_up(const float* u, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d, const int n_d){
+        float ut = (c*n_s+i+a < n_c*n_s) ? u[c*n_s+i+a] : 0.0f;
+        ut = 2.0f*ut -1.0f;
+        float rt = (c*n_s+i < n_c*n_s) ? r[c*n_s+i] : 0.0f;
         return (d < n_d-1) ? ut*rt : 0.0f;
 }
-__device__ float get_effective_reg_kernel_dn(const float* u, const float* r, const int c, const int n_s, const int i, const int a, const int d){
-        float ut = 2.0f*u[c*n_s+i-a]-1.0f;
-        float rt = r[c*n_s+i-a];
+__device__ float get_effective_reg_kernel_dn(const float* u, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d){
+        float ut = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? u[c*n_s+i-a] : 0.0f;
+        ut = 2.0f*ut -1.0f;
+        float rt = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? r[c*n_s+i-a] : 0.0f;
         return (d > 0) ? ut*rt : 0.0f;
 }
 
@@ -1539,16 +1457,16 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
         float reg_tot = 0.0f;
 
         //z direction
-        reg_tot += get_effective_reg_kernel_up(u, rz, c, n_s, i, 1, z, n_z);
-        reg_tot += get_effective_reg_kernel_dn(u, rz, c, n_s, i, 1, z);
+        reg_tot += get_effective_reg_kernel_up(u, rz, c, n_c, n_s, i, 1, z, n_z);
+        reg_tot += get_effective_reg_kernel_dn(u, rz, c, n_c, n_s, i, 1, z);
 
         //y direction
-        reg_tot += get_effective_reg_kernel_up(u, ry, c, n_s, i, n_z, y, n_y);
-        reg_tot += get_effective_reg_kernel_dn(u, ry, c, n_s, i, n_z, y);
+        reg_tot += get_effective_reg_kernel_up(u, ry, c, n_c, n_s, i, n_z, y, n_y);
+        reg_tot += get_effective_reg_kernel_dn(u, ry, c, n_c, n_s, i, n_z, y);
 
         //x direction
-        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_s, i, n_z*n_y, x, n_x);
-        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_s, i, n_z*n_y, x);
+        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_c, n_s, i, n_z*n_y, x, n_x);
+        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_c, n_s, i, n_z*n_y, x);
         
         if(i < n_s)
             r_eff[c*n_s+i] = reg_tot;
@@ -1566,12 +1484,12 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
         float reg_tot = 0.0f;
 
         //y direction
-        reg_tot += get_effective_reg_kernel_up(u, ry, c, n_s, i, 1, y, n_y);
-        reg_tot += get_effective_reg_kernel_dn(u, ry, c, n_s, i, 1, y);
+        reg_tot += get_effective_reg_kernel_up(u, ry, c, n_c, n_s, i, 1, y, n_y);
+        reg_tot += get_effective_reg_kernel_dn(u, ry, c, n_c, n_s, i, 1, y);
 
         //x direction
-        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_s, i, n_y, x, n_x);
-        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_s, i, n_y, x);
+        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_c, n_s, i, n_y, x, n_x);
+        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_c, n_s, i, n_y, x);
         
         if(i < n_s)
             r_eff[c*n_s+i] = reg_tot;
@@ -1585,8 +1503,8 @@ __global__ void get_effective_reg_kernel(float* r_eff, const float* u, const flo
         float reg_tot = 0.0f;
         
         //x direction
-        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_x, i, 1, i, n_x);
-        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_x, i, 1, i);
+        reg_tot += get_effective_reg_kernel_up(u, rx, c, n_c, n_x, i, 1, i, n_x);
+        reg_tot += get_effective_reg_kernel_dn(u, rx, c, n_c, n_x, i, 1, i);
         
         if(i < n_x)
             r_eff[c*n_x+i] = reg_tot;
@@ -1611,8 +1529,8 @@ void get_effective_reg(const cudaStream_t& dev, float* r_eff, const float* u, co
 
 __global__ void add_then_store_kernel(const float* addend1, const float* addend2, float* sum, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float a1 = addend1[i];
-    float a2 = addend2[i];
+    float a1 = (i < n_s) ? addend1[i] : 0.0f;
+    float a2 = (i < n_s) ? addend2[i] : 0.0f;
     float res = a1+a2;
     if(i < n_s)
         sum[i] = res;   
@@ -1625,8 +1543,8 @@ void add_then_store(const cudaStream_t& dev, const float* addend1, const float* 
 
 __global__ void add_then_store_kernel_2(const float* addend1, const float* addend2, float* sum1, float* sum2, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-    float a1 = addend1[i];
-    float a2 = addend2[i];
+    float a1 = (i < n_s) ? addend1[i] : 0.0f;
+    float a2 = (i < n_s) ? addend2[i] : 0.0f;
     float res = a1+a2;
     if(i < n_s){
         sum1[i] = res;   
@@ -1644,13 +1562,14 @@ __global__ void untangle_softmax_kernel(const float* du_i, const float* u, float
     
     for(int c = 0; c < n_c; c++){
         float new_grad = 0.0f;
-        float uc = u[c*n_s+i];
+        float uc = (c*n_s+i < n_s*n_c) ? u[c*n_s+i] : 0.0f;
         for(int a = 0; a < n_c; a++){
-            float da = du_i[a*n_s+i];
+            float da = (a*n_s+i < n_s*n_c) ? du_i[a*n_s+i] : 0.0f;
+            float dua = (a*n_s+i < n_s*n_c) ? u[a*n_s+i] : 0.0f;
             if(c == a)
                 new_grad += da*(1.0f-uc);
             else
-                new_grad -= da*u[a*n_s+i];
+                new_grad -= da*dua;
         }
         new_grad *= uc;
         if( i < n_s )
@@ -1669,7 +1588,9 @@ void untangle_softmax(const cudaStream_t& dev, const float* du_i, const float* u
 __global__ void untangle_sigmoid_kernel(const float* du_i, const float* u, float* loc, const int n_s){
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     
-	float new_grad = du_i[i]*u[i]*(1.0f-u[i]);
+    float du_t = (i < n_s) ? du_i[i] : 0.0f;
+    float u_t = (i < n_s) ? u[i] : 0.0f;
+	float new_grad = du_t*u_t*(1.0f-u_t);
 	if( i < n_s )
         loc[i] = new_grad;
     
@@ -1680,14 +1601,14 @@ void untangle_sigmoid(const cudaStream_t& dev, const float* du_i, const float* u
     if(CHECK_ERRORS) check_error(dev, "process_grad_binary launch failed with error");
 }
 
-__device__ float get_gradient_for_u_kernel_dn(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d){
-    float multiplier = dy[c*n_s+i-a];
-    float inc = 2.0f*multiplier*r[c*n_s+i-a];
+__device__ float get_gradient_for_u_kernel_dn(const float* dy, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d){
+    float multiplier = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? dy[c*n_s+i-a] : 0.0f;
+    float inc = 2.0f * ((c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? multiplier*r[c*n_s+i-a] : 0.0f );
     return (d > 0) ? inc: 0.0f;
 }
-__device__ float get_gradient_for_u_kernel_up(const float* dy, const float* r, const int c, const int n_s, const int i, const int a, const int d, const int n_d){
-    float multiplier = dy[c*n_s+i+a];
-    float inc = 2.0f*multiplier*r[c*n_s+i];
+__device__ float get_gradient_for_u_kernel_up(const float* dy, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d, const int n_d){
+    float multiplier = (c*n_s+i+a < n_c*n_s) ? dy[c*n_s+i+a] : 0.0f;
+    float inc = 2.0f*((c*n_s+i < n_c*n_s) ? multiplier*r[c*n_s+i] : 0.0f);
     return (d < n_d-1) ? inc: 0.0f;
 }
 
@@ -1702,16 +1623,16 @@ __global__ void get_gradient_for_u_kernel(const float* dy, float* du, const floa
     for(int c = 0; c < n_c; c++){
         float grad_val = 0.0f;
             
-        grad_val += get_gradient_for_u_kernel_dn(dy, rz, c, n_s, i, 1, z);
-        grad_val += get_gradient_for_u_kernel_up(dy, rz, c, n_s, i, 1, z, n_z);
+        grad_val += get_gradient_for_u_kernel_dn(dy, rz, c, n_c, n_s, i, 1, z);
+        grad_val += get_gradient_for_u_kernel_up(dy, rz, c, n_c, n_s, i, 1, z, n_z);
         
-        grad_val += get_gradient_for_u_kernel_dn(dy, ry, c, n_s, i, n_z, y);
-        grad_val += get_gradient_for_u_kernel_up(dy, ry, c, n_s, i, n_z, y, n_y);
+        grad_val += get_gradient_for_u_kernel_dn(dy, ry, c, n_c, n_s, i, n_z, y);
+        grad_val += get_gradient_for_u_kernel_up(dy, ry, c, n_c, n_s, i, n_z, y, n_y);
         
-        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_s, i, n_z*n_y, x);
-        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_s, i, n_z*n_y, x, n_x);
+        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_c, n_s, i, n_z*n_y, x);
+        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_c, n_s, i, n_z*n_y, x, n_x);
         
-		float old_grad = du[c*n_s+i];
+		float old_grad = (c*n_s+i < n_c*n_s) ? du[c*n_s+i] : 0.0f;
 		float new_grad = tau*grad_val + (1-tau)*old_grad;
         if(i < n_s)
             du[c*n_s+i] = new_grad;
@@ -1728,13 +1649,13 @@ __global__ void get_gradient_for_u_kernel(const float* dy, float* du, const floa
     for(int c = 0; c < n_c; c++){
         float grad_val = 0.0f;
         
-        grad_val += get_gradient_for_u_kernel_dn(dy, ry, c, n_s, i, 1, y);
-        grad_val += get_gradient_for_u_kernel_up(dy, ry, c, n_s, i, 1, y, n_y);
+        grad_val += get_gradient_for_u_kernel_dn(dy, ry, c, n_c, n_s, i, 1, y);
+        grad_val += get_gradient_for_u_kernel_up(dy, ry, c, n_c, n_s, i, 1, y, n_y);
         
-        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_s, i, n_y, x);
-        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_s, i, n_y, x, n_x);
+        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_c, n_s, i, n_y, x);
+        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_c, n_s, i, n_y, x, n_x);
         
-		float old_grad = du[c*n_s+i];
+		float old_grad = (c*n_s+i < n_c*n_s) ? du[c*n_s+i] : 0.0f;
 		float new_grad = tau*grad_val + (1-tau)*old_grad;
         if(i < n_s)
             du[c*n_s+i] = new_grad;
@@ -1747,10 +1668,10 @@ __global__ void get_gradient_for_u_kernel(const float* dy, float* du, const floa
     for(int c = 0; c < n_c; c++){
         float grad_val = 0.0f;
         
-        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_x, i, 1, i);
-        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_x, i, 1, i, n_x);
+        grad_val += get_gradient_for_u_kernel_dn(dy, rx, c, n_c, n_x, i, 1, i);
+        grad_val += get_gradient_for_u_kernel_up(dy, rx, c, n_c, n_x, i, 1, i, n_x);
         
-		float old_grad = du[c*n_x+i];
+		float old_grad = (c*n_x+i < n_c*n_x) ? du[c*n_x+i] : 0.0f;
 		float new_grad = tau*grad_val + (1-tau)*old_grad;
         if(i < n_x)
             du[c*n_x+i] = new_grad;
@@ -1938,7 +1859,7 @@ void taylor_series_grad_channels_last(const cudaStream_t& dev, const float* inpu
 
 __global__ void init_flows_binary_kernel(const float* data, float* ps, float* pt, const int n_s){
 	int i = blockIdx.x * NUM_THREADS + threadIdx.x;
-	float d_t = data[i];
+	float d_t = (i < n_s) ? data[i] : 0.0f;
 	float ps_t = (d_t > 0.0f) ? d_t : 0.0f ;
 	float pt_t = (d_t < 0.0f) ? -d_t : 0.0f ;
 	if(i < n_s){
@@ -1949,6 +1870,35 @@ __global__ void init_flows_binary_kernel(const float* data, float* ps, float* pt
 }
 
 void init_flows_binary(const cudaStream_t& dev, const float* data, float* ps, float* pt, const int n_s){
-	init_flows_binary_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(data, ps, pt, n_s);
+	init_flows_binary_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), (n_s > NUM_THREADS) ? NUM_THREADS : n_s, 0, dev>>>(data, ps, pt, n_s);
     if(CHECK_ERRORS) check_error(dev, "init_flows_binary_kernel launch failed with error");
+}
+
+__global__ void init_flows_potts_kernel(const float* data, float* ps, float* pt, float* u, const int n_s, const int n_c){
+	int i = blockIdx.x * NUM_THREADS + threadIdx.x;
+    
+    float min = -((i < n_s) ? data[i] : -1.0f/0.0f);
+    for(int c = 1; c < n_c; c++){
+        float d_t = - ((i < n_s) ? data[c*n_s+i] : 0.0f);
+        if(d_t < min)
+            min = d_t;
+    }
+    
+    if(i < n_s)
+        ps[i] = min;
+    
+    for(int c = 0; c < n_c; c++){
+        float d_t = - ((i < n_s) ? data[c*n_s+i] : 0.0f);
+        float u_t = (d_t == min) ? 1.0f: 0.0f;
+        if(i < n_s){
+            pt[c*n_s+i] = min;
+            u[c*n_s+i] = u_t;
+        }
+    }
+	
+}
+
+void init_flows_potts(const cudaStream_t& dev, const float* data, float* ps, float* pt, float* u, const int n_s, const int n_c){
+	init_flows_potts_kernel<<<((n_s+NUM_THREADS-1)/NUM_THREADS), NUM_THREADS, 0, dev>>>(data, ps, pt, u, n_s, n_c);
+    if(CHECK_ERRORS) check_error(dev, "init_flows_potts_kernel launch failed with error");
 }

@@ -9,7 +9,7 @@
 
 
 int HMF_AUGLAG_GPU_SOLVER_3D::min_iter_calc() {
-    return std::max(n_x,std::max(n_y,n_z))+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x+n_y+n_z);
 }
 
 void HMF_AUGLAG_GPU_SOLVER_3D::clear_spatial_flows(){

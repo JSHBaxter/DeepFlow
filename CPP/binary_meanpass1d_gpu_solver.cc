@@ -1,9 +1,10 @@
 
 #include "binary_meanpass1d_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <cmath> 
 
 int BINARY_MEANPASS_GPU_SOLVER_1D::min_iter_calc(){
-	return n_x;
+	return (int) std::sqrt(n_x);
 }
 
 void BINARY_MEANPASS_GPU_SOLVER_1D::init_vars(){}
@@ -39,7 +40,7 @@ rx(rx_cost)
 {}
 
 int BINARY_MEANPASS_GPU_GRADIENT_1D::min_iter_calc(){
-	return n_x;
+	return (int) std::sqrt(n_x);
 }
 
 void BINARY_MEANPASS_GPU_GRADIENT_1D::init_vars(){

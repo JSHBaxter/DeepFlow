@@ -7,13 +7,12 @@
 #include <algorithm>
 
 int POTTS_AUGLAG_CPU_SOLVER_2D::min_iter_calc(){
-    return std::max(n_x,n_y);
+    return (int) std::sqrt(n_x+n_y);
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_2D::clear_spatial_flows(){
-    px = new float[n_s*n_c];
-    py = new float[n_s*n_c];
-    clear(px, py, n_s*n_c);
+    clear(px, n_s*n_c);
+    clear(py, n_s*n_c);
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_2D::update_spatial_flow_calc(){
@@ -24,8 +23,11 @@ void POTTS_AUGLAG_CPU_SOLVER_2D::update_spatial_flow_calc(){
 }
 
 void POTTS_AUGLAG_CPU_SOLVER_2D::clean_up(){
-    if( px ) delete px; px = 0;
-    if( py ) delete py; py = 0;
+}
+
+POTTS_AUGLAG_CPU_SOLVER_2D::~POTTS_AUGLAG_CPU_SOLVER_2D(){
+    if( px ) delete [] px;
+    if( py ) delete [] py;
 }
 
 POTTS_AUGLAG_CPU_SOLVER_2D::POTTS_AUGLAG_CPU_SOLVER_2D(
@@ -43,7 +45,9 @@ n_x(sizes[0]),
 n_y(sizes[1]),
 rx(rx_cost),
 ry(ry_cost),
-px(0),
-py(0)
-{}
+px(new float[n_s*n_c]),
+py(new float[n_s*n_c])
+{
+    //std::cout << n_x << " " << n_y << " " << n_c << " " << rx << " " << ry << " " << px << " " << py << std::endl;
+}
 

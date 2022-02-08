@@ -15,6 +15,7 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #include <cuda_runtime.h>
 
 //General GPU utilities
+void let_device_catchup(const cudaStream_t& dev);
 void* allocate_on_gpu(const cudaStream_t& dev, size_t amount);
 void deallocate_on_gpu(const cudaStream_t& dev, void* ptr);
 void send_to_gpu(const cudaStream_t& dev, const void* source, void* dest, size_t amount);
@@ -62,6 +63,7 @@ void update_source_sink_multiplier_potts(const cudaStream_t& dev, float* ps, flo
 void update_source_sink_multiplier_binary(const cudaStream_t& dev, float* ps, float* pt, const float* div, float* u, float* erru, const float* d, const float cc, const float icc, const int n_s);
 void update_multiplier_hmf(const cudaStream_t& dev, float* const* const ps_ind, const float* div, const float* pt, float* u, float* erru, const int n_s, const int n_c, const float cc);
 void find_min_constraint(const cudaStream_t& dev, float* output, const float* neg_constraint, const int n_c, const int n_s);
+void init_flows_potts(const cudaStream_t& dev, const float* data, float* ps, float* pt, float* u, const int n_s, const int n_c);
 void init_flows_binary(const cudaStream_t& dev, const float* data, float* ps, float* pt, const int n_s);
 void calc_capacity_potts(const cudaStream_t& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const int n_c, const float icc, const float tau);
 void calc_capacity_binary(const cudaStream_t& dev, float* g, const float* div, const float* ps, const float* pt, const float* u, const int n_s, const float icc, const float tau);
@@ -78,11 +80,6 @@ void update_flow_hmf(const cudaStream_t& dev, float** g_ind, float* g_s, float* 
 void divide_out_and_store_hmf(const cudaStream_t& dev, const float* g_s, const float* g, float* ps, float* pt, const int* p_c, const int s_c, const int n_s, const int n_c);
 void prep_flow_hmf(const cudaStream_t& dev, float* g, float* const* const ps_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c);
 void compute_parents_flow_hmf(const cudaStream_t& dev, float** g_ind, const float* pt, const float* div, const float* u, const float icc, const int n_s, const int n_c);
-
-void populate_data_gradient(const cudaStream_t& dev, const float* g, const float* u, float* output, const int n_s);
-
-void populate_reg_gradients(const cudaStream_t& dev, const float* g, const float* u, float* g_rx, float* g_ry, float* g_rz, const int n_x, const int n_y, const int n_z, const int n_c);
-
 
 //Functions specifically for the mean field forward calculation
 void softmax(const cudaStream_t& dev, const float* e1, const float* e2, float* u, const int n_s, const int n_c);
@@ -103,7 +100,6 @@ void parity_mask(const cudaStream_t& dev, float* buffer, const float* other, con
 
 
 //Functions specifically for helping with mean field gradient calculation
-void softmax_gradient(const cudaStream_t& dev, const float* g, const float* u, float* g_d, const int n_s, const int n_c);
 void untangle_softmax(const cudaStream_t& dev, const float* du_i, const float* u, float* loc, const int n_s, const int n_c);
 void untangle_sigmoid(const cudaStream_t& dev, const float* du_i, const float* u, float* loc, const int n_s);
 

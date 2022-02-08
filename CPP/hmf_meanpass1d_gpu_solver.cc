@@ -3,9 +3,10 @@
 #include "hmf_trees.h"
 #include "hmf_meanpass1d_gpu_solver.h"
 #include "gpu_kernels.h"
+#include <cmath>
 
 int HMF_MEANPASS_GPU_SOLVER_1D::min_iter_calc(){
-    return n_x+n_r-n_c;
+    return n_r-n_c + (int) std::sqrt(n_x);
 }
 
 void HMF_MEANPASS_GPU_SOLVER_1D::update_spatial_flow_calc(){
@@ -49,7 +50,7 @@ rx(rx_cost)
 {}
 
 int HMF_MEANPASS_GPU_GRADIENT_1D::min_iter_calc(){
-    return n_x;
+    return n_r-n_c + (int) std::sqrt(n_x);
 }
 
 void HMF_MEANPASS_GPU_GRADIENT_1D::clear_variables(){

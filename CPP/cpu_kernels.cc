@@ -1298,7 +1298,7 @@ void init_flows_binary(const float* d, float* ps, float* pt, const int n_s){
 	}
 }
 
-void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n_s){
+void init_flows(const float* d, float* ps, float* pt, float* u, const int n_c, const int n_s){
     for(int s = 0; s < n_s; s++){
         float max_d = -std::numeric_limits<float>::infinity();
         for(int c = 0; c < n_c; c++){
@@ -1311,12 +1311,16 @@ void init_flows(const float* d, float* ps, float* pt, const int n_c, const int n
         for(int c = 0; c < n_c; c++){
             int cs = idxc(s,n_s,c,n_c);
             pt[cs] = -max_d;
+            if (d[cs] == max_d)
+                u[cs] = 1.0f;
+            else
+                u[cs] = 0.0f;
         }
     }
             
 }
 
-void init_flows_channels_first(const float* d, float* ps, float* pt, const int n_c, const int n_s){
+void init_flows_channels_first(const float* d, float* ps, float* pt, float* u, const int n_c, const int n_s){
     for(int s = 0; s < n_s; s++){
         float max_d = -std::numeric_limits<float>::infinity();
         for(int c = 0; c < n_c; c++){
@@ -1329,6 +1333,10 @@ void init_flows_channels_first(const float* d, float* ps, float* pt, const int n
         for(int c = 0; c < n_c; c++){
             int cs = idx(c,n_c,s,n_s);
             pt[cs] = -max_d;
+            if (d[cs] == max_d)
+                u[cs] = 1.0f;
+            else
+                u[cs] = 0.0f;
         }
     }
             

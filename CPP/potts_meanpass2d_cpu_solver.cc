@@ -2,9 +2,11 @@
 #include "potts_meanpass2d_cpu_solver.h"
 #include "cpu_kernels.h"
 #include <algorithm>
+#include <iostream>
+#include <cmath>
 
 int POTTS_MEANPASS_CPU_SOLVER_2D::min_iter_calc(){
-    return std::max(n_x,n_y);
+    return (int) std::sqrt(n_x+n_y);
 }
 
 void POTTS_MEANPASS_CPU_SOLVER_2D::init_vars(){}
@@ -48,10 +50,12 @@ n_x(sizes[0]),
 n_y(sizes[1]),
 rx(rx_cost),
 ry(ry_cost)
-{}
+{
+    //std::cout << n_x << " " << n_y << " " << n_c << " " << rx << " " << ry << std::endl;
+}
 
 int POTTS_MEANPASS_CPU_GRADIENT_2D::min_iter_calc(){
-    return std::max(n_x,n_y);
+    return (int) std::sqrt(n_x+n_y);
 }
 
 void POTTS_MEANPASS_CPU_GRADIENT_2D::init_vars(){
@@ -90,4 +94,6 @@ rx(rx_cost),
 ry(ry_cost),
 g_rx(g_rx),
 g_ry(g_ry)
-{}
+{
+    //std::cout << n_x << " " << n_y << " " << n_c << " " << rx << " " << ry << " " << g_rx << " " << g_ry << std::endl;
+}
