@@ -1,133 +1,182 @@
+import unittest
+
 import numpy as np
+
+import time
 
 import torch
 from hmf_deepflow import HMF_MAP1d,HMF_MAP2d,HMF_MAP3d
 from hmf_deepflow import HMF_Mean1d,HMF_Mean2d,HMF_Mean3d
 
 b=1
-l=3
+l=2
 c=2**l
 br=2**(l+1)-2
-x=32
+x=2**6
 epsilon = 0.000000001
 
-def test_dimensionality(d):
 
-    size_info = tuple( [b,c]+[x for i in range(d)] )
-    size_redc_info = tuple( [1,c]+[1 for i in range(d)] )
-    size_red_info = tuple( [1,1]+[x for i in range(d)] )
-    br_size_info = tuple( [b,br]+[x for i in range(d)] )
+
+def get_size_into(d, device):
+    x_used = int(x**(1/d)+0.001)
     
-    data_t = (1*(10*np.random.normal(0,1,size=size_info)+np.array(range(c)).reshape(size_redc_info))).astype(np.float32)
-    data_r = (0.25*np.clip(0.25*np.random.normal(0,1,size=br_size_info)+0.1*np.array([(i+1) % 2 for i in range(x**d)]).reshape(size_red_info),0,100)).astype(np.float32)
-
     parentage = np.zeros(shape=(br,)).astype(np.int32)
     for i in range(br):
         parentage[i] = i//2-1
+    parentage = torch.tensor(parentage, device=torch.device(device))
+    
+    return tuple( [b,c]+[x_used for i in range(d)] ), tuple( [b,br]+[x_used for i in range(d)] ), \
+           tuple( [1,c]+[x_used for i in range(d)] ), tuple( [1,br]+[x_used for i in range(d)] ), \
+           tuple([i+2 for i in range(d)]), parentage,
+            
 
+def test_no_smoothness(d,device,asserter):
+    print("Testing (no smoothness) \t Dim: " +str(d)+ " \t Dev: " + device)
 
+    size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
 
+    data_t = np.random.normal(0,1,size=size_info_d).astype(np.float32)
+    data_w = np.random.normal(0,1,size=size_info_d).astype(np.float32)
+    data_rx = np.zeros(shape=size_info_r).astype(np.float32)
+    if d > 1:
+        data_ry = np.zeros(shape=size_info_r).astype(np.float32)
+    if d > 2:
+        data_rz = np.zeros(shape=size_info_r).astype(np.float32)
 
-    t = torch.tensor(data_t, device=torch.device("cuda"))
-    r = torch.tensor(data_r, device=torch.device("cuda"))
-    p = torch.tensor(parentage, device=torch.device("cuda"))
+    t = torch.tensor(data_t, device=torch.device(device))
     t.requires_grad = True
-    r.requires_grad = True
+    w = torch.tensor(data_w, device=torch.device(device))
+    rx = torch.tensor(data_rx, device=torch.device(device))
+    rx.requires_grad = True
+    if d > 1:
+        ry = torch.tensor(data_ry, device=torch.device(device))
+        ry.requires_grad = True
+    if d > 2:
+        rz = torch.tensor(data_rz, device=torch.device(device))
+        rz.requires_grad = True
 
     if d == 1:
-        oa_1 = torch.exp(HMF_MAP1d.apply(t,r,p))
-        om_1 = HMF_Mean1d.apply(t,r,p)
+        oa = torch.exp(HMF_MAP1d.apply(t,rx,parentage))
+        print("Finished MAP")
+        om = HMF_Mean1d.apply(t,rx,parentage)
+        print("Finished Mean")
     elif d == 2:
-        oa_1 = torch.exp(HMF_MAP2d.apply(t,r,r,p))
-        om_1 = HMF_Mean2d.apply(t,r,r,p)
+        oa = torch.exp(HMF_MAP2d.apply(t,rx,ry,parentage))
+        om = HMF_Mean2d.apply(t,rx,ry,parentage)
     elif d == 3:
-        oa_1 = torch.exp(HMF_MAP3d.apply(t,r,r,r,p))
-        om_1 = HMF_Mean3d.apply(t,r,r,r,p)
-
-    loss = -torch.sum(om_1.flatten()[0])
+        oa = torch.exp(HMF_MAP3d.apply(t,rx,ry,rz,parentage))
+        om = HMF_Mean3d.apply(t,rx,ry,rz,parentage)
+    loss = torch.sum(w*om)
     loss.backward()
-
-    t_g1 = t.grad.clone()
-    r_g1 = r.grad.clone()
-
-    print("\nGPU results:")
-    print("data sum")
-    print(torch.sum(t,dim=1))
-    print("data")
-    print(t)
-    print("mean pass")
-    print(om_1)
-    print("data mean pass diff")
-    print(om_1-t)
-    print("MAP res")
-    print(oa_1)
-    #print("data grad")
-    #print(t_g1)
-    #print(torch.mean(torch.abs(t_g1)))
-    #print("reg grad")
-    #print(r_g1)
-    #print(torch.mean(torch.abs(r_g1)))
-
-
-
-
-    t = torch.tensor(data_t, device=torch.device("cpu"))
-    r = torch.tensor(data_r, device=torch.device("cpu"))
-    p = torch.tensor(parentage, device=torch.device("cpu"))
-    t.requires_grad = True
-    r.requires_grad = True
-
-    if d == 1:
-        oa_2 = torch.exp(HMF_MAP1d.apply(t,r,p))
-        om_2 = HMF_Mean1d.apply(t,r,p)
-    elif d == 2:
-        oa_2 = torch.exp(HMF_MAP2d.apply(t,r,r,p))
-        om_2 = HMF_Mean2d.apply(t,r,r,p)
-    elif d == 3:
-        oa_2 = torch.exp(HMF_MAP3d.apply(t,r,r,r,p))
-        om_2 = HMF_Mean3d.apply(t,r,r,r,p)
+    oa_np = oa.detach().cpu().numpy()
+    om_np = om.detach().cpu().numpy()
+    ot_np = t.grad.detach().cpu().numpy()
+    
+    #make sure not nan
+    asserter.assertFalse(np.any(np.isnan(oa_np)))
+    asserter.assertFalse(np.any(np.isnan(om_np)))
+    asserter.assertFalse(np.any(np.isnan(ot_np)))
+    
+    #resize into more usable form
+    dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
+    dw_np_l = [data_w[0,i,...].flatten() for i in range(c)]
+    oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
+    om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    ot_np_l = [ot_np[0,i,...].flatten()  for i in range(c)]
+    x_space = len(dt_np_l[0])
+    
+    #ensure MAP assigns 1 to highest term and 0 to everything else
+    for i in range(x_space):
+        highest = max([o[i] for o in dt_np_l])
+        for ic in range(c):
+            if(dt_np_l[ic][i] == highest and oa_np_l[ic][i] < 0.5):
+                raise Exception(str(dt_np_l[ic][i])+"\t"+str([o[i] for o in dt_np_l])+"\t"+str(highest)+"\t"+str(oa_np_l[ic][i])+"\t"+str([o[i] for o in oa_np_l]))
+            if(dt_np_l[ic][i] < highest - epsilon  and oa_np_l[ic][i] > 0.5):
+                raise Exception(str(dt_np_l[ic][i])+"\t"+str([o[i] for o in dt_np_l])+"\t"+str(highest)+"\t"+str(oa_np_l[ic][i])+"\t"+str([o[i] for o in oa_np_l]))
         
-    loss = -torch.sum(om_2.flatten()[0])
-    loss.backward()
-
-    t_g2 = t.grad.clone()
-    r_g2 = r.grad.clone()
-
-
-    print("\nCPU results:")
-    print("data sum")
-    print(torch.sum(t,dim=1))
-    print("data")
-    print(t)
-    print("mean pass")
-    print(om_2)
-    print("data mean pass diff")
-    print(om_2-t)
-    print("MAP res")
-    print(oa_2)
-    #print("data grad")
-    #print(t_g2)
-    #print(torch.mean(torch.abs(t_g2)))
-    #print("reg grad")
-    #print(r_g2)
-    #print(torch.mean(torch.abs(r_g2)))
+    #ensure mean pass is equivalent to the data terms only
+    for i in range(c): 
+        for val_df, val_d in zip(om_np_l[i],dt_np_l[i]):
+            if(abs(val_df-val_d) > epsilon):
+                raise Exception(str(val_df) + "\t" + str(val_d))
+    
+    #ensure gradient wrt data terms are passed immediately through
+    for i in range(c): 
+        for val_df, val_d in zip(ot_np_l[i],dw_np_l[i]):
+            if(abs(val_df-val_d) > epsilon):
+                raise Exception(str(val_df) + "\t" + str(val_d))
 
 
 
-    print("\nDifferences " + str(d) + "D:")
-    print("auglag res")
-    #print(2*(oa_1.cpu()-oa_2)/(abs(oa_1.cpu())+abs(oa_2)+epsilon))
-    print(torch.max(torch.abs((oa_1.cpu()-oa_2))))
-    print("meanpass res")
-    #print(2*(om_1.cpu()-om_2)/(abs(om_1.cpu())+abs(om_2)+epsilon))
-    print(torch.max(torch.abs((om_1.cpu()-om_2))))
-    print("t_g")
-    #print(2*(t_g1.cpu()-t_g2)/(abs(t_g1.cpu())+abs(t_g2)+epsilon))
-    print(torch.max(torch.abs((t_g1.cpu()-t_g2))))
-    print("r_g")
-    #print(2*(t_g1.cpu()-t_g2)/(abs(t_g1.cpu())+abs(t_g2)+epsilon))
-    print(torch.max(torch.abs((r_g1.cpu()-r_g2))))
 
 
-for d in range(1,2):
-    test_dimensionality(3)
+
+
+
+
+
+
+
+
+
+class Test_Extreme(unittest.TestCase):
+
+    def test_no_smoothness_1D(self):
+        print("")
+        test_no_smoothness(1,"cpu",self)
+        if torch.has_cuda:  
+            test_no_smoothness(1,"cuda",self)
+
+    def test_no_smoothness_2D(self):
+        print("")
+        if torch.has_cuda:
+            test_no_smoothness(2,"cuda",self)
+        test_no_smoothness(2,"cpu",self)
+
+    def test_no_smoothness_3D(self):
+        print("")
+        if torch.has_cuda:
+            test_no_smoothness(3,"cuda",self)
+        test_no_smoothness(3,"cpu",self)
+
+    #def test_smoothness_dom_1D(self):
+    #    print("")
+    #    if torch.has_cuda:
+    #        test_smoothness_dom(1,"cuda",self)
+    #    test_smoothness_dom(1,"cpu",self)
+
+    #def test_smoothness_dom_2D(self):
+    #    print("")
+    #    if torch.has_cuda:
+    #        test_smoothness_dom(2,"cuda",self)
+    #    test_smoothness_dom(2,"cpu",self)
+
+    #def test_smoothness_dom_3D(self):
+    #    print("")
+    #    if torch.has_cuda:
+    #        test_smoothness_dom(3,"cuda",self)
+    #    test_smoothness_dom(3,"cpu",self)
+            
+    #def test_equivalence_1d(self):
+    #    print("")
+    #    if torch.has_cuda:
+    #        test_device_equivalence(1,["cpu","cuda"],self)
+            
+    #def test_equivalence_2d(self):
+    #    print("")
+    #    if torch.has_cuda:
+    #        test_device_equivalence(2,["cpu","cuda"],self)
+            
+    #def test_equivalence_3d(self):
+    #    print("")
+    #    if torch.has_cuda:
+    #        test_device_equivalence(3,["cpu","cuda"],self)
+        
+        
+
+
+if __name__ == '__main__':
+    unittest.main()
+    
+    
+
