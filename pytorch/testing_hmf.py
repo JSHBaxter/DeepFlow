@@ -12,7 +12,7 @@ b=1
 l=3
 c=2**l
 br=2**(l+1)-2
-x=2**18
+x=2**12
 epsilon = 0.000000001
 
 
@@ -107,7 +107,63 @@ def test_no_smoothness(d,device,asserter):
                 raise Exception(str(val_df) + "\t" + str(val_d))
 
 
+def test_smoothness_dom(d,device,asserter):
+    print("Testing (smoothness dom.) \t Dim: " +str(d)+ " \t Dev: " + device)
 
+    size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
+
+    winner = int(np.random.uniform()*c)
+    data_t = 1*np.random.uniform(0,1,size=size_info_d).astype(np.float32)
+    data_t[:,winner,...] = 0.75
+    data_rx = 100+np.zeros(shape=size_info_r).astype(np.float32)
+    if d > 1:
+        data_ry = 100+np.zeros(shape=size_info_r).astype(np.float32)
+    if d > 2:
+        data_rz = 100+np.zeros(shape=size_info_r).astype(np.float32)
+
+    t = torch.tensor(data_t, device=torch.device(device))
+    t.requires_grad = True
+    rx = torch.tensor(data_rx, device=torch.device(device))
+    rx.requires_grad = True
+    if d > 1:
+        ry = torch.tensor(data_ry, device=torch.device(device))
+    if d > 2:
+        rz = torch.tensor(data_rz, device=torch.device(device))
+
+    if d == 1:
+        oa = torch.exp(HMF_MAP1d.apply(t,rx,parentage))
+        print("Finished MAP")
+        om = HMF_Mean1d.apply(t,rx,parentage)
+        print("Finished Mean")
+    elif d == 2:
+        oa = torch.exp(HMF_MAP2d.apply(t,rx,ry,parentage))
+        om = HMF_Mean2d.apply(t,rx,ry,parentage)
+    elif d == 3:
+        oa = torch.exp(HMF_MAP3d.apply(t,rx,ry,rz,parentage))
+        om = HMF_Mean3d.apply(t,rx,ry,rz,parentage)
+    oa_np = oa.detach().cpu().numpy()
+    om_np = om.detach().cpu().numpy()
+    
+    #make sure not nan
+    asserter.assertFalse(np.any(np.isnan(oa_np)))
+    asserter.assertFalse(np.any(np.isnan(om_np)))
+    asserter.assertFalse(np.any(np.isnan(om_np)))
+    
+    #resize into more usable form
+    dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
+    oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
+    om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    x_space = len(dt_np_l[0])
+    
+    #ensure MAP assigns 1 to highest terms
+    sums = [np.sum(o) for o in dt_np_l]
+    highest = max(sums)
+    for i in range(c):
+        for val_df in oa_np_l[i]:
+            if(sums[i] == highest and val_df < 0.5):
+                raise Exception(str(sums[i])+ "\t" + str(sums) + "\t" + str(val_df))
+            if(sums[i] < highest  and val_df > 0.5):
+                raise Exception(str(sums[i])+ "\t" + str(sums) + "\t" + str(val_df))
 
 
 
@@ -139,23 +195,23 @@ class Test_Extreme(unittest.TestCase):
         if torch.has_cuda:
             test_no_smoothness(3,"cuda",self)
 
-    #def test_smoothness_dom_1D(self):
-    #    print("")
-    #    if torch.has_cuda:
-    #        test_smoothness_dom(1,"cuda",self)
-    #    test_smoothness_dom(1,"cpu",self)
+    def test_smoothness_dom_1D(self):
+        print("")
+        if torch.has_cuda:
+            test_smoothness_dom(1,"cuda",self)
+        test_smoothness_dom(1,"cpu",self)
 
-    #def test_smoothness_dom_2D(self):
-    #    print("")
-    #    if torch.has_cuda:
-    #        test_smoothness_dom(2,"cuda",self)
-    #    test_smoothness_dom(2,"cpu",self)
+    def test_smoothness_dom_2D(self):
+        print("")
+        if torch.has_cuda:
+            test_smoothness_dom(2,"cuda",self)
+        test_smoothness_dom(2,"cpu",self)
 
-    #def test_smoothness_dom_3D(self):
-    #    print("")
-    #    if torch.has_cuda:
-    #        test_smoothness_dom(3,"cuda",self)
-    #    test_smoothness_dom(3,"cpu",self)
+    def test_smoothness_dom_3D(self):
+        print("")
+        if torch.has_cuda:
+            test_smoothness_dom(3,"cuda",self)
+        test_smoothness_dom(3,"cpu",self)
             
     #def test_equivalence_1d(self):
     #    print("")
