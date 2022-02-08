@@ -91,9 +91,9 @@ class Binary_Mean1d(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         u,d,rx, = ctx.saved_tensors
-        grad_d =  torch.zeros_like(d)
-        grad_rx = torch.zeros_like(rx)
-        grad_output = grad_output.clone()
+        grad_d =  torch.zeros_like(d).to(d.device)
+        grad_rx = torch.zeros_like(rx).to(d.device)
+        grad_output = grad_output.to(d.device)
         if d.is_cuda:
             deepflow.binary_gpu_meanpass_1d_backward(grad_output, u, rx, grad_d, grad_rx)
         else:

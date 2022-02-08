@@ -28,15 +28,16 @@ void potts_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
 	int num_buffers_full = POTTS_AUGLAG_GPU_SOLVER_1D::num_buffers_full();
 	int num_buffers_img = POTTS_AUGLAG_GPU_SOLVER_1D::num_buffers_images();
 	float* buffer = 0;
-	cudaMalloc( &buffer, (num_buffers_full*n_s+num_buffers_img*(n_s/n_c))*sizeof(float));
+	int success = cudaMalloc( &buffer, (num_buffers_full*n_s+num_buffers_img*(n_s/n_c))*sizeof(float));
+    std::cout << "cudaMalloc code : " << success <<std::endl;
 	float* buffer_ptr = buffer;
 	float** buffers_full = new float* [num_buffers_full];
 	float** buffers_img = new float* [num_buffers_img];
@@ -63,8 +64,8 @@ void potts_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
-	delete(buffers_img);
+	delete [] buffers_full;
+	delete [] buffers_img;
 }
 
 void potts_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out) {
@@ -78,9 +79,9 @@ void potts_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -114,8 +115,8 @@ void potts_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
-	delete(buffers_img);
+	delete [] buffers_full;
+	delete [] buffers_img;
 }
 
 void potts_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out) {
@@ -130,17 +131,18 @@ void potts_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
 	int num_buffers_full = POTTS_AUGLAG_GPU_SOLVER_3D::num_buffers_full();
 	int num_buffers_img = POTTS_AUGLAG_GPU_SOLVER_3D::num_buffers_images();
 	float* buffer = 0;
-	cudaMalloc( &buffer, (num_buffers_full*n_s+num_buffers_img*(n_s/n_c))*sizeof(float));
+	int success = cudaMalloc( &buffer, (num_buffers_full*n_s+num_buffers_img*(n_s/n_c))*sizeof(float));
+    std::cout << "cudaMalloc code : " << success <<std::endl;
 	float* buffer_ptr = buffer;
 	float** buffers_full = new float* [num_buffers_full];
 	float** buffers_img = new float* [num_buffers_img];
@@ -167,8 +169,8 @@ void potts_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
-	delete(buffers_img);
+	delete [] buffers_full;
+	delete [] buffers_img;
 }
 
 void potts_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx,  torch::Tensor out) {
@@ -181,8 +183,8 @@ void potts_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx,  torch::Tensor 
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -222,8 +224,8 @@ void potts_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx,  torch::Tensor 
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
-	delete(buffers_img);
+	delete [] buffers_full;
+	delete [] buffers_img;
 }
 
 
@@ -237,7 +239,7 @@ void potts_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -267,7 +269,7 @@ void potts_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
+	delete [] buffers_full;
 }
 
 void potts_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out) {
@@ -281,9 +283,9 @@ void potts_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -322,8 +324,8 @@ void potts_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
-	delete(buffers_img);
+	delete [] buffers_full;
+	delete [] buffers_img;
 }
 
 
@@ -338,8 +340,8 @@ void potts_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -370,7 +372,7 @@ void potts_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
+	delete [] buffers_full;
 }
 
 void potts_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out) {
@@ -385,10 +387,10 @@ void potts_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -427,8 +429,8 @@ void potts_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
-	delete(buffers_img);
+	delete [] buffers_full;
+	delete [] buffers_img;
 }
 
 void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor g_ry, torch::Tensor g_rz) {
@@ -443,9 +445,9 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -453,7 +455,8 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	cudaSetDevice(u.get_device());
 	int num_buffers_full = POTTS_MEANPASS_GPU_GRADIENT_3D::num_buffers_full();
 	float* buffer = 0;
-	cudaMalloc(&buffer, num_buffers_full*n_s*sizeof(float));
+	int success = cudaMalloc(&buffer, num_buffers_full*n_s*sizeof(float));
+    std::cout << "cudaMalloc code : " << success <<std::endl;
 	float* buffer_ptr = buffer;
 	float** buffers_full = new float* [num_buffers_full];
 	for(int b = 0; b < num_buffers_full; b++)
@@ -477,7 +480,7 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	
 	//free temporary memory
 	cudaFree(buffer);
-	delete(buffers_full);
+	delete [] buffers_full;
 }
 
 

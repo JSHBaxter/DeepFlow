@@ -35,8 +35,8 @@ void hmf_auglag_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, 
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//make output tensor
 	float* out_buf = out.data_ptr<float>();
@@ -71,9 +71,9 @@ void hmf_auglag_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//make output tensor  
 	float* out_buf = out.data_ptr<float>();
@@ -109,10 +109,10 @@ void hmf_auglag_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//make output tensor  
 	float* out_buf = out.data_ptr<float>();
@@ -146,8 +146,8 @@ void hmf_meanpass_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
 	float* u_init_buf = new float[n_s];
@@ -192,7 +192,7 @@ void hmf_meanpass_1d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 
@@ -230,9 +230,9 @@ void hmf_meanpass_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
 	float* u_init_buf = new float[n_s];
@@ -276,8 +276,8 @@ void hmf_meanpass_2d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 
@@ -317,10 +317,10 @@ void hmf_meanpass_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
 	float* u_init_buf = new float[n_s];
@@ -365,9 +365,9 @@ void hmf_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage.data_ptr<int>(), n_r, n_c);
 
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 

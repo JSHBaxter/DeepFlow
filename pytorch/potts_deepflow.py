@@ -91,11 +91,8 @@ class Potts_Mean1d(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         u,d,rx, = ctx.saved_tensors
-        grad_d =  torch.zeros_like(d)
-        grad_rx = torch.zeros_like(rx)
-        grad_output = grad_output.clone()
-        u = u.clone()
-        rx = rx.clone()
+        grad_d = torch.zeros(d.size(), dtype=d.dtype, device=d.device).contiguous()
+        grad_rx = torch.zeros(rx.size(), dtype=rx.dtype, device=rx.device).contiguous()
         if d.is_cuda:
             deepflow.potts_gpu_meanpass_1d_backward(grad_output, u, rx, grad_d, grad_rx)
         else:
@@ -126,9 +123,6 @@ class Potts_Mean2d(torch.autograd.Function):
         grad_rx = torch.zeros_like(rx)
         grad_ry = torch.zeros_like(ry)
         grad_output = grad_output.clone()
-        u = u.clone()
-        rx = rx.clone()
-        ry = ry.clone()
         if d.is_cuda:
             deepflow.potts_gpu_meanpass_2d_backward(grad_output, u, rx, ry, grad_d, grad_rx, grad_ry)
         else:
@@ -160,10 +154,6 @@ class Potts_Mean3d(torch.autograd.Function):
         grad_ry = torch.zeros_like(ry)
         grad_rz = torch.zeros_like(rz)
         grad_output = grad_output.clone()
-        u = u.clone()
-        rx = rx.clone()
-        ry = ry.clone()
-        rz = rz.clone()
         if d.is_cuda:
             deepflow.potts_gpu_meanpass_3d_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz)
         else:

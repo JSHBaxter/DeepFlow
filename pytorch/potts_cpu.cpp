@@ -25,68 +25,16 @@ void potts_auglag_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const  out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [1] = {n_x};
 	for(int b = 0; b < n_b; b++){
 		auto solver = POTTS_AUGLAG_CPU_SOLVER_1D(true, b, n_c, data_sizes, data_buf+b*n_s, rx_buf+b*n_s, out_buf+b*n_s);
-		solver();
-	}
-}
-
-void potts_auglag_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out) {
-
-	//get tensor sizing information
-	int n_b = data.size(0);
-	int n_c = data.size(1);
-	int n_x = data.size(2);
-	int n_y = data.size(3);
-	int n_s = n_c*n_x*n_y;
-	
-	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-
-	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
-
-	//create and run the solver
-	int data_sizes [2] = {n_x, n_y};
-	for(int b = 0; b < n_b; b++){
-		auto solver = POTTS_AUGLAG_CPU_SOLVER_2D(true, b, n_c, data_sizes, data_buf+b*n_s, rx_buf+b*n_s, ry_buf+b*n_s, out_buf+b*n_s);
-		solver();
-	}
-}
-
-void potts_auglag_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out) {
-
-	//get tensor sizing information
-	int n_b = data.size(0);
-	int n_c = data.size(1);
-	int n_x = data.size(2);
-	int n_y = data.size(3);
-	int n_z = data.size(4);
-	int n_s = n_c*n_x*n_y*n_z;
-    
-	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
-
-	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
-
-	//create and run the solver
-	int data_sizes [3] = {n_x, n_y, n_z};
-	for(int b = 0; b < n_b; b++){
-		auto solver = POTTS_AUGLAG_CPU_SOLVER_3D(true, b, n_c, data_sizes, data_buf+b*n_s, rx_buf+b*n_s, ry_buf+b*n_s, rz_buf+b*n_s, out_buf+b*n_s);
 		solver();
 	}
 }
@@ -100,14 +48,14 @@ void potts_meanpass_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor o
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
-	float* u_init_buf = new float[n_s];
+	float * const  u_init_buf = new float[n_s];
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const  out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [1] = {n_x};
@@ -136,19 +84,44 @@ void potts_meanpass_1d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	float* u_buf = u.data_ptr<float>();
-	float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	float * const  u_buf = u.data_ptr<float>();
+	float * const  g_buf = g.data_ptr<float>();
 
 	//make output tensor  
-	float* g_data_buf = g_data.data_ptr<float>();
-	float* g_rx_buf = g_rx.data_ptr<float>();
+	float * const  g_data_buf = g_data.data_ptr<float>();
+	float * const  g_rx_buf = g_rx.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [1] = {n_x};
 	for(int b = 0; b < n_b; b++){
 		auto grad_meanpass = POTTS_MEANPASS_CPU_GRADIENT_1D(true, b, n_c, data_sizes, u_buf+b*n_s, g_buf+b*n_s, rx_buf+b*n_s, g_data_buf+b*n_s, g_rx_buf+b*n_s);
 		grad_meanpass();
+	}
+}
+
+void potts_auglag_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out) {
+
+	//get tensor sizing information
+	int n_b = data.size(0);
+	int n_c = data.size(1);
+	int n_x = data.size(2);
+	int n_y = data.size(3);
+	int n_s = n_c*n_x*n_y;
+	
+	//get input buffers
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+
+	//make output tensor  
+	float * const  out_buf = out.data_ptr<float>();
+
+	//create and run the solver
+	int data_sizes [2] = {n_x, n_y};
+	for(int b = 0; b < n_b; b++){
+		auto solver = POTTS_AUGLAG_CPU_SOLVER_2D(true, b, n_c, data_sizes, data_buf+b*n_s, rx_buf+b*n_s, ry_buf+b*n_s, out_buf+b*n_s);
+		solver();
 	}
 }
 
@@ -162,15 +135,15 @@ void potts_meanpass_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
-	float* u_init_buf = new float[n_s];
+	float * const  u_init_buf = new float[n_s];
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const  out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [2] = {n_x, n_y};
@@ -199,15 +172,15 @@ void potts_meanpass_2d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	float* u_buf = u.data_ptr<float>();
-	float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	float * const  u_buf = u.data_ptr<float>();
+	float * const  g_buf = g.data_ptr<float>();
 
 	//make output tensor  
-	float* g_data_buf = g_data.data_ptr<float>();
-	float* g_rx_buf = g_rx.data_ptr<float>();
-	float* g_ry_buf = g_ry.data_ptr<float>();
+	float * const  g_data_buf = g_data.data_ptr<float>();
+	float * const  g_rx_buf = g_rx.data_ptr<float>();
+	float * const  g_ry_buf = g_ry.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [2] = {n_x, n_y};
@@ -218,6 +191,34 @@ void potts_meanpass_2d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	
 	//return
 	return;
+}
+
+
+void potts_auglag_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out) {
+
+	//get tensor sizing information
+	int n_b = data.size(0);
+	int n_c = data.size(1);
+	int n_x = data.size(2);
+	int n_y = data.size(3);
+	int n_z = data.size(4);
+	int n_s = n_c*n_x*n_y*n_z;
+    
+	//get input buffers
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
+
+	//make output tensor  
+	float * const  out_buf = out.data_ptr<float>();
+
+	//create and run the solver
+	int data_sizes [3] = {n_x, n_y, n_z};
+	for(int b = 0; b < n_b; b++){
+		auto solver = POTTS_AUGLAG_CPU_SOLVER_3D(true, b, n_c, data_sizes, data_buf+b*n_s, rx_buf+b*n_s, ry_buf+b*n_s, rz_buf+b*n_s, out_buf+b*n_s);
+		solver();
+	}
 }
 
 void potts_meanpass_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out) {
@@ -231,16 +232,16 @@ void potts_meanpass_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
-	float* u_init_buf = new float[n_s];
+	float * const  u_init_buf = new float[n_s];
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const  out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [3] = {n_x, n_y, n_z};
@@ -269,17 +270,17 @@ void potts_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
-	float* u_buf = u.data_ptr<float>();
-	float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
+	float * const  u_buf = u.data_ptr<float>();
+	float * const  g_buf = g.data_ptr<float>();
 
 	//make output tensor  
-	float* g_data_buf = g_data.data_ptr<float>();
-	float* g_rx_buf = g_rx.data_ptr<float>();
-	float* g_ry_buf = g_ry.data_ptr<float>();
-	float* g_rz_buf = g_rz.data_ptr<float>();
+	float * const  g_data_buf = g_data.data_ptr<float>();
+	float * const  g_rx_buf = g_rx.data_ptr<float>();
+	float * const  g_ry_buf = g_ry.data_ptr<float>();
+	float * const  g_rz_buf = g_rz.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes [3] = {n_x, n_y, n_z};

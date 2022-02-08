@@ -26,11 +26,11 @@ void binary_auglag_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ou
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const out_buf = out.data_ptr<float>();
     
 	//create and run the solver
 	int data_sizes[1] = {n_x};
@@ -50,12 +50,12 @@ void binary_auglag_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[2] = {n_x,n_y};
@@ -76,13 +76,13 @@ void binary_auglag_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[3] = {n_x,n_y,n_z};
@@ -101,14 +101,14 @@ void binary_meanpass_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
-	float* u_init_buf = new float[n_s];
+	float * const u_init_buf = new float[n_s];
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[1] = {n_x};
@@ -135,13 +135,13 @@ void binary_meanpass_1d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* u_buf = u.data_ptr<float>();
-	const float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const u_buf = u.data_ptr<float>();
+	const float * const g_buf = g.data_ptr<float>();
 
 	//make output tensor  
-	float* g_data_buf = g_data.data_ptr<float>();
-	float* g_rx_buf = g_rx.data_ptr<float>();
+	float * const g_data_buf = g_data.data_ptr<float>();
+	float * const g_rx_buf = g_rx.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[1] = {n_x};
@@ -161,15 +161,15 @@ void binary_meanpass_2d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	float * const data_buf = data.data_ptr<float>();
+	float * const rx_buf = rx.data_ptr<float>();
+	float * const ry_buf = ry.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
-	float* u_init_buf = new float[n_s];
+	float * const u_init_buf = new float[n_s];
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[2] = {n_x,n_y};
@@ -198,15 +198,15 @@ void binary_meanpass_2d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* u_buf = u.data_ptr<float>();
-	const float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const u_buf = u.data_ptr<float>();
+	const float * const g_buf = g.data_ptr<float>();
 
 	//make output tensor  
-	float* g_data_buf = g_data.data_ptr<float>();
-	float* g_rx_buf = g_rx.data_ptr<float>();
-	float* g_ry_buf = g_ry.data_ptr<float>();
+	float * const g_data_buf = g_data.data_ptr<float>();
+	float * const g_rx_buf = g_rx.data_ptr<float>();
+	float * const g_ry_buf = g_ry.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[2] = {n_x,n_y};
@@ -230,16 +230,16 @@ void binary_meanpass_3d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get buffer for MAP solution (used as initialisation)
-	float* u_init_buf = new float[n_s];
+	float * const u_init_buf = new float[n_s];
 
 	//make output tensor  
-	float* out_buf = out.data_ptr<float>();
+	float * const out_buf = out.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[3] = {n_x,n_y,n_z};
@@ -268,17 +268,17 @@ void binary_meanpass_3d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
-	const float* u_buf = u.data_ptr<float>();
-	const float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
+	const float * const u_buf = u.data_ptr<float>();
+	const float * const g_buf = g.data_ptr<float>();
 
 	//make output tensor  
-	float* g_data_buf = g_data.data_ptr<float>();
-	float* g_rx_buf = g_rx.data_ptr<float>();
-	float* g_ry_buf = g_ry.data_ptr<float>();
-	float* g_rz_buf = g_rz.data_ptr<float>();
+	float * const g_data_buf = g_data.data_ptr<float>();
+	float * const g_rx_buf = g_rx.data_ptr<float>();
+	float * const g_ry_buf = g_ry.data_ptr<float>();
+	float * const g_rz_buf = g_rz.data_ptr<float>();
 
 	//create and run the solver
 	int data_sizes[3] = {n_x,n_y,n_z};

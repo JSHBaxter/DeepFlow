@@ -38,8 +38,8 @@ void hmf_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, 
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -100,9 +100,9 @@ void hmf_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -166,10 +166,10 @@ void hmf_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -229,8 +229,8 @@ void hmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx,  torch::Tensor ou
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -297,7 +297,7 @@ void hmf_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 		
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -354,9 +354,9 @@ void hmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get the temporary buffers
 	int num_buffers_full = std::max(HMF_AUGLAG_GPU_SOLVER_2D::num_buffers_full(),HMF_MEANPASS_GPU_SOLVER_2D::num_buffers_full());
@@ -423,8 +423,8 @@ void hmf_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	
@@ -482,10 +482,10 @@ void hmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 
 	//get input buffers
-	float* data_buf = data.data_ptr<float>();
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get the temporary buffers
 	int num_buffers_full = std::max(HMF_AUGLAG_GPU_SOLVER_3D::num_buffers_full(),HMF_MEANPASS_GPU_SOLVER_3D::num_buffers_full());
@@ -553,9 +553,9 @@ void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 
 	//get input buffers
-	float* rx_buf = rx.data_ptr<float>();
-	float* ry_buf = ry.data_ptr<float>();
-	float* rz_buf = rz.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 	float* u_buf = u.data_ptr<float>();
 	float* g_buf = g.data_ptr<float>();
 	

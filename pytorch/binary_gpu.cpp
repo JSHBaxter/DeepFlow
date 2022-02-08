@@ -29,8 +29,8 @@ void binary_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ou
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -79,9 +79,9 @@ void binary_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -132,10 +132,10 @@ void binary_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -183,8 +183,8 @@ void binary_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx,  torch::Tensor
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -239,9 +239,9 @@ void binary_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor
 	int n_s = n_c*n_x;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* u_buf = u.data_ptr<float>();
-	const float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const u_buf = u.data_ptr<float>();
+	const float * const g_buf = g.data_ptr<float>();
 	
 	//get the temporary buffers
 	cudaSetDevice(u.get_device());
@@ -283,9 +283,9 @@ void binary_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -340,10 +340,10 @@ void binary_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor
 	int n_s = n_c*n_x*n_y;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* u_buf = u.data_ptr<float>();
-	const float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const u_buf = u.data_ptr<float>();
+	const float * const g_buf = g.data_ptr<float>();
 	
 	//get the temporary buffers
 	cudaSetDevice(u.get_device());
@@ -387,10 +387,10 @@ void binary_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* data_buf = data.data_ptr<float>();
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
+	const float * const data_buf = data.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
 
 	//get the temporary buffers
 	cudaSetDevice(data.get_device());
@@ -446,11 +446,11 @@ void binary_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor
 	int n_s = n_c*n_x*n_y*n_z;
 	
 	//get input buffers
-	const float* rx_buf = rx.data_ptr<float>();
-	const float* ry_buf = ry.data_ptr<float>();
-	const float* rz_buf = rz.data_ptr<float>();
-	const float* u_buf = u.data_ptr<float>();
-	const float* g_buf = g.data_ptr<float>();
+	const float * const rx_buf = rx.data_ptr<float>();
+	const float * const ry_buf = ry.data_ptr<float>();
+	const float * const rz_buf = rz.data_ptr<float>();
+	const float * const u_buf = u.data_ptr<float>();
+	const float * const g_buf = g.data_ptr<float>();
 	
 	//get the temporary buffers
 	cudaSetDevice(u.get_device());
