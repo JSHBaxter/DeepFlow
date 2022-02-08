@@ -37,7 +37,6 @@ void potts_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	int num_buffers_img = POTTS_AUGLAG_GPU_SOLVER_1D::num_buffers_images();
 	float* buffer = 0;
 	int success = cudaMalloc( &buffer, (num_buffers_full*n_s+num_buffers_img*(n_s/n_c))*sizeof(float));
-    std::cout << "cudaMalloc code : " << success <<std::endl;
 	float* buffer_ptr = buffer;
 	float** buffers_full = new float* [num_buffers_full];
 	float** buffers_img = new float* [num_buffers_img];
@@ -142,7 +141,6 @@ void potts_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int num_buffers_img = POTTS_AUGLAG_GPU_SOLVER_3D::num_buffers_images();
 	float* buffer = 0;
 	int success = cudaMalloc( &buffer, (num_buffers_full*n_s+num_buffers_img*(n_s/n_c))*sizeof(float));
-    std::cout << "cudaMalloc code : " << success <<std::endl;
 	float* buffer_ptr = buffer;
 	float** buffers_full = new float* [num_buffers_full];
 	float** buffers_img = new float* [num_buffers_img];
@@ -456,7 +454,6 @@ void potts_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	int num_buffers_full = POTTS_MEANPASS_GPU_GRADIENT_3D::num_buffers_full();
 	float* buffer = 0;
 	int success = cudaMalloc(&buffer, num_buffers_full*n_s*sizeof(float));
-    std::cout << "cudaMalloc code : " << success <<std::endl;
 	float* buffer_ptr = buffer;
 	float** buffers_full = new float* [num_buffers_full];
 	for(int b = 0; b < num_buffers_full; b++)
