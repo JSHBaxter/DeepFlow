@@ -9,10 +9,10 @@ from hmf_deepflow import HMF_MAP1d,HMF_MAP2d,HMF_MAP3d
 from hmf_deepflow import HMF_Mean1d,HMF_Mean2d,HMF_Mean3d
 
 b=1
-l=2
+l=3
 c=2**l
 br=2**(l+1)-2
-x=2**6
+x=2**18
 epsilon = 0.000000001
 
 
@@ -129,15 +129,15 @@ class Test_Extreme(unittest.TestCase):
 
     def test_no_smoothness_2D(self):
         print("")
+        test_no_smoothness(2,"cpu",self)
         if torch.has_cuda:
             test_no_smoothness(2,"cuda",self)
-        test_no_smoothness(2,"cpu",self)
 
     def test_no_smoothness_3D(self):
         print("")
+        test_no_smoothness(3,"cpu",self)
         if torch.has_cuda:
             test_no_smoothness(3,"cuda",self)
-        test_no_smoothness(3,"cpu",self)
 
     #def test_smoothness_dom_1D(self):
     #    print("")
