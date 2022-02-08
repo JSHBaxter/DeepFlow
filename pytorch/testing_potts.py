@@ -252,9 +252,9 @@ class Test_Extreme(unittest.TestCase):
 
     def test_smoothness_dom_3D(self):
         print("")
-        #if torch.has_cuda:
-        #    test_smoothness_dom(3,"cuda",self)
-        #test_smoothness_dom(3,"cpu",self)
+        if torch.has_cuda:
+            test_smoothness_dom(3,"cuda",self)
+        test_smoothness_dom(3,"cpu",self)
             
     def test_equivalence_1d(self):
         print("")
