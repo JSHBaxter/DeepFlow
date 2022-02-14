@@ -11,7 +11,9 @@ int HMF_AUGLAG_CPU_SOLVER_3D::min_iter_calc(){
 }
 
 void HMF_AUGLAG_CPU_SOLVER_3D::clear_spatial_flows(){
-    clear(px, 3*n_r*n_s);
+    clear(px, n_r*n_s);
+    clear(py, n_r*n_s);
+    clear(pz, n_r*n_s);
 }
 
 void HMF_AUGLAG_CPU_SOLVER_3D::update_spatial_flow_calc(){
@@ -22,7 +24,12 @@ void HMF_AUGLAG_CPU_SOLVER_3D::clean_up(){
 }
 
 HMF_AUGLAG_CPU_SOLVER_3D::~HMF_AUGLAG_CPU_SOLVER_3D(){
-    delete px;
+    delete[] px;
+    delete[] py;
+    delete[] pz;
+    if(!channels_first) delete [] rx_b;
+    if(!channels_first) delete [] ry_b;
+    if(!channels_first) delete [] rz_b;
 }
 
 HMF_AUGLAG_CPU_SOLVER_3D::HMF_AUGLAG_CPU_SOLVER_3D(
@@ -51,10 +58,10 @@ n_z(sizes[2]),
 rx(rx_cost),
 ry(ry_cost),
 rz(rz_cost),
-px(new float [3*(channels_first ? 1 : 2)*n_s*n_r]),
-py(px+n_s*n_r),
-pz(py+n_s*n_r),
-rx_b( channels_first ? rx : transpose(rx,pz+1*n_r*n_s,n_s,n_r) ),
-ry_b( channels_first ? ry : transpose(ry,pz+2*n_r*n_s,n_s,n_r) ),
-rz_b( channels_first ? rz : transpose(rz,pz+3*n_r*n_s,n_s,n_r) )
+px(new float [n_s*n_r]),
+py(new float [n_s*n_r]),
+pz(new float [n_s*n_r]),
+rx_b( channels_first ? rx : transpose(rx,new float [n_s*n_r],n_s,n_r) ),
+ry_b( channels_first ? ry : transpose(ry,new float [n_s*n_r],n_s,n_r) ),
+rz_b( channels_first ? rz : transpose(rz,new float [n_s*n_r],n_s,n_r) )
 {}

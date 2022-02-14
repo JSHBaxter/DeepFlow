@@ -2,6 +2,7 @@
 #include "hmf_trees.h"
 #include "gpu_kernels.h"
 #include <iostream>
+#include <limits>
 
 HMF_AUGLAG_GPU_SOLVER_BASE::HMF_AUGLAG_GPU_SOLVER_BASE(
     const cudaStream_t & dev,
@@ -92,10 +93,8 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
             calc_capacity_binary(dev, g+r*n_s, div+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, u_tmp+r*n_s, n_s, icc, tau);
         }
     }
+    if(DEBUG_PRINT) print_buffer(dev,g,n_s*n_c);
     //std::cout << "Capacities" << std::endl;
-    for(int r = 0; r < n_r; r++){
-        //std::cout << "g " << r << "\t";  print_buffer(dev, g+r*n_s, n_s);
-    }
     //std::cout << std::endl;
     update_spatial_flow_calc();
         
@@ -115,20 +114,20 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
         if(n->r == -1){
             //std::cout << "Source " << n->r << " " << n->d << std::endl;
             set_buffer(dev, ps, icc, n_s);
-            //std::cout << "ps\t";  print_buffer(dev, ps, n_s);
+            //std::cout << "ps\t";  if(DEBUG_PRINT) print_buffer(dev, ps, n_s);
             for(int c = 0; c < n->c; c++){
                 const TreeNode* nc = n->children[c];
                 float* c_pt_buf = pt+nc->r*n_s;
                 float* c_div_buf = div+nc->r*n_s;
                 float* c_u_buf = u_tmp+nc->r*n_s;
                 inc_inc_minc_buffer(dev, c_pt_buf, c_div_buf, c_u_buf, -icc, ps, n_s);
-                //std::cout << "c_pt\t";  print_buffer(dev, c_pt_buf, n_s);
-                //std::cout << "c_div\t"; print_buffer(dev, c_div_buf, n_s);
-                //std::cout << "c_u\t";   print_buffer(dev, c_u_buf, n_s);
-                //std::cout << "ps\t";  print_buffer(dev, ps, n_s);
+                //std::cout << "c_pt\t";  if(DEBUG_PRINT) print_buffer(dev, c_pt_buf, n_s);
+                //std::cout << "c_div\t"; if(DEBUG_PRINT) print_buffer(dev, c_div_buf, n_s);
+                //std::cout << "c_u\t";   if(DEBUG_PRINT) print_buffer(dev, c_u_buf, n_s);
+                //std::cout << "ps\t";  if(DEBUG_PRINT) print_buffer(dev, ps, n_s);
             }
             mult_buffer(dev, 1.0f / (float) n->c, ps, n_s);
-            //std::cout << "ps\t";  print_buffer(dev, ps, n_s);
+            //std::cout << "ps\t";  if(DEBUG_PRINT) print_buffer(dev, ps, n_s);
             //std::cout << std::endl;
         }
 
@@ -142,23 +141,23 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
             copy_buffer(dev, p_pt_buf, n_pt_buf, n_s);
             ninc_buffer(dev, n_div_buf, n_pt_buf, n_s);
             inc_mult_buffer(dev, n_u_buf, n_pt_buf, n_s, icc);
-            //std::cout << "p_pt\t";  print_buffer(dev, p_pt_buf, n_s);
-            //std::cout << "n_div\t"; print_buffer(dev, n_div_buf, n_s);
-            //std::cout << "n_u\t";   print_buffer(dev, n_u_buf, n_s);
-            //std::cout << "n_pt\t";  print_buffer(dev, n_pt_buf, n_s);
+            //std::cout << "p_pt\t";  if(DEBUG_PRINT) print_buffer(dev, p_pt_buf, n_s);
+            //std::cout << "n_div\t"; if(DEBUG_PRINT) print_buffer(dev, n_div_buf, n_s);
+            //std::cout << "n_u\t";   if(DEBUG_PRINT) print_buffer(dev, n_u_buf, n_s);
+            //std::cout << "n_pt\t";  if(DEBUG_PRINT) print_buffer(dev, n_pt_buf, n_s);
             for(int c = 0; c < n->c; c++){
                 const TreeNode* nc = n->children[c];
                 float* c_pt_buf = pt+nc->r*n_s;
                 float* c_div_buf = div+nc->r*n_s;
                 float* c_u_buf = u_tmp+nc->r*n_s;
-                //std::cout << "c_pt\t";  print_buffer(dev, c_pt_buf, n_s);
-                //std::cout << "c_div\t"; print_buffer(dev, c_div_buf, n_s);
-                //std::cout << "c_u\t";   print_buffer(dev, c_u_buf, n_s);
+                //std::cout << "c_pt\t";  if(DEBUG_PRINT) print_buffer(dev, c_pt_buf, n_s);
+                //std::cout << "c_div\t"; if(DEBUG_PRINT) print_buffer(dev, c_div_buf, n_s);
+                //std::cout << "c_u\t";   if(DEBUG_PRINT) print_buffer(dev, c_u_buf, n_s);
                 inc_inc_minc_buffer(dev, c_pt_buf, c_div_buf, c_u_buf, -icc, n_pt_buf, n_s);
-                //std::cout << "n_pt\t";  print_buffer(dev, n_pt_buf, n_s);
+                //std::cout << "n_pt\t";  if(DEBUG_PRINT) print_buffer(dev, n_pt_buf, n_s);
             }
             mult_buffer(dev, 1.0f / (float) (n->c+1), n_pt_buf, n_s);
-            //std::cout << "n_pt\t";  print_buffer(dev, n_pt_buf, n_s);
+            //std::cout << "n_pt\t";  if(DEBUG_PRINT) print_buffer(dev, n_pt_buf, n_s);
             //std::cout << std::endl;
         }
     
@@ -172,14 +171,16 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
             copy_buffer(dev, p_pt_buf, n_pt_buf, n_s);
             ninc_buffer(dev, n_div_buf, n_pt_buf, n_s);
             inc_mult_buffer(dev, n_u_buf, n_pt_buf, n_s, icc);
-            //std::cout << "p_pt\t";  print_buffer(dev, p_pt_buf, n_s);
-            //std::cout << "n_div\t"; print_buffer(dev, n_div_buf, n_s);
-            //std::cout << "n_u\t";   print_buffer(dev, n_u_buf, n_s);
-            //std::cout << "n_pt\t";  print_buffer(dev, n_pt_buf, n_s);
+            //std::cout << "p_pt\t";  if(DEBUG_PRINT) print_buffer(dev, p_pt_buf, n_s);
+            //std::cout << "n_div\t"; if(DEBUG_PRINT) print_buffer(dev, n_div_buf, n_s);
+            //std::cout << "n_u\t";   if(DEBUG_PRINT) print_buffer(dev, n_u_buf, n_s);
+            //std::cout << "n_pt\t";  if(DEBUG_PRINT) print_buffer(dev, n_pt_buf, n_s);
             //std::cout << std::endl;
     
         }
     }
+    if(DEBUG_PRINT) print_buffer(dev,ps,n_s);
+    if(DEBUG_PRINT) print_buffer(dev,pt,n_s*n_r);
     
     //update multipliers
     //update_multiplier_hmf(dev, ps_ind, div, pt, u_tmp, g, n_s, n_r, cc);
@@ -196,26 +197,28 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::block_iter(){
     }
     mult_buffer(dev, -cc, g, n_s*n_r);
     //std::cout << "Updates " << cc << std::endl;
-    for(int r = 0; r < n_r; r++){
-        //std::cout << "g " << r << "\t";  print_buffer(dev, g+r*n_s, n_s);
-    }
     //std::cout << std::endl;
+    
+    if(DEBUG_PRINT) print_buffer(dev,g,n_s*n_r);
     inc_buffer(dev, g, u_tmp, n_s*n_r);
+    if(DEBUG_PRINT) print_buffer(dev,u_tmp,n_s*n_r);
                  
     //std::cout << "Printing flows" << std::endl;
     //for(int n_n = 0; n_n < n_r+1; n_n++){
     //    const TreeNode* n = bottom_up_list[n_r-n_n];
     //    float* n_pt_buf = pt+n->r*n_s;
     //    if(n->r == -1)
-    //        print_buffer(dev, ps, n_s);
+    //        if(DEBUG_PRINT) print_buffer(dev, ps, n_s);
     //    else
-    //        print_buffer(dev, n_pt_buf, n_s);
+    //        if(DEBUG_PRINT) print_buffer(dev, n_pt_buf, n_s);
     //}
     //std::cout << std::endl;
 }
 
 void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
     int u_tmp_offset = n_s*(n_r-n_c);
+    float prior_max_change = std::numeric_limits<float>::infinity();
+    if(DEBUG_PRINT) print_buffer(dev,data,n_s*n_c);
     
     //initialize flows and labels
     clear_spatial_flows();
@@ -235,7 +238,7 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
         min_iter = 10;
     int max_loop = min_iter_calc();
     if (max_loop < 200)
-        max_loop = 200;;
+        max_loop = 200;
     
     for(int i = 0; i < max_loop; i++){    
         
@@ -244,10 +247,12 @@ void HMF_AUGLAG_GPU_SOLVER_BASE::operator()(){
             block_iter();
 
         //Determine if converged
-        float max_change = max_of_buffer(dev, g, n_s*n_r);
-        //std::cout << "HMF_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
-        if (max_change < tau*beta)
+        float max_change = spat_max_of_buffer(dev, g, n_s, n_r);
+        if(DEBUG_ITER) std::cout << "HMF_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << "\t" << prior_max_change-max_change << std::endl;
+        if (abs(prior_max_change-max_change) < tau*beta && max_change < tau*beta)
             break;
+        
+        prior_max_change = max_change;
     }
 
     //run one last block, just to be safe

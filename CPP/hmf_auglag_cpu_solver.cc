@@ -7,14 +7,12 @@
 #include "hmf_trees.h"
 
 HMF_AUGLAG_CPU_SOLVER_BASE::~HMF_AUGLAG_CPU_SOLVER_BASE(){
-    std::cout << "Base class destructor" << std::endl;
     delete[] ps;
     delete[] pt;
     delete[] u_tmp;
     delete[] div;
     delete[] g;
     delete[] data_b;
-    std::cout << "\t... finished" << std::endl;
 }
 
 HMF_AUGLAG_CPU_SOLVER_BASE::HMF_AUGLAG_CPU_SOLVER_BASE(
@@ -65,6 +63,7 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
             compute_capacity_binary(g+r*n_s, u_tmp+r*n_s, pt+n->parent->r*n_s, pt+r*n_s, div+r*n_s, n_s, tau, icc);
         }
     }
+    if(DEBUG_PRINT) print_buffer(g,n_s*n_r);
     update_spatial_flow_calc();
 
     //update source and sink multipliers bottom up
@@ -91,12 +90,12 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
                 inc(c_pt_buf, ps, n_s);
                 inc(c_div_buf, ps, n_s);
                 inc(c_u_buf, ps, -icc, n_s);
-				//print_buffer(c_pt_buf, n_s);
-				//print_buffer(c_div_buf, n_s);
-				//print_buffer(c_u_buf, n_s);
+				//if(DEBUG_PRINT) print_buffer(c_pt_buf, n_s);
+				//if(DEBUG_PRINT) print_buffer(c_div_buf, n_s);
+				//if(DEBUG_PRINT) print_buffer(c_u_buf, n_s);
             }
             mult_buffer(ps, 1.0f / (float) n->c, n_s);
-			//print_buffer(ps, n_s);
+			//if(DEBUG_PRINT) print_buffer(ps, n_s);
 			//std::cout << std::endl;
         }
 
@@ -118,15 +117,15 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
                 inc(c_pt_buf, n_pt_buf, n_s);
                 inc(c_div_buf, n_pt_buf, n_s);
                 inc(c_u_buf, n_pt_buf, -icc, n_s);
-				//print_buffer(c_pt_buf, n_s);
-				//print_buffer(c_div_buf, n_s);
-				//print_buffer(c_u_buf, n_s);
+				//if(DEBUG_PRINT) print_buffer(c_pt_buf, n_s);
+				//if(DEBUG_PRINT) print_buffer(c_div_buf, n_s);
+				//if(DEBUG_PRINT) print_buffer(c_u_buf, n_s);
             }
             mult_buffer(n_pt_buf, 1.0f / (float) (n->c+1), n_s);
-			//print_buffer(p_pt_buf, n_s);
-			//print_buffer(n_div_buf, n_s);
-			//print_buffer(n_u_buf, n_s);
-			//print_buffer(n_pt_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(p_pt_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(n_div_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(n_u_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(n_pt_buf, n_s);
 			//std::cout << std::endl;
         }
 
@@ -140,13 +139,15 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
             copy(p_pt_buf,n_pt_buf,n_s);
             ninc(n_div_buf, n_pt_buf, n_s);
             inc(n_u_buf, n_pt_buf, icc, n_s);
-			//print_buffer(p_pt_buf, n_s);
-			//print_buffer(n_div_buf, n_s);
-			//print_buffer(n_u_buf, n_s);
-			//print_buffer(n_pt_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(p_pt_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(n_div_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(n_u_buf, n_s);
+			//if(DEBUG_PRINT) print_buffer(n_pt_buf, n_s);
 			//std::cout << std::endl;
         }
     }
+    if(DEBUG_PRINT) print_buffer(ps,n_s);
+    if(DEBUG_PRINT) print_buffer(pt,n_s*n_r);
     
     //update multipliers
     copy(pt, g, n_s*n_r);
@@ -161,22 +162,26 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::block_iter(){
         ninc(p_pt_buf,n_g_buf,n_s);
     }
     mult_buffer(g, -cc, n_s*n_r);
+    if(DEBUG_PRINT) print_buffer(g,n_s*n_r);
     inc(g, u_tmp, n_s*n_r);
+    if(DEBUG_PRINT) print_buffer(u_tmp,n_s*n_r);
                  
 	//std::cout << "Printing flows" << std::endl;
     //for(int n_n = 0; n_n < n_r+1; n_n++){
     //    const TreeNode* n = bottom_up_list[n_r-n_n];
     //    float* n_pt_buf = pt+n->r*n_s;
     //    if(n->r == -1)
-	//		print_buffer(ps, n_s);
+	//		if(DEBUG_PRINT) print_buffer(ps, n_s);
 	//	else
-	//		print_buffer(n_pt_buf, n_s);
+	//		if(DEBUG_PRINT) print_buffer(n_pt_buf, n_s);
 	//}
 	//std::cout << std::endl;
 }
 
 void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
     int u_tmp_offset = n_s*(n_r-n_c);
+    float prior_max_change = std::numeric_limits<float>::infinity();
+    if(DEBUG_PRINT) print_buffer(data_b,n_s*n_c);
 
     //initialize flows
     clear(g, div, n_r*n_s);
@@ -215,10 +220,16 @@ void HMF_AUGLAG_CPU_SOLVER_BASE::operator()(){
         for (int iter = 0; iter < min_iter; iter++)
             block_iter();
 
-        float max_change = maxabs(g,n_s*n_r);
-	    //std::cout << "HMF_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
-        if (max_change < tau*beta)
+        float max_change;
+        if(channels_first)
+            max_change = spatmaxabs_channels_first(g,n_s,n_r);
+        else
+            max_change = spatmaxabs(g,n_s,n_r);
+	    if(DEBUG_ITER) std::cout << "HMF_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << "\t" << prior_max_change-max_change << std::endl;
+        if (abs(prior_max_change-max_change) < tau*beta && max_change < tau*beta)
             break;
+        
+        prior_max_change = max_change;
     }
 
     //run one last block, just to be safe

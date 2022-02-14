@@ -18,6 +18,7 @@ void HMF_AUGLAG_GPU_SOLVER_1D::clear_spatial_flows(){
 
 void HMF_AUGLAG_GPU_SOLVER_1D::update_spatial_flow_calc(){
     update_spatial_flows(dev, g, div, px, rx_b, n_x, n_r*n_s);
+    if(DEBUG_PRINT) print_buffer(dev,px,n_s*n_r);
 }
 
 HMF_AUGLAG_GPU_SOLVER_1D::HMF_AUGLAG_GPU_SOLVER_1D(

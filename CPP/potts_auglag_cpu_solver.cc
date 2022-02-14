@@ -70,7 +70,7 @@ void POTTS_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_c);
-        //std::cout << "POTTS_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
+        if(DEBUG_ITER) std::cout << "POTTS_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

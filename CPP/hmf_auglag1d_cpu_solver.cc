@@ -17,16 +17,15 @@ void HMF_AUGLAG_CPU_SOLVER_1D::clear_spatial_flows(){
 
 void HMF_AUGLAG_CPU_SOLVER_1D::update_spatial_flow_calc(){
     compute_flows_channels_first(g, div, px, rx_b, n_r, n_x);
+    if(DEBUG_PRINT) print_buffer(px,n_s*n_r);
 }
 
 void HMF_AUGLAG_CPU_SOLVER_1D::clean_up(){
 }
 
 HMF_AUGLAG_CPU_SOLVER_1D::~HMF_AUGLAG_CPU_SOLVER_1D(){
-    std::cout << "Subclass destructor" << std::endl;
     delete[] px;
     if(!channels_first) delete[] rx_b;
-    std::cout << "\t... finished" << std::endl;
 }
 
 HMF_AUGLAG_CPU_SOLVER_1D::HMF_AUGLAG_CPU_SOLVER_1D(

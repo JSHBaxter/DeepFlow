@@ -14,7 +14,7 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #include "hmf_trees.h"
 //General use
 void clear(float* buffer, const int n_s);
-void print_buffer(float* buffer, const int n_s);
+void print_buffer(const float* buffer, const int n_s);
 void set(float* buffer, const float number, const int n_s);
 void clear(float* buffer1, float* buffer2, const int n_s);
 void clear(float* buffer1, float* buffer2, float* buffer3, const int n_s);
@@ -24,6 +24,9 @@ void ninc(const float* inc, float* acc, const int n_s);
 void inc(const float* inc, float* acc, const float alpha, const int n_s);
 void constrain(float* buffer, const float* constraint, const int n_s);
 float maxabs(const float* buffer, const int n_s);
+float meanabs(const float* buffer, const int n_s);
+float spatmaxabs(const float* buffer, const int n_s, const int n_c);
+float spatmaxabs_channels_first(const float* buffer, const int n_s, const int n_c);
 float max_diff(const float* buffer, const int n_c, const int n_s);
 void log_buffer(float* buffer, const int n_s);
 void div_buffer(float* buffer, const float number, const int n_s);

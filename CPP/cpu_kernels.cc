@@ -17,10 +17,10 @@ void clear(float* buffer1, float* buffer2, float* buffer3, const int n_s){
         buffer1[i] = buffer2[i] = buffer3[i] = 0.0f;
 }
 
-void print_buffer(float* buffer, const int n_s){
+void print_buffer(const float* buffer, const int n_s){
 	for(int i = 0; i < n_s; i++)
-		std::cout << buffer[i] << " ";
-	std::cout << std::endl;
+		printf("%f ",buffer[i]);
+	printf("\n");
 }
 void set(float* buffer, const float number, const int n_s){
     for(int i = 0; i < n_s; i++)
@@ -77,6 +77,37 @@ float maxabs(const float* buffer, const int n_s){
             maxabs = -buffer[i];
         if( buffer[i] > maxabs )
             maxabs = buffer[i];
+    }
+    return maxabs;
+}
+
+float meanabs(const float* buffer, const int n_s){
+    double sumabs = 0.0f;
+    for(int i = 0; i < n_s; i++)
+        sumabs += (buffer[i] < 0) ? -buffer[i] : buffer[i];
+    return (float) (sumabs / (double) n_s);
+}
+
+float spatmaxabs_channels_first(const float* buffer, const int n_s, const int n_c){
+    double maxabs = 0.0;
+    float sumabs = 0.0f;
+    for(int s = 0; s < n_s; s++){
+        sumabs = 0.0f;
+        for(int c = 0; c < n_c; c++)
+            sumabs += (buffer[c*n_s+s] < 0) ? -buffer[c*n_s+s] : buffer[c*n_s+s];
+        maxabs = (maxabs > sumabs) ? maxabs : sumabs;
+    }
+    return maxabs;
+}
+
+float spatmaxabs(const float* buffer, const int n_s, const int n_c){
+    double maxabs = 0.0;
+    float sumabs = 0.0f;
+    for(int s = 0; s < n_s; s++){
+        sumabs = 0.0f;
+        for(int c = 0; c < n_c; c++)
+            sumabs += (buffer[s*n_c+c] < 0) ? -buffer[s*n_c+c] : buffer[s*n_c+c];
+        maxabs = (maxabs > sumabs) ? maxabs : sumabs;
     }
     return maxabs;
 }
@@ -466,7 +497,7 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
 
         //in z+
         if(z < n_z-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z  ,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-1.0);
 
         //in z-
         if(z > 0)
@@ -474,7 +505,7 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
 
         //in y+
         if(y < n_y-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y  ,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-1.0);
 
         //in y-
         if(y > 0)
@@ -482,7 +513,7 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
 
         //in x+
         if(x < n_x-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x  ,n_x,y,n_y,z,n_z)] * (2.0*u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-1.0);
 
         //in x-
         if(x > 0)
@@ -500,7 +531,7 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
         
         //in y+
         if(y < n_y-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y,n_y)] * (2.0*u[idx(c,n_c,x,n_x,y+1,n_y)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y  ,n_y)] * (2.0*u[idx(c,n_c,x,n_x,y+1,n_y)]-1.0);
 
         //in y-
         if(y > 0)
@@ -508,7 +539,7 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
 
         //in x+
         if(x < n_x-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x,n_x,y,n_y)] * (2.0*u[idx(c,n_c,x+1,n_x,y,n_y)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x  ,n_x,y,n_y)] * (2.0*u[idx(c,n_c,x+1,n_x,y,n_y)]-1.0);
 
         //in x-
         if(x > 0)
@@ -984,8 +1015,11 @@ void compute_source_sink_multipliers_channels_first( float* erru, float* u, floa
 
     for(int s = 0; s < n_s; s++){
         ps[s] = icc;
-        for(int c = 0; c < n_c; c++)
-            ps[s] += pt[idx(c,n_c,s,n_s)] + div[idx(c,n_c,s,n_s)] - u[idx(c,n_c,s,n_s)] * icc;
+        for(int c = 0; c < n_c; c++){
+            ps[s] += pt[idx(c,n_c,s,n_s)];
+            ps[s] += div[idx(c,n_c,s,n_s)];
+            ps[s] -= u[idx(c,n_c,s,n_s)] * icc;
+        }
         ps[s] /= n_c;
         
         for (int c = 0; c < n_c; c++) {
@@ -1025,14 +1059,16 @@ void compute_source_sink_multipliers_binary( float* erru, float* u, float* ps, f
 
 void compute_capacity_potts(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc){
     for(int s = 0, cs = 0; s < n_s; s++)
-        for(int c = 0; c < n_c; c++, cs++)
-            g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
+    for(int c = 0; c < n_c; c++, cs++)
+        g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
 }
 
 void compute_capacity_potts_channels_first(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const int n_c, const float tau, const float icc){
     for(int c = 0, cs = 0; c < n_c; c++)
-        for(int s = 0; s < n_s; s++, cs++)
-            g[cs] = tau * (div[cs] + pt[cs] - ps[s] - u[cs] * icc);
+    for(int s = 0; s < n_s; s++, cs++){
+        g[cs] = div[cs] + pt[cs] - ps[s] - u[cs] * icc;
+        g[cs] *= tau;
+    }
 }
 
 void compute_capacity_binary(float* g, const float* u, const float* ps, const float* pt, const float* div, const int n_s, const float tau, const float icc){

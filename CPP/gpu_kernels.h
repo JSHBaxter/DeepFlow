@@ -52,6 +52,8 @@ void add_then_store(const cudaStream_t& dev, const float* addend1, const float* 
 void add_then_store_2(const cudaStream_t& dev, const float* addend1, const float* addend2, float* sum1, float* sum2, const int size);
 
 float max_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s);
+float mean_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s);
+float spat_max_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s, const int n_c);
 
 void aggregate_bottom_up(const cudaStream_t& dev, float** p_ind, float* buffer, const float* org, const int n_s, const int n_c, const int n_r);
 

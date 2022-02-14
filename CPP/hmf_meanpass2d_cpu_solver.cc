@@ -57,7 +57,7 @@ rx(rx_cost),
 ry(ry_cost),
 alloc(channels_first ? 0 : new float[2*n_s*n_r]),
 rx_b(channels_first ? rx : transpose(rx, alloc, n_s, n_r)),
-ry_b(channels_first ? rx : transpose(rx, alloc+n_s*n_r, n_s, n_r))
+ry_b(channels_first ? ry : transpose(ry, alloc+n_s*n_r, n_s, n_r))
 { 
     alloc = 0;
 }

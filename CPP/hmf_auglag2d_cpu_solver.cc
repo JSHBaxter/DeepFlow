@@ -11,18 +11,24 @@ int HMF_AUGLAG_CPU_SOLVER_2D::min_iter_calc(){
 }
 
 void HMF_AUGLAG_CPU_SOLVER_2D::clear_spatial_flows(){
-    clear(px, 2*n_r*n_s);
+    clear(px, n_r*n_s);
+    clear(py, n_r*n_s);
 }
 
 void HMF_AUGLAG_CPU_SOLVER_2D::update_spatial_flow_calc(){
     compute_flows_channels_first(g, div, px, py, rx_b, ry_b, n_r, n_x, n_y);
+    if(DEBUG_PRINT) print_buffer(px,n_s*n_r);
+    if(DEBUG_PRINT) print_buffer(py,n_s*n_r);
 }
 
 void HMF_AUGLAG_CPU_SOLVER_2D::clean_up(){
 }
 
 HMF_AUGLAG_CPU_SOLVER_2D::~HMF_AUGLAG_CPU_SOLVER_2D(){
-    delete px;
+    delete[] px;
+    delete[] py;
+    if(!channels_first) delete [] rx_b;
+    if(!channels_first) delete [] ry_b;
 }
 
 HMF_AUGLAG_CPU_SOLVER_2D::HMF_AUGLAG_CPU_SOLVER_2D(
@@ -48,8 +54,8 @@ n_x(sizes[0]),
 n_y(sizes[1]),
 rx(rx_cost),
 ry(ry_cost),
-px(new float [2*(channels_first ? 1 : 2)*n_s*n_r]),
-py(px+n_s*n_r),
-rx_b( channels_first ? rx : transpose(rx,py+1*n_r*n_s,n_s,n_r) ),
-ry_b( channels_first ? ry : transpose(ry,py+2*n_r*n_s,n_s,n_r) )
+px(new float[n_s*n_r]),
+py(new float[n_s*n_r]),
+rx_b( channels_first ? rx : transpose(rx,new float [n_s*n_r],n_s,n_r) ),
+ry_b( channels_first ? ry : transpose(ry,new float [n_s*n_r],n_s,n_r) )
 {}

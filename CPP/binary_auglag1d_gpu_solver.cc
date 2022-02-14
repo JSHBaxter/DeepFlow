@@ -15,6 +15,7 @@ void BINARY_AUGLAG_GPU_SOLVER_1D::clear_spatial_flows(){
 
 void BINARY_AUGLAG_GPU_SOLVER_1D::update_spatial_flow_calc(){
 	update_spatial_flows(dev, g, div, px, rx, n_x, n_s*n_c);
+    print_buffer(dev,px,n_s*n_c);
 }
 
 BINARY_AUGLAG_GPU_SOLVER_1D::BINARY_AUGLAG_GPU_SOLVER_1D(

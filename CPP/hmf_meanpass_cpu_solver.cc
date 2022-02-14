@@ -96,7 +96,7 @@ void HMF_MEANPASS_CPU_SOLVER_BASE::operator()(){
             max_change = (max_change_1 > max_change_2) ? max_change_1 : max_change_2;
         }
 
-        //std::cout << "HMF_MEANPASS_CPU_SOLVER_BASE Iter #" << i << ": " << max_change << std::endl;
+        if(DEBUG_ITER) std::cout << "HMF_MEANPASS_CPU_SOLVER_BASE Iter #" << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -235,7 +235,7 @@ void HMF_MEANPASS_CPU_GRADIENT_BASE::operator()(){
         
         //get max of gu and break if converged
         float gu_max = maxabs(g_u+u_offset, n_s*n_c);
-        //std::cout << "HMF_MEANPASS_CPU_GRADIENT_BASE Iter #" << i << " " << gu_max << std::endl;
+        if(DEBUG_ITER) std::cout << "HMF_MEANPASS_CPU_GRADIENT_BASE Iter #" << i << " " << gu_max << std::endl;
         if( gu_max <= beta*init_grad_max )
             break;
     }

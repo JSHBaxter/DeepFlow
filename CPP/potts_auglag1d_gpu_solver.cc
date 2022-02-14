@@ -30,5 +30,6 @@ POTTS_AUGLAG_GPU_SOLVER_BASE(dev, batch, sizes[0], n_c, data_cost, u, buffers_fu
 n_x(sizes[0]),
 rx(rx_cost),
 px(buffers_full[3])
-{}
+{
+}
 

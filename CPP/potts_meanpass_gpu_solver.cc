@@ -59,7 +59,7 @@ void POTTS_MEANPASS_GPU_SOLVER_BASE::operator()(){
             block_iter(iter&1);
 
         float max_change = max_of_buffer(dev, r_eff, n_c*n_s);
-        //std::cout << "POTTS_MEANPASS_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
+        if(DEBUG_ITER) std::cout << "POTTS_MEANPASS_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -145,7 +145,7 @@ void POTTS_MEANPASS_GPU_GRADIENT_BASE::operator()(){
             block_iter();
 
         float max_change = max_of_buffer(dev, g_u, n_s*n_c);
-        //std::cout << "POTTS_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << std::endl;
+        if(DEBUG_ITER) std::cout << "POTTS_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < beta)
             break;
     }

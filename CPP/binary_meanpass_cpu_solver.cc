@@ -71,7 +71,7 @@ void BINARY_MEANPASS_CPU_SOLVER_BASE::operator()(){
 			max_change = (max_change_1 > max_change_2) ? max_change_1 : max_change_2;
 		}
 
-		//std::cout << "BINARY_MEANPASS_CPU_SOLVER_BASE Iter " << i << ": " << max_change_1 << " " << max_change_2 << std::endl;
+		if(DEBUG_ITER) std::cout << "BINARY_MEANPASS_CPU_SOLVER_BASE Iter " << i << ": " << max_change_1 << " " << max_change_2 << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -159,7 +159,7 @@ void BINARY_MEANPASS_CPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = maxabs(g_u,n_s*n_c);
-		//std::cout << "BINARY_MEANPASS_CPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
+		if(DEBUG_ITER) std::cout << "BINARY_MEANPASS_CPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
         if (max_change < beta)
             break;
     }

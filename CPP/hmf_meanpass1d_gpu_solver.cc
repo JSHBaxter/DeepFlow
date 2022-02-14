@@ -59,7 +59,7 @@ void HMF_MEANPASS_GPU_GRADIENT_1D::clear_variables(){
 
 void HMF_MEANPASS_GPU_GRADIENT_1D::get_reg_gradients_and_push(float tau){
     populate_reg_mean_gradients_and_add(dev, dy, u, g_rx, n_x, n_r, tau);
-    get_gradient_for_u(dev, dy, du, rx, n_x, n_c, tau);
+    get_gradient_for_u(dev, dy, du, rx, n_x, n_r, tau);
 }
 
 HMF_MEANPASS_GPU_GRADIENT_1D::HMF_MEANPASS_GPU_GRADIENT_1D(

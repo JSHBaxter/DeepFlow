@@ -64,7 +64,7 @@ void BINARY_MEANPASS_GPU_SOLVER_BASE::operator()(){
 		float max_change_2 = max_of_buffer(dev, r_eff, n_c*n_s);
 		float max_change = (max_change_1 > max_change_2) ? max_change_1 : max_change_2;
 		
-		//std::cout << "BINARY_MEANPASS_GPU_SOLVER_BASE Iter " << i << ": " << max_change_1 << " " << max_change_2 << std::endl;
+		if(DEBUG_ITER) std::cout << "BINARY_MEANPASS_GPU_SOLVER_BASE Iter " << i << ": " << max_change_1 << " " << max_change_2 << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -151,7 +151,7 @@ void BINARY_MEANPASS_GPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = max_of_buffer(dev, g_u, n_s*n_c);
-		//std::cout << "BINARY_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
+		if(DEBUG_ITER) std::cout << "BINARY_MEANPASS_GPU_GRADIENT_BASE Iter " << i << ": " << max_change << " " << beta << std::endl;
         if (max_change < beta)
             break;
     }

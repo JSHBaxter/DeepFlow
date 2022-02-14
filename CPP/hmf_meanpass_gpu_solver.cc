@@ -120,7 +120,7 @@ void HMF_MEANPASS_GPU_SOLVER_BASE::operator()(){
         block_iter(1);
         float max_change_2 = max_of_buffer(dev, r_eff, n_s*n_c);
         float max_change = (max_change_1 > max_change_2) ? max_change_1 : max_change_2;
-        //std::cout << "HMF_MEANPASS_GPU_SOLVER_BASE Iter #" << i << ": " << max_change << std::endl;
+        if(DEBUG_ITER) std::cout << "HMF_MEANPASS_GPU_SOLVER_BASE Iter #" << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -205,7 +205,7 @@ void HMF_MEANPASS_GPU_GRADIENT_BASE::block_iter(){
     for (int l = n_r-1; l >= n_c; l--) {
         const TreeNode* n = bottom_up_list[l];
         for(int c = 0; c < n->c; c++)
-        inc_buffer(dev, du+n->r*n_s, du+n->children[c]->r*n_s, n_s);
+            inc_buffer(dev, du+n->r*n_s, du+n->children[c]->r*n_s, n_s);
     }
 }
 
@@ -261,7 +261,7 @@ void HMF_MEANPASS_GPU_GRADIENT_BASE::operator()(){
         block_iter();
         
         float max_change = max_of_buffer(dev, du+u_tmp_offset, n_c*n_s);
-        //std::cout << "HMF_MEANPASS_GPU_GRADIENT_BASE Iter " << i << " " << max_change << std::endl;
+        if(DEBUG_ITER) std::cout << "HMF_MEANPASS_GPU_GRADIENT_BASE Iter " << i << " " << max_change << std::endl;
         if(max_change < beta*init_grad_max)
             break;
     }

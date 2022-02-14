@@ -31,10 +31,15 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::block_iter(){
     
     //calculate the capacity and then update flows
     compute_capacity_binary(g, u, ps, pt, div, n_s*n_c, tau, icc);
+    print_buffer(g,n_s*n_c);
     update_spatial_flow_calc();
                  
 	//update source flows, sink flows, and multipliers
 	compute_source_sink_multipliers_binary( g, u, ps, pt, div, data, cc, icc, n_s*n_c);
+    print_buffer(ps,n_s*n_c);
+    print_buffer(pt,n_s*n_c);
+    print_buffer(g,n_s*n_c);
+    print_buffer(u,n_s*n_c);
 }
 
 void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
@@ -52,9 +57,11 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
+    min_iter = 10;
     int max_loop = min_iter_calc();
     if (max_loop < 200)
         max_loop = 200;
+    max_loop = 0;
     
     for(int i = 0; i < max_loop; i++){
 
@@ -63,7 +70,7 @@ void BINARY_AUGLAG_CPU_SOLVER_BASE::operator()(){
             block_iter();
 
         float max_change = maxabs(g,n_s*n_c);
-		//std::cout << "BINARY_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
+		if(DEBUG_ITER) std::cout << "BINARY_AUGLAG_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

@@ -36,10 +36,15 @@ void BINARY_AUGLAG_GPU_SOLVER_BASE::block_iter(){
     
     //calculate the capacity and then update flows
     calc_capacity_binary(dev, g, div, ps, pt, u, n_s*n_c, icc, tau);
+    print_buffer(dev,g,n_s*n_c);
     update_spatial_flow_calc();
 	
     //update source flows, sink flows, and multipliers
     update_source_sink_multiplier_binary(dev, ps, pt, div, u, g, data, cc, icc, n_s*n_c);
+    print_buffer(dev,ps,n_s*n_c);
+    print_buffer(dev,pt,n_s*n_c);
+    print_buffer(dev,g,n_s*n_c);
+    print_buffer(dev,u,n_s*n_c);
 }
 
 void BINARY_AUGLAG_GPU_SOLVER_BASE::operator()(){
@@ -58,10 +63,12 @@ void BINARY_AUGLAG_GPU_SOLVER_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
+    min_iter = 10;
     int max_loop = min_iter_calc();
     if (max_loop < 200)
         max_loop = 200;
-
+    max_loop = 0;
+    
     for(int i = 0; i < max_loop; i++){    
         //run the solver a set block of iterations
         for (int iter = 0; iter < min_iter; iter++)
@@ -69,7 +76,7 @@ void BINARY_AUGLAG_GPU_SOLVER_BASE::operator()(){
 
         //Determine if converged
         float max_change = max_of_buffer(dev, g, n_s*n_c);
-		//std::cout << "BINARY_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
+		if(DEBUG_ITER) std::cout << "BINARY_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

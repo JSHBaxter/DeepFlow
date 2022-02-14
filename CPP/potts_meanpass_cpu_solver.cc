@@ -70,7 +70,7 @@ void POTTS_MEANPASS_CPU_SOLVER_BASE::operator()(){
         for (int iter = 0; iter < min_iter; iter++)
             max_change = block_iter(iter&1, iter == min_iter-1);
 
-		//std::cout << "POTTS_MEANPASS_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
+		if(DEBUG_ITER) std::cout << "POTTS_MEANPASS_CPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }
@@ -163,7 +163,7 @@ void POTTS_MEANPASS_CPU_GRADIENT_BASE::operator()(){
             block_iter();
 
 		float max_change = maxabs(g_u,n_s*n_c);
-		//std::cout << "POTTS_MEANPASS_CPU_GRADIENT_BASE Iter " << i << ": " << max_change << std::endl;
+		if(DEBUG_ITER) std::cout << "POTTS_MEANPASS_CPU_GRADIENT_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < beta)
             break;
     }

@@ -47,11 +47,9 @@ void POTTS_AUGLAG_GPU_SOLVER_BASE::operator()(){
     int min_iter = min_iter_calc();
     if (min_iter < 10)
         min_iter = 10;
-    //min_iter = 1;
     int max_loop = min_iter_calc();
     if (max_loop < 200)
         max_loop = 200;
-    //max_loop = 0;
     
     for(int i = 0; i < max_loop; i++){    
         //run the solver a set block of iterations
@@ -60,7 +58,7 @@ void POTTS_AUGLAG_GPU_SOLVER_BASE::operator()(){
 
         //Determine if converged
         float max_change = max_of_buffer(dev, g, n_s*n_c);
-		//std::cout << "POTTS_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
+		if(DEBUG_ITER) std::cout << "POTTS_AUGLAG_GPU_SOLVER_BASE Iter " << i << ": " << max_change << std::endl;
         if (max_change < tau*beta)
             break;
     }

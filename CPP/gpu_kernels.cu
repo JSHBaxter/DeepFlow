@@ -245,8 +245,11 @@ __global__ void update_source_sink_multiplier_potts_kernel(float* ps, float* pt,
     
     //update source flow
     float ps_t = icc;
-    for(int c = 0; c < n_c; c++)
-        ps_t += (c*n_s+i < n_c*n_s) ? (pt[c*n_s+i]+div[c*n_s+i]-u[c*n_s+i]*icc) : 0.0f;
+    for(int c = 0; c < n_c; c++){
+        ps_t += (c*n_s+i < n_c*n_s) ? pt[c*n_s+i] : 0.0f;
+        ps_t += (c*n_s+i < n_c*n_s) ? div[c*n_s+i] : 0.0f;
+        ps_t -= (c*n_s+i < n_c*n_s) ? (u[c*n_s+i]*icc) : 0.0f;
+    }
     ps_t /= n_c;
     if( i < n_s )
         ps[i] = ps_t;
@@ -254,9 +257,9 @@ __global__ void update_source_sink_multiplier_potts_kernel(float* ps, float* pt,
     //update sink flow
     for(int c = 0; c < n_c; c++){
         float div_t = (c*n_s+i < n_c*n_s) ? div[c*n_s+i] : 0.0f;
-        float u_t = (c*n_s+i < n_c*n_s) ? u[c*n_s+i] : 0.0f;
+        float u_t   = (c*n_s+i < n_c*n_s) ? u[c*n_s+i] : 0.0f;
+        float d_t   = (c*n_s+i < n_c*n_s) ? -d[c*n_s+i] : 0.0f;
         float pt_t = ps_t - div_t + u_t*icc;
-        float d_t = (c*n_s+i < n_c*n_s) ? -d[c*n_s+i] : 0.0f;
         pt_t = (pt_t > d_t) ? d_t : pt_t;
     
         
@@ -665,7 +668,10 @@ __global__ void calc_capacity_potts_kernel(float* g, const float* div, const flo
     int i = blockIdx.x * NUM_THREADS + threadIdx.x;
     float ps_t = (i < n_s) ? ps[i] : 0.0f;
     for(int c = 0; c < n_c; c++){
-        float g_t = (i+c*n_s < n_c*n_s) ? div[i+c*n_s] + pt[i+c*n_s] - ps_t - icc * u[i+c*n_s] : 0.0f;
+        float div_t = (i+c*n_s < n_c*n_s) ? div[i+c*n_s] : 0.0f;
+        float pt_t  = (i+c*n_s < n_c*n_s) ? pt [i+c*n_s] : 0.0f;
+        float u_t   = (i+c*n_s < n_c*n_s) ? u  [i+c*n_s] : 0.0f;
+        float g_t = div_t + pt_t - ps_t - icc * u_t;
         g_t *= tau;
         if(i < n_s)
             g[i+c*n_s] = g_t;
@@ -781,6 +787,18 @@ __global__ void maxreduce(float* buffer, int j, int n) {
 }
 
 
+
+float mean_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s){
+    float* buffer_c = (float*) malloc(n_s*sizeof(float));
+    get_from_gpu(dev,buffer,buffer_c,n_s*sizeof(float));
+	cudaStreamSynchronize(dev);
+    double mean_value = 0.0;
+    for(int s = 0; s < n_s; s++)
+        mean_value += (buffer_c[s] < 0) ? -buffer_c[s] : buffer_c[s];
+    free(buffer_c);
+    return (float)(mean_value / (double) n_s);
+}
+
 float max_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s){
     float* buffer_c = (float*) malloc(n_s*sizeof(float));
     get_from_gpu(dev,buffer,buffer_c,n_s*sizeof(float));
@@ -791,6 +809,23 @@ float max_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s)
             max_value = buffer_c[s];
         else if( max_value < -buffer_c[s] )
             max_value = -buffer_c[s];
+    }
+    free(buffer_c);
+    return max_value;
+}
+
+float spat_max_of_buffer(const cudaStream_t& dev, const float* buffer, const int n_s, const int n_c){
+    float* buffer_c = (float*) malloc(n_c*n_s*sizeof(float));
+    get_from_gpu(dev,buffer,buffer_c,n_c*n_s*sizeof(float));
+	cudaStreamSynchronize(dev);
+    float max_value = 0.0f;
+    float sum_value = 0.0f;
+    for(int s = 0; s < n_s; s++){
+        sum_value = 0.0f;
+        for(int c = 0; c < n_c; c++)
+            sum_value += (buffer_c[c*n_s+s] < 0) ? -buffer_c[c*n_s+s] : buffer_c[c*n_s+s];
+        
+        max_value = (max_value > sum_value) ? max_value : sum_value;
     }
     free(buffer_c);
     return max_value;

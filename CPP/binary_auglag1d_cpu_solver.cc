@@ -17,6 +17,7 @@ void BINARY_AUGLAG_CPU_SOLVER_1D::update_spatial_flow_calc(){
         compute_flows_channels_first(g, div, px, rx, n_c, n_x);
     else
         compute_flows(g, div, px, rx, n_c, n_x);
+    print_buffer(px,n_s*n_c);
 }
 
 void BINARY_AUGLAG_CPU_SOLVER_1D::clean_up(){
