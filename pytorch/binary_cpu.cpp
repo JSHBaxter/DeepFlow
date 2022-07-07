@@ -32,7 +32,7 @@ void binary_auglag_1d_cpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ou
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s*n_c, rx_buf + b*n_s*n_c};
         float* const out_buff_curr = out_buf + b*n_s*n_c;
-		auto solver = new BINARY_AUGLAG_SOLVER<CPU_DEVICE>(dev, false, 1, zdata_sizes, n_c, inputs, out_buff_curr);
+		auto solver = new BINARY_AUGLAG_SOLVER<CPU_DEVICE>(dev, false, 1, data_sizes, n_c, inputs, out_buff_curr);
 		solver->run();
         delete solver;
 	}
