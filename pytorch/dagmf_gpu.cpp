@@ -1,6 +1,6 @@
 
-#include "../CPP/hmf_auglag_solver.h"
-#include "../CPP/hmf_meanpass_solver.h"
+#include "../CPP/dagmf_auglag_solver.h"
+#include "../CPP/dagmf_meanpass_solver.h"
 
 #include "../CPP/gpu_kernels.h"
 
@@ -11,7 +11,7 @@ namespace py = pybind11;
 
 #include <iostream>
 
-void hmf_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, torch::Tensor parentage) {
+void dagmf_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
     
 	//get tensor sizing information
@@ -24,13 +24,13 @@ void hmf_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, 
 
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	const float * const data_buf = data.data_ptr<float>();
@@ -43,17 +43,17 @@ void hmf_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, 
 	int data_sizes [1] = {n_x};
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s, rx_buf + b*n_sr};
-		auto solver = new HMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 1, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
+		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 1, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
 		solver->run();
         delete solver;
 	}
 
 	//free temporary memory
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out, torch::Tensor parentage) {
+void dagmf_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
 
 	//get tensor sizing information
@@ -67,13 +67,13 @@ void hmf_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	const float * const data_buf = data.data_ptr<float>();
@@ -87,16 +87,16 @@ void hmf_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 	int data_sizes [2] = {n_x,n_y};
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr};
-		auto solver = new HMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 2, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
+		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 2, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
 		solver->run();
         delete solver;
 	}
 	//free temporary memory
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out, torch::Tensor parentage) {
+void dagmf_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
 	
 	//get tensor sizing information
@@ -111,13 +111,13 @@ void hmf_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	const float * const data_buf = data.data_ptr<float>();
@@ -132,17 +132,17 @@ void hmf_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, t
 	int data_sizes [3] = {n_x,n_y,n_z};
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr, rz_buf + b*n_sr};
-		auto solver = new HMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 3, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
+		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 3, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
 		solver->run();
         delete solver;
 	}
 
 	//free temporary memory
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, torch::Tensor parentage) {
+void dagmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
     
 	//get tensor sizing information
@@ -155,13 +155,13 @@ void hmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 		
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	float * const data_buf = data.data_ptr<float>();
@@ -178,12 +178,12 @@ void hmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	for(int b = 0; b < n_b; b++){
         float* const buffers[] = {u_init_buf, data_buf + b*n_s, rx_buf + b*n_sr};
 		
-		auto solver_auglag = new HMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 1, data_sizes, n_c, n_r, buffers+1, u_init_buf);
+		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 1, data_sizes, n_c, n_r, buffers+1, u_init_buf);
 		solver_auglag->run();
         delete solver_auglag;
 		exp(dev,u_init_buf,u_init_buf,n_s);
 		
-		auto solver_meanpass = new HMF_MEANPASS_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, 1, data_sizes, n_c, n_r, buffers, out_buf+b*n_s);
+		auto solver_meanpass = new DAGMF_MEANPASS_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, 1, data_sizes, n_c, n_r, buffers, out_buf+b*n_s);
 		solver_meanpass->run();
         delete solver_meanpass;
 	}
@@ -191,10 +191,10 @@ void hmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	//clean up temp buffers
 	cudaFree(u_init_buf);
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor parentage) {
+void dagmf_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = u.get_device(), .stream = c10::cuda::getCurrentCUDAStream(u.get_device()) };
 
 	//get tensor sizing information
@@ -207,13 +207,13 @@ void hmf_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	const float* const rx_buf = rx.data_ptr<float>();
@@ -229,17 +229,17 @@ void hmf_meanpass_1d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {g_buf + b*n_s, u_buf + b*n_s*n_c, rx_buf + b*n_sr};
         float* const outputs[] = {g_data_buf + b*n_s, g_rx_buf + b*n_sr};
-		auto grad_meanpass = new HMF_MEANPASS_GRADIENT<CUDA_DEVICE>(dev, bottom_up_list, 1, data_sizes, n_c, n_r, inputs, outputs);
+		auto grad_meanpass = new DAGMF_MEANPASS_GRADIENT<CUDA_DEVICE>(dev, bottom_up_list, 1, data_sizes, n_c, n_r, inputs, outputs);
 		grad_meanpass->run();
         delete grad_meanpass;
 	}
 	
 	//clean up temp buffers
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out, torch::Tensor parentage) {
+void dagmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
 
 	//get tensor sizing information
@@ -253,13 +253,13 @@ void hmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	float * const data_buf = data.data_ptr<float>();
@@ -277,12 +277,12 @@ void hmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	for(int b = 0; b < n_b; b++){
         float* const buffers[] = {u_init_buf, data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr};
 		
-		auto solver_auglag = new HMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 2, data_sizes, n_c, n_r, buffers+1, u_init_buf);
+		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 2, data_sizes, n_c, n_r, buffers+1, u_init_buf);
 		solver_auglag->run();
         delete solver_auglag;
 		exp(dev,u_init_buf,u_init_buf,n_s);
 		
-		auto solver_meanpass = new HMF_MEANPASS_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, 2, data_sizes, n_c, n_r, buffers, out_buf+b*n_s);
+		auto solver_meanpass = new DAGMF_MEANPASS_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, 2, data_sizes, n_c, n_r, buffers, out_buf+b*n_s);
 		solver_meanpass->run();
 		delete solver_meanpass;
 	}
@@ -290,10 +290,10 @@ void hmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	//clean up temp buffers
 	cudaFree(u_init_buf);
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor ry, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor g_ry, torch::Tensor parentage) {
+void dagmf_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor ry, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor g_ry, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = u.get_device(), .stream = c10::cuda::getCurrentCUDAStream(u.get_device()) };
 
 	//get tensor sizing information
@@ -307,13 +307,13 @@ void hmf_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 	
 	//get input buffers
 	const float * const rx_buf = rx.data_ptr<float>();
@@ -331,17 +331,17 @@ void hmf_meanpass_2d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {g_buf + b*n_s, u_buf + b*n_s*n_c, rx_buf + b*n_sr, ry_buf + b*n_sr};
         float* const outputs[] = {g_data_buf + b*n_s, g_rx_buf + b*n_sr, g_ry_buf + b*n_sr};
-		auto grad_meanpass = new HMF_MEANPASS_GRADIENT<CUDA_DEVICE>(dev, bottom_up_list, 2, data_sizes, n_c, n_r, inputs, outputs);
+		auto grad_meanpass = new DAGMF_MEANPASS_GRADIENT<CUDA_DEVICE>(dev, bottom_up_list, 2, data_sizes, n_c, n_r, inputs, outputs);
 		grad_meanpass->run();
         delete grad_meanpass;
 	}
 	
 	//clean up temp buffers
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out, torch::Tensor parentage) {
+void dagmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor out, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
 	
 	//get tensor sizing information
@@ -356,13 +356,13 @@ void hmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 
 	//get input buffers
 	float * const data_buf = data.data_ptr<float>();
@@ -381,12 +381,12 @@ void hmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	for(int b = 0; b < n_b; b++){
         float* const buffers[] = {u_init_buf, data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr, rz_buf + b*n_sr};
 		
-		auto solver_auglag = new HMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 3, data_sizes, n_c, n_r, buffers+1, u_init_buf);
+		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 3, data_sizes, n_c, n_r, buffers+1, u_init_buf);
 		solver_auglag->run();
         delete solver_auglag;
 		exp(dev,u_init_buf,u_init_buf,n_s);
 		
-		auto solver_meanpass = new HMF_MEANPASS_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, 3, data_sizes, n_c, n_r, buffers, out_buf+b*n_s);
+		auto solver_meanpass = new DAGMF_MEANPASS_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, 3, data_sizes, n_c, n_r, buffers, out_buf+b*n_s);
 		solver_meanpass->run();
         delete solver_meanpass;
 	}
@@ -394,10 +394,10 @@ void hmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	//clean up temp buffers
 	cudaFree(u_init_buf);
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor g_ry, torch::Tensor g_rz, torch::Tensor parentage) {
+void dagmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, torch::Tensor g_data, torch::Tensor g_rx, torch::Tensor g_ry, torch::Tensor g_rz, torch::Tensor parentage) {
     CUDA_DEVICE dev = { .dev_number = u.get_device(), .stream = c10::cuda::getCurrentCUDAStream(u.get_device()) };
 
 	//get tensor sizing information
@@ -412,13 +412,13 @@ void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 
     //build the tree
     cudaSetDevice(dev.dev_number);
-    int* parentage_b = new int[n_r];
-    get_from_gpu(dev, parentage.data_ptr<int>(), parentage_b, n_r*sizeof(int));
-    TreeNode* node = NULL;
-    TreeNode** children = NULL;
-    TreeNode** bottom_up_list = NULL;
-    TreeNode** top_down_list = NULL;
-    TreeNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
+    float* parentage_b = new float[n_r*n_r];
+    get_from_gpu(dev, parentage.data_ptr<float>(), parentage_b, n_r*n_r*sizeof(float));
+    DAGNode* node = NULL;
+    DAGNode** children = NULL;
+    DAGNode** bottom_up_list = NULL;
+    DAGNode** top_down_list = NULL;
+    DAGNode::build_tree(node, children, bottom_up_list, top_down_list, parentage_b, n_r, n_c);
 
 	//get input buffers
 	const float * const rx_buf = rx.data_ptr<float>();
@@ -438,24 +438,24 @@ void hmf_meanpass_3d_gpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor rx
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {g_buf + b*n_s, u_buf + b*n_s*n_c, rx_buf + b*n_sr, ry_buf + b*n_sr, rz_buf + b*n_sr};
         float* const outputs[] = {g_data_buf + b*n_s, g_rx_buf + b*n_sr, g_ry_buf + b*n_sr, g_rz_buf + b*n_sr};
-		auto grad_meanpass = new HMF_MEANPASS_GRADIENT<CUDA_DEVICE>(dev, bottom_up_list, 3, data_sizes, n_c, n_r, inputs, outputs);
+		auto grad_meanpass = new DAGMF_MEANPASS_GRADIENT<CUDA_DEVICE>(dev, bottom_up_list, 3, data_sizes, n_c, n_r, inputs, outputs);
 		grad_meanpass->run();
         delete grad_meanpass;
 	}
 	
 	//clean up temp buffers
     delete [] parentage_b;
-    TreeNode::free_tree(node, children, bottom_up_list, top_down_list);
+    DAGNode::free_tree(node, children, bottom_up_list, top_down_list);
 }
 
-void hmf_gpu_bindings(py::module & m) {
-  m.def("hmf_auglag_1d_gpu_forward", &hmf_auglag_1d_gpu, "deepflow hmf_auglag_1d_gpu_forward");
-  m.def("hmf_auglag_2d_gpu_forward", &hmf_auglag_2d_gpu, "deepflow hmf_auglag_2d_gpu_forward");
-  m.def("hmf_auglag_3d_gpu_forward", &hmf_auglag_3d_gpu, "deepflow hmf_auglag_3d_gpu_forward");
-  m.def("hmf_meanpass_1d_gpu_forward", &hmf_meanpass_1d_gpu, "deepflow hmf_meanpass_1d_gpu_forward");
-  m.def("hmf_meanpass_2d_gpu_forward", &hmf_meanpass_2d_gpu, "deepflow hmf_meanpass_2d_gpu_forward");
-  m.def("hmf_meanpass_3d_gpu_forward", &hmf_meanpass_3d_gpu, "deepflow hmf_meanpass_3d_gpu_forward");
-  m.def("hmf_meanpass_1d_gpu_backward", &hmf_meanpass_1d_gpu_back, "deepflow hmf_meanpass_1d_gpu_backward");
-  m.def("hmf_meanpass_2d_gpu_backward", &hmf_meanpass_2d_gpu_back, "deepflow hmf_meanpass_2d_gpu_backward");
-  m.def("hmf_meanpass_3d_gpu_backward", &hmf_meanpass_3d_gpu_back, "deepflow hmf_meanpass_3d_gpu_backward");
+void dagmf_gpu_bindings(py::module & m) {
+  m.def("dagmf_auglag_1d_gpu_forward", &dagmf_auglag_1d_gpu, "deepflow dagmf_auglag_1d_gpu_forward");
+  m.def("dagmf_auglag_2d_gpu_forward", &dagmf_auglag_2d_gpu, "deepflow dagmf_auglag_2d_gpu_forward");
+  m.def("dagmf_auglag_3d_gpu_forward", &dagmf_auglag_3d_gpu, "deepflow dagmf_auglag_3d_gpu_forward");
+  m.def("dagmf_meanpass_1d_gpu_forward", &dagmf_meanpass_1d_gpu, "deepflow dagmf_meanpass_1d_gpu_forward");
+  m.def("dagmf_meanpass_2d_gpu_forward", &dagmf_meanpass_2d_gpu, "deepflow dagmf_meanpass_2d_gpu_forward");
+  m.def("dagmf_meanpass_3d_gpu_forward", &dagmf_meanpass_3d_gpu, "deepflow dagmf_meanpass_3d_gpu_forward");
+  m.def("dagmf_meanpass_1d_gpu_backward", &dagmf_meanpass_1d_gpu_back, "deepflow dagmf_meanpass_1d_gpu_backward");
+  m.def("dagmf_meanpass_2d_gpu_backward", &dagmf_meanpass_2d_gpu_back, "deepflow dagmf_meanpass_2d_gpu_backward");
+  m.def("dagmf_meanpass_3d_gpu_backward", &dagmf_meanpass_3d_gpu_back, "deepflow dagmf_meanpass_3d_gpu_backward");
 }

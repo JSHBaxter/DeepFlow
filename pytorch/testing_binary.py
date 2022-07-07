@@ -10,11 +10,11 @@ from binary_deepflow import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
 
 b=1
 c=5
-x=2**12
+x=2**6
 epsilon = 0.01
 
 def get_size_into(d):
-    x_used = int(x**(1/d)+0.001)
+    x_used = int(x**(2/(d+1))+0.5)
     return tuple( [b,c]+[x_used for i in range(d)] ), tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
 def test_no_smoothness(d,device,asserter):
@@ -58,36 +58,57 @@ def test_no_smoothness(d,device,asserter):
     om_np = om.detach().cpu().numpy()
     ot_np = t.grad.detach().cpu().numpy()
     
+    #print(data_t)
+    #print(oa_np)
+    #print(om_np)
+    #print(ot_np)
+    
     #make sure not nan
     asserter.assertFalse(np.any(np.isnan(oa_np)))
     asserter.assertFalse(np.any(np.isnan(om_np)))
     asserter.assertFalse(np.any(np.isnan(ot_np)))
-    
-    #ensure MAP assigns 1 to positive terms
-    for val_df, val_d in zip(oa_np.flatten(),data_t.flatten()):
-        asserter.assertFalse(val_d > epsilon and val_df < 1-epsilon)
-        asserter.assertFalse(val_d < -epsilon and val_df > epsilon)
         
     #ensure mean pass is equivalent to the data terms only
     for val_df, val_d in zip(om_np.flatten(),data_t.flatten()):
-        asserter.assertTrue(abs(val_df-val_d) < epsilon)
+        if not (abs(val_df-val_d) < epsilon):
+            print(data_t)
+            print(om_np)
+            asserter.assertTrue(abs(val_df-val_d) < epsilon)
     
     #ensure gradient wrt data terms are passed immediately through
     for val_df, val_d in zip(ot_np.flatten(),data_w.flatten()):
-        asserter.assertTrue(abs(val_df-val_d) < epsilon)
+        if not (abs(val_df-val_d) < epsilon):
+            print(data_w)
+            print(ot_np)
+            asserter.assertTrue(abs(val_df-val_d) < epsilon)
+    
+    #ensure MAP assigns 1 to positive terms
+    for val_df, val_d in zip(oa_np.flatten(),data_t.flatten()):
+        if(val_d > epsilon and val_df < 1-epsilon):
+            print("oa",val_df, val_d, epsilon)
+            print(data_t)
+            print(oa_np)
+            print(om_np)
+            asserter.assertFalse(val_d > epsilon and val_df < 1-epsilon)
+        if(val_d < -epsilon and val_df > epsilon):
+            print("oa",val_df, val_d, epsilon)
+            print(data_t)
+            print(oa_np)
+            print(om_np)
+            asserter.assertFalse(val_d < -epsilon and val_df > epsilon)
 
 def test_smoothness_dom(d,device,asserter):
     print("Testing (smoothness dom.) \t Dim: " +str(d)+ " \t Dev: " + device)
 
     size_info, size_red_info, axes = get_size_into(d)
 
-    data_t = 0.1*np.random.normal(0,1,size=size_info).astype(np.float32)
+    data_t = 0.01*np.random.normal(0,1,size=size_info).astype(np.float32)
     data_t += epsilon / np.sum(data_t,axis=axes,keepdims=True)
-    data_rx = 250+25*np.random.uniform(size=size_info).astype(np.float32)
+    data_rx = 2+2*np.random.uniform(size=size_info).astype(np.float32)
     if d > 1:
-        data_ry = 250+25*np.random.uniform(size=size_info).astype(np.float32)
+        data_ry = 2+2*np.random.uniform(size=size_info).astype(np.float32)
     if d > 2:
-        data_rz = 250+25*np.random.uniform(size=size_info).astype(np.float32)
+        data_rz = 2+2*np.random.uniform(size=size_info).astype(np.float32)
 
     t = torch.tensor(data_t, device=torch.device(device))
     rx = torch.tensor(data_rx, device=torch.device(device))
@@ -117,11 +138,27 @@ def test_smoothness_dom(d,device,asserter):
     totals = np.sum(data_t,axis=axes)
     for i in range(c):
         for val_df in oa_np[0,i,...].flatten():
-            asserter.assertFalse(totals[0,i] > epsilon and val_df < 1-epsilon)
-            asserter.assertFalse(totals[0,i] < -epsilon and val_df > epsilon)
+            if(totals[0,i] > x*epsilon/10 and val_df < 1-epsilon):
+                print("oa",val_df, totals[0,i], x*epsilon/10)
+                asserter.assertFalse(totals[0,i] > x*epsilon/10 and val_df < 1-epsilon)
+            if(totals[0,i] < -x*epsilon/10 and val_df > epsilon):
+                print("oa",val_df, totals[0,i], x*epsilon/10)
+                asserter.assertFalse(totals[0,i] < -x*epsilon/10 and val_df > epsilon)
         for val_df in om_np[0,i,...].flatten():
-            asserter.assertFalse(totals[0,i] > epsilon and val_df < -epsilon)
-            asserter.assertFalse(totals[0,i] < -epsilon and val_df > epsilon)
+            if(totals[0,i] > x*epsilon/10 and val_df < 1-epsilon):
+                print("om",val_df, totals[0,i], x*epsilon/10)
+                print(data_t)
+                print(totals)
+                print(oa_np)
+                print(om_np)
+                asserter.assertFalse(totals[0,i] > x*epsilon/10 and val_df < 1-epsilon)
+            if(totals[0,i] < -x*epsilon/10 and val_df > epsilon):
+                print("om",val_df, totals[0,i], x*epsilon/10)
+                print(data_t)
+                print(totals)
+                print(oa_np)
+                print(om_np)
+                asserter.assertFalse(totals[0,i] < -x*epsilon/10 and val_df > epsilon)
 
 def test_device_equivalence(d,device_list,asserter):
     print("Testing (dev equiv.) \t Dim: " +str(d)+ " \t Dev:",device_list)
@@ -203,63 +240,78 @@ def test_device_equivalence(d,device_list,asserter):
             diffs = [np.max(abs(res[dev1][j]-res[dev2][j])) for j in range(len(name))]
             for var in range(len(name)):
                 if(diffs[var] > epsilon_l[var] or np.isnan(diffs[var])):
+                    print(dev1,"\t\t",dev2)
+                    for i1,i2 in zip(res[dev1][var].flatten(),res[dev2][var].flatten()):
+                        print(i1,"\t",i2)
                     raise Exception(name[var]+"\t"+str(diffs[var]))
 
 class Test_Extreme(unittest.TestCase):
 
     def test_no_smoothness_1D(self):
         print("")
+        test_no_smoothness(1,"cpu",self)
+
+    def test_no_smoothness_1D_cuda(self):
+        print("")
         if torch.has_cuda:
             test_no_smoothness(1,"cuda",self)
-        test_no_smoothness(1,"cpu",self)
 
     def test_no_smoothness_2D(self):
         print("")
+        test_no_smoothness(2,"cpu",self)
+
+    def test_no_smoothness_2D_cuda(self):
+        print("")
         if torch.has_cuda:
             test_no_smoothness(2,"cuda",self)
-        test_no_smoothness(2,"cpu",self)
 
     def test_no_smoothness_3D(self):
         print("")
-        if torch.has_cuda:
-            test_no_smoothness(3,"cuda",self)
         test_no_smoothness(3,"cpu",self)
 
-    def test_smoothness_dom_1D(self):
+    def test_no_smoothness_3D_cuda(self):
+        print("")
+        if torch.has_cuda:
+            test_no_smoothness(3,"cuda",self)
+
+    def test_smoothness_1D(self):
+        print("")
+        test_smoothness_dom(1,"cpu",self)
+
+    def test_smoothness_1D_cuda(self):
         print("")
         if torch.has_cuda:
             test_smoothness_dom(1,"cuda",self)
-        test_smoothness_dom(1,"cpu",self)
 
-    def test_smoothness_dom_2D(self):
+    def test_smoothness_2D(self):
+        print("")
+        test_smoothness_dom(2,"cpu",self)
+
+    def test_smoothness_2D_cuda(self):
         print("")
         if torch.has_cuda:
             test_smoothness_dom(2,"cuda",self)
-        test_smoothness_dom(2,"cpu",self)
 
-    def test_smoothness_dom_3D(self):
+    def test_smoothness_3D(self):
+        print("")
+        test_smoothness_dom(3,"cpu",self)
+
+    def test_smoothness_3D_cuda(self):
         print("")
         if torch.has_cuda:
             test_smoothness_dom(3,"cuda",self)
-        test_smoothness_dom(3,"cpu",self)
-            
+    
     def test_equivalence_1d(self):
         print("")
-        if torch.has_cuda:
-            test_device_equivalence(1,["cuda","cpu"],self)
-            
+        test_device_equivalence(1,["cuda","cpu"],self);
+        
     def test_equivalence_2d(self):
         print("")
-        if torch.has_cuda:
-            test_device_equivalence(2,["cuda","cpu"],self)
-            
+        test_device_equivalence(2,["cuda","cpu"],self);
+        
     def test_equivalence_3d(self):
         print("")
-        if torch.has_cuda:
-            test_device_equivalence(3,["cuda","cpu"],self)
-        
-        
-
+        test_device_equivalence(3,["cuda","cpu"],self);
 
 if __name__ == '__main__':
     unittest.main()
