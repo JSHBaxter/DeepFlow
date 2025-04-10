@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include "cpu_kernels.h"
+#include "cpu_kernels_meanpass.h"
 #ifdef USE_CUDA
 #include "gpu_kernels.h"
 #endif
