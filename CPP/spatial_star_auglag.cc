@@ -3,8 +3,10 @@
 #include "common.h"
 
 #include "cpu_kernels.h"
+#include "cpu_kernels_auglag.h"
 #ifdef USE_CUDA
 #include "gpu_kernels.h"
+#include "gpu_kernels_auglag.h"
 #endif
 
 #include <iostream>

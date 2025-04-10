@@ -11,6 +11,7 @@
 #include "cpu_kernels_meanpass.h"
 #ifdef USE_CUDA
 #include "gpu_kernels.h"
+#include "gpu_kernels_meanpass.h"
 #endif
 
 template<typename DEV>

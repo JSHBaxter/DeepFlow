@@ -10,6 +10,7 @@
 #include "cpu_kernels_auglag.h"
 #ifdef USE_CUDA
 #include "gpu_kernels.h"
+#include "gpu_kernels_auglag.h"
 #endif
 
 template<typename DEV>
