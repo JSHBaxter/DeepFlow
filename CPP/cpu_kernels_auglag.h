@@ -11,6 +11,8 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #ifndef CPU_KERNELS_AUGLAG
 #define CPU_KERNELS_AUGLAG
 
+#include "algorithm.h"
+
 //Functions speficially for augmented lagrangian
 void compute_source_flow(const CPU_DEVICE & dev, const float* u, float* ps, const float* pt, const float* div, const float icc, const int n_c, const int n_s);
 void compute_sink_flow(const CPU_DEVICE & dev, const float* u, const float* ps, float* pt, const float* div, const float* d, const float icc, const int n_c, const int n_s);

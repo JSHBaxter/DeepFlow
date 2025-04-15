@@ -15,13 +15,10 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #include <cuda_runtime.h>
 #include "algorithm.h"
 
-// Flags specific to the GPU (i.e. debug, number of threads, etc...)
-#define CHECK_ERRORS true
-#define NUM_THREADS 256
-#define epsilon 0.00001f
 
 //General GPU utilities
 void let_device_catchup(const CUDA_DEVICE& dev);
+void check_error(const CUDA_DEVICE& dev, const char* string);
 void* allocate_on_gpu(const CUDA_DEVICE& dev, size_t amount);
 void deallocate_on_gpu(const CUDA_DEVICE& dev, void* ptr);
 void send_to_gpu(const CUDA_DEVICE& dev, const void* source, void* dest, size_t amount);

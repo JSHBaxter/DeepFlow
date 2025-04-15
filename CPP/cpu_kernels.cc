@@ -195,30 +195,6 @@ void refold_buffer(const CPU_DEVICE & dev, float* buffer, const int n_s, const i
 		buffer[n_c*s+c] = buffer[n_r*s+c];
 }
 
-inline int idx(const int x, const int n_x, const int y, const int n_y){
-    return y + n_y*x;
-}
-
-inline int idx(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z){
-    return z + n_z*idx(x,n_x,y,n_y);
-}
-
-inline int idx(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z, const int w, const int n_w){
-    return w + n_w*idx(x,n_x,y,n_y,z,n_z);
-}
-
-inline int idxc(const int s, const int n_s, const int c, const int n_c){
-    return c + n_c*s;
-}
-
-inline int idxc(const int x, const int n_x, const int y, const int n_y, const int c, const int n_c){
-    return c + n_c*idx(x,n_x,y,n_y);
-}
-
-inline int idxc(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z, const int c, const int n_c){
-    return c + n_c*idx(x,n_x,y,n_y,z,n_z);
-}
-
 void softmax_channels_first(const float* bufferin, float* bufferout, const int n_s, const int n_c){
     for(int s = 0; s < n_s; s++) {
         float max_cost = bufferin[s];

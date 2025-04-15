@@ -11,6 +11,8 @@ Many functions operate point-wise and thus only one signature is needed regardle
 #ifndef CPU_KERNELS_MEANPASS
 #define CPU_KERNELS_MEANPASS
 
+#include "algorithm.h"
+
 //Functions specifically for the mean field forward calculation
 void change_to_diff(const CPU_DEVICE & dev,float* buffer, float* update, const int n_s, const float alpha);
 void get_effective_reg(const CPU_DEVICE & dev, float* const r_eff, const float* const u, const float *const *const r, const int dim, const int* const n, const int n_c);

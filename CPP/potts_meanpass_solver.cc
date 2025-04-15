@@ -31,7 +31,7 @@ u(u),
 r_eff(0)
 {
     if(DEBUG_ITER) std::cout << "POTTS_MEANPASS_SOLVER Constructor " << dim << " " << n_s << " " << n_c << " " << inputs[0] << " " << u << std::endl;
-    spatial_flow = new SPATIAL_MEANPASS_FORWARD_SOLVER<DEV>(dev,n_c,dims,dim,inputs+2);
+    this->spatial_flow = new SPATIAL_MEANPASS_FORWARD_SOLVER<DEV>(dev,n_c,dims,dim,inputs+2);
     MAXFLOW_ALGORITHM<DEV>::construct();
 }
 

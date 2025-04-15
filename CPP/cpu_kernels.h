@@ -64,4 +64,29 @@ void aggregate_bottom_up_channels_first(const CPU_DEVICE & dev,const float* buff
 void aggregate_bottom_up_channels_first(const CPU_DEVICE & dev,float* buffer, const int n_s, const int n_r, const DAGNode* const* bottom_up_list);
 void aggregate_top_down_channels_first(const CPU_DEVICE & dev,float* buffer, const int n_s, const int n_r, const DAGNode* const* bottom_up_list);
 
+
+inline int idx(const int x, const int n_x, const int y, const int n_y){
+    return y + n_y*x;
+}
+
+inline int idx(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z){
+    return z + n_z*idx(x,n_x,y,n_y);
+}
+
+inline int idx(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z, const int w, const int n_w){
+    return w + n_w*idx(x,n_x,y,n_y,z,n_z);
+}
+
+inline int idxc(const int s, const int n_s, const int c, const int n_c){
+    return c + n_c*s;
+}
+
+inline int idxc(const int x, const int n_x, const int y, const int n_y, const int c, const int n_c){
+    return c + n_c*idx(x,n_x,y,n_y);
+}
+
+inline int idxc(const int x, const int n_x, const int y, const int n_y, const int z, const int n_z, const int c, const int n_c){
+    return c + n_c*idx(x,n_x,y,n_y,z,n_z);
+}
+
 #endif //CPU_KERNELS
