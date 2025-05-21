@@ -1,7 +1,7 @@
 #include "cpu_kernels.h"
 #include <limits>
 #include <iostream>
-#define epsilon 0.00001f
+#define epsilon_cpu_kernels 0.00001f
 
 #include <cmath>
 void clear_buffer(const CPU_DEVICE & dev, float* buffer, const int n_s){
@@ -83,8 +83,8 @@ void m_inc_inc_ninc_minc_buffer(const CPU_DEVICE& dev, const float* inc1, const 
 
 void log_buffer(const CPU_DEVICE & dev, const float* bufferin, float* bufferout, const int n_s){
     for(int i = 0; i < n_s; i++)
-		if( bufferin[i] < epsilon )
-			bufferout[i] = log(epsilon);
+		if( bufferin[i] < epsilon_cpu_kernels )
+			bufferout[i] = log(epsilon_cpu_kernels);
 		else
 			bufferout[i] = log(bufferin[i]);
 }

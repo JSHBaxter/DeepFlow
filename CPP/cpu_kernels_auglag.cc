@@ -148,7 +148,7 @@ void update_spatial_flows__update_specific_flow(const int cs, const int csn, con
 
 void update_spatial_flows__update_specific_star_flow(const int cs, const int csn, const float* g, float* p, const float* r, const float* l){
     p[cs] += g[cs] - g[csn];
-    if( p[cs]*l[cs] < 0.0f){
+    if( p[cs]*l[cs] <= 0.0f){
         if (p[cs] > r[cs])
             p[cs] = r[cs];
         else if (p[cs] < -r[cs])
