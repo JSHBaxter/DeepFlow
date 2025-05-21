@@ -15,9 +15,9 @@ b=1
 l=2
 c=2**l
 br=2**(l+1)-2
-x1 = 5
-x2 = 2
-x3 = 2
+x1 = 2048
+x2 = 256
+x3 = 64
 epsilon = 0.01
 
 print(l,c,br)
@@ -322,9 +322,9 @@ def test_device_equivalence(d,device_list,asserter):
         w.requires_grad = False
         p.requires_grad = False
         
-        print(t)
-        print(w)
-        print(p)
+        print("t",t)
+        print("w",w)
+        print("p",p)
         
         rx = torch.tensor(data_rx, device=torch.device(device))
         rx.requires_grad = True
@@ -347,9 +347,11 @@ def test_device_equivalence(d,device_list,asserter):
         loss = torch.sum(w*om)
         loss.backward()
         
-        print(oa)
-        print(om)
-        print(t.grad)
+        print("r",rx)
+        
+        print("oa",oa)
+        print("om",om)
+        print("grad",t.grad)
         
         oa_np = oa.detach().cpu().numpy()
         om_np = om.detach().cpu().numpy()

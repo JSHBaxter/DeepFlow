@@ -9,7 +9,7 @@ from binary_deepflow import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
 from binary_deepflow import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
 
 b=1
-c=5
+c=8
 x=2**6
 epsilon = 0.01
 
@@ -246,59 +246,58 @@ def test_device_equivalence(d,device_list,asserter):
                     raise Exception(name[var]+"\t"+str(diffs[var]))
 
 class Test_Extreme(unittest.TestCase):
-
     def test_no_smoothness_1D(self):
         print("")
         test_no_smoothness(1,"cpu",self)
-
-    def test_no_smoothness_1D_cuda(self):
-        print("")
-        if torch.has_cuda:
-            test_no_smoothness(1,"cuda",self)
-
+        
     def test_no_smoothness_2D(self):
         print("")
         test_no_smoothness(2,"cpu",self)
-
-    def test_no_smoothness_2D_cuda(self):
-        print("")
-        if torch.has_cuda:
-            test_no_smoothness(2,"cuda",self)
 
     def test_no_smoothness_3D(self):
         print("")
         test_no_smoothness(3,"cpu",self)
 
-    def test_no_smoothness_3D_cuda(self):
-        print("")
-        if torch.has_cuda:
-            test_no_smoothness(3,"cuda",self)
-
     def test_smoothness_1D(self):
         print("")
         test_smoothness_dom(1,"cpu",self)
-
-    def test_smoothness_1D_cuda(self):
-        print("")
-        if torch.has_cuda:
-            test_smoothness_dom(1,"cuda",self)
 
     def test_smoothness_2D(self):
         print("")
         test_smoothness_dom(2,"cpu",self)
 
-    def test_smoothness_2D_cuda(self):
-        print("")
-        if torch.has_cuda:
-            test_smoothness_dom(2,"cuda",self)
-
     def test_smoothness_3D(self):
         print("")
         test_smoothness_dom(3,"cpu",self)
+        
+    def test_no_smoothness_1D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_no_smoothness(1,"cuda",self)
+
+    def test_no_smoothness_2D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_no_smoothness(2,"cuda",self)
+
+    def test_no_smoothness_3D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_no_smoothness(3,"cuda",self)
+
+    def test_smoothness_1D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_smoothness_dom(1,"cuda",self)
+
+    def test_smoothness_2D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_smoothness_dom(2,"cuda",self)
 
     def test_smoothness_3D_cuda(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_smoothness_dom(3,"cuda",self)
     
     def test_equivalence_1d(self):

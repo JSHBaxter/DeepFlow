@@ -1,22 +1,27 @@
 import torch
-import sys
 import deepflow
+from deepflow_function import DeepFlowFunction
+from itertools import product
 
+def check_ordering(p,b,l):
+    if len(p) != b**2:
+        raise Exception("Length of the ordering is not correct")
+    for i,(par,chi) in enumerate(product(range(b),range(b))):
+        if par >= chi and int(p[i].item()) != 0:
+            raise Exception("Parents must occur before children in the tree",i,par,chi)
+            
 class DAGMF_MAP1d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, p):
-        print(d)
-        if len(d.shape) == 3 and len(rx.shape) == 3:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.dagmf_auglag_1d_gpu_forward(d,rx, output, p)
-            else:
-                deepflow.dagmf_auglag_1d_cpu_forward(d,rx, output, p)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx],1,True)
+        check_ordering(p,rx.shape[1],d.shape[1])
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.dagmf_auglag_1d_gpu_forward(d,rx, output, p)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 1D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.dagmf_auglag_1d_cpu_forward(d,rx, output, p)
+        return output
             
     #For the optimisers, there is no well defined backwards
     @staticmethod
@@ -29,16 +34,14 @@ class DAGMF_MAP2d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, ry, p):
-        if len(d.shape) == 4 and len(rx.shape) == 4 and len(ry.shape) == 4:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.dagmf_auglag_2d_gpu_forward(d,rx, ry, output, p)
-            else:
-                deepflow.dagmf_auglag_2d_cpu_forward(d,rx, ry, output, p)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry],2,True)
+        check_ordering(p,rx.shape[1],d.shape[1])
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.dagmf_auglag_2d_gpu_forward(d,rx, ry, output, p)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 2D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.dagmf_auglag_2d_cpu_forward(d,rx, ry, output, p)
+        return output
             
     #For the optimisers, there is no well defined backwards
     @staticmethod
@@ -51,16 +54,14 @@ class DAGMF_MAP3d(torch.autograd.Function):
         
     @staticmethod
     def forward(ctx, d, rx, ry, rz, p):
-        if len(d.shape) == 5 and len(rx.shape) == 5 and len(ry.shape) == 5 and len(rz.shape) == 5:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.dagmf_auglag_3d_gpu_forward(d, rx, ry, rz, output, p)
-            else:
-                deepflow.dagmf_auglag_3d_cpu_forward(d, rx, ry, rz, output, p)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry,rz],3,True)
+        check_ordering(p,rx.shape[1],d.shape[1])
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.dagmf_auglag_3d_gpu_forward(d, rx, ry, rz, output, p)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 3D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.dagmf_auglag_3d_cpu_forward(d, rx, ry, rz, output, p)
+        return output
         
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -74,17 +75,15 @@ class DAGMF_Mean1d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, p):
-        if len(d.shape) == 3 and len(rx.shape) == 3:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.dagmf_meanpass_1d_gpu_forward(d,rx, output, p)
-            else:
-                deepflow.dagmf_meanpass_1d_cpu_forward(d,rx, output, p)
-            ctx.save_for_backward(output,rx,p)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx],1,True)
+        check_ordering(p,rx.shape[1],d.shape[1])
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.dagmf_meanpass_1d_gpu_forward(d,rx, output, p)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 1D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.dagmf_meanpass_1d_cpu_forward(d,rx, output, p)
+        ctx.save_for_backward(output,rx,p)
+        return output
             
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -105,17 +104,15 @@ class DAGMF_Mean2d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, ry, p):
-        if len(d.shape) == 4 and len(rx.shape) == 4 and len(ry.shape) == 4:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.dagmf_meanpass_2d_gpu_forward(d,rx, ry, output, p)
-            else:
-                deepflow.dagmf_meanpass_2d_cpu_forward(d,rx, ry, output, p)
-            ctx.save_for_backward(output,rx,ry,p)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry],2,True)
+        check_ordering(p,rx.shape[1],d.shape[1])
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.dagmf_meanpass_2d_gpu_forward(d,rx, ry, output, p)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 2D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.dagmf_meanpass_2d_cpu_forward(d,rx, ry, output, p)
+        ctx.save_for_backward(output,rx,ry,p)
+        return output
             
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -138,17 +135,15 @@ class DAGMF_Mean3d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, ry, rz, p):
-        if len(d.shape) == 5 and len(rx.shape) == 5 and len(ry.shape) == 5 and len(rz.shape) == 5:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.dagmf_meanpass_3d_gpu_forward(d,rx, ry, rz, output, p)
-            else:
-                deepflow.dagmf_meanpass_3d_cpu_forward(d,rx, ry, rz, output, p)
-            ctx.save_for_backward(output,rx,ry,rz,p)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry,rz],3,True)
+        check_ordering(p,rx.shape[1],d.shape[1])
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.dagmf_meanpass_3d_gpu_forward(d,rx, ry, rz, output, p)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 3D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.dagmf_meanpass_3d_cpu_forward(d,rx, ry, rz, output, p)
+        ctx.save_for_backward(output,rx,ry,rz,p)
+        return output
             
     #For the optimisers, there is no well defind backwards
     @staticmethod

@@ -229,7 +229,7 @@ class Test_Extreme(unittest.TestCase):
         
     def test_no_smoothness_1D_cuda(self):
         print("")
-        if torch.has_cuda:  
+        if torch.backends.cuda.is_built():  
             test_no_smoothness(1,"cuda",self)
             
     def test_no_smoothness_2D(self):
@@ -238,7 +238,7 @@ class Test_Extreme(unittest.TestCase):
 
     def test_no_smoothness_2D_cuda(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_no_smoothness(2,"cuda",self)
 
     def test_no_smoothness_3D(self):
@@ -247,7 +247,7 @@ class Test_Extreme(unittest.TestCase):
         
     def test_no_smoothness_3D_cuda(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_no_smoothness(3,"cuda",self)
 
     def test_smoothness_dom_1D(self):
@@ -256,7 +256,7 @@ class Test_Extreme(unittest.TestCase):
 
     def test_smoothness_dom_1D_cuda(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_smoothness_dom(1,"cuda",self)
 
     def test_smoothness_dom_2D(self):
@@ -265,7 +265,7 @@ class Test_Extreme(unittest.TestCase):
 
     def test_smoothness_dom_2D_cuda(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_smoothness_dom(2,"cuda",self)
 
     def test_smoothness_dom_3D(self):
@@ -274,22 +274,22 @@ class Test_Extreme(unittest.TestCase):
 
     def test_smoothness_dom_3D_cuda(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_smoothness_dom(3,"cuda",self)
             
     def test_equivalence_1d(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_device_equivalence(1,["cpu","cuda"],self)
             
     def test_equivalence_2d(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_device_equivalence(2,["cpu","cuda"],self)
             
     def test_equivalence_3d(self):
         print("")
-        if torch.has_cuda:
+        if torch.backends.cuda.is_built():
             test_device_equivalence(3,["cpu","cuda"],self)
         
         

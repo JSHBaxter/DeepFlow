@@ -1,21 +1,18 @@
 import torch
-import sys
 import deepflow
+from deepflow_function import DeepFlowFunction
 
 class Binary_MAP1d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx):
-        if len(d.shape) == 3 and len(rx.shape) == 3:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.binary_auglag_1d_gpu_forward(d,rx, output)
-            else:
-                deepflow.binary_auglag_1d_cpu_forward(d,rx, output)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx],1)
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_auglag_1d_gpu_forward(d,rx, output)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 1D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.binary_auglag_1d_cpu_forward(d,rx, output)
+        return output
             
     #For the optimisers, there is no well defined backwards
     @staticmethod
@@ -28,16 +25,13 @@ class Binary_MAP2d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, ry):
-        if len(d.shape) == 4 and len(rx.shape) == 4 and len(ry.shape) == 4:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.binary_auglag_2d_gpu_forward(d,rx, ry, output)
-            else:
-                deepflow.binary_auglag_2d_cpu_forward(d,rx, ry, output)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry],2)
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_auglag_2d_gpu_forward(d,rx, ry, output)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 2D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.binary_auglag_2d_cpu_forward(d,rx, ry, output)
+        return output
             
     #For the optimisers, there is no well defined backwards
     @staticmethod
@@ -50,16 +44,13 @@ class Binary_MAP3d(torch.autograd.Function):
         
     @staticmethod
     def forward(ctx, d, rx, ry, rz):
-        if len(d.shape) == 5 and len(rx.shape) == 5 and len(ry.shape) == 5 and len(rz.shape) == 5:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.binary_auglag_3d_gpu_forward(d, rx, ry, rz, output)
-            else:
-                deepflow.binary_auglag_3d_cpu_forward(d, rx, ry, rz, output)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry,rz],3)
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_auglag_3d_gpu_forward(d, rx, ry, rz, output)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 3D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.binary_auglag_3d_cpu_forward(d, rx, ry, rz, output)
+        return output
         
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -73,17 +64,14 @@ class Binary_Mean1d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx):
-        if len(d.shape) == 3 and len(rx.shape) == 3:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.binary_meanpass_1d_gpu_forward(d,rx, output)
-            else:
-                deepflow.binary_meanpass_1d_cpu_forward(d,rx, output)
-            ctx.save_for_backward(output,rx)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx],1)
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_meanpass_1d_gpu_forward(d,rx, output)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 1D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.binary_meanpass_1d_cpu_forward(d,rx, output)
+        ctx.save_for_backward(output,rx)
+        return output
             
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -104,17 +92,14 @@ class Binary_Mean2d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, ry):
-        if len(d.shape) == 4 and len(rx.shape) == 4 and len(ry.shape) == 4:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.binary_meanpass_2d_gpu_forward(d,rx, ry, output)
-            else:
-                deepflow.binary_meanpass_2d_cpu_forward(d,rx, ry, output)
-            ctx.save_for_backward(output,rx,ry)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry],2)
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_meanpass_2d_gpu_forward(d,rx, ry, output)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 2D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.binary_meanpass_2d_cpu_forward(d,rx, ry, output)
+        ctx.save_for_backward(output,rx,ry)
+        return output
             
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -137,17 +122,14 @@ class Binary_Mean3d(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, d, rx, ry, rz):
-        if len(d.shape) == 5 and len(rx.shape) == 5 and len(ry.shape) == 5 and len(rz.shape) == 5:
-            output = torch.zeros_like(d)
-            if d.is_cuda:
-                deepflow.binary_meanpass_3d_gpu_forward(d,rx, ry, rz, output)
-            else:
-                deepflow.binary_meanpass_3d_cpu_forward(d,rx, ry, rz, output)
-            ctx.save_for_backward(output,rx,ry,rz)
-            return output
+        DeepFlowFunction.check_var_dims([d,rx,ry,rz],3)
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_meanpass_3d_gpu_forward(d,rx, ry, rz, output)
         else:
-            sys.stderr.write("Gave enough smoothness terms for 3D deepflow, but wrong dimensionality. \n")
-            return
+            deepflow.binary_meanpass_3d_cpu_forward(d,rx, ry, rz, output)
+        ctx.save_for_backward(output,rx,ry,rz)
+        return output
             
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -167,4 +149,4 @@ class Binary_Mean3d(torch.autograd.Function):
         else:
             deepflow.binary_meanpass_3d_cpu_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz)
         return grad_d, grad_rx, grad_ry, grad_rz
-        
+    
