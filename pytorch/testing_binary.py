@@ -8,11 +8,11 @@ import torch
 from binary_deepflow import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
 from binary_deepflow import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
 from binary_deepflow import Binary_Mean1d_PytorchNative,Binary_Mean2d_PytorchNative,Binary_Mean3d_PytorchNative
-from binary_deepflow import Binary_LBP1d_PytorchNative, Binary_LBP2d_PytorchNative
+from binary_deepflow import Binary_LBP1d_PytorchNative, Binary_LBP2d_PytorchNative, Binary_LBP3d_PytorchNative
 
 b=1
 c=1
-x=16
+x=2**6
 epsilon = 0.01
 
 def APD(v1,v2):
@@ -79,6 +79,7 @@ def test_no_smoothness(d,full_device,asserter):
             om = Binary_Mean3d.apply(t,rx,ry,rz)
         else:
             om = Binary_Mean3d_PytorchNative.apply(t,rx,ry,rz)
+        ol = Binary_LBP3d_PytorchNative.apply(t2,rx2,ry2,rz2)
     
     loss = torch.sum(w*om)
     loss.backward()
@@ -174,13 +175,10 @@ def test_smoothness_dom(d,full_device,asserter):
             om = Binary_Mean3d.apply(t,rx,ry,rz)
         else:
             om = Binary_Mean3d_PytorchNative.apply(t,rx,ry,rz)
+        ol = Binary_LBP3d_PytorchNative.apply(t,rx,ry,rz)
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
     ol_np = ol.detach().cpu().numpy()
-    print(data_t)
-    print(oa_np)
-    print(om_np)
-    print(ol_np)
     
     #make sure not nan
     asserter.assertFalse(np.any(np.isnan(oa_np)))
@@ -247,17 +245,26 @@ def test_device_equivalence(d,device_list,asserter):
         device = "cuda" if "cuda" in full_device else "cpu"
         alg_type = "pytorch" if "pytorch" in full_device else "cpp"
         t = torch.tensor(data_t, device=torch.device(device))
+        t2 = torch.tensor(data_t, device=torch.device(device))
         w = torch.tensor(data_w, device=torch.device(device))
+        w2 = torch.tensor(data_w, device=torch.device(device))
         t.requires_grad = True
+        t2.requires_grad = True
         
         rx = torch.tensor(data_rx, device=torch.device(device))
         rx.requires_grad = True
+        rx2 = torch.tensor(data_rx, device=torch.device(device))
+        rx2.requires_grad = True
         if d > 1:
             ry = torch.tensor(data_ry, device=torch.device(device))
             ry.requires_grad = True
+            ry2 = torch.tensor(data_ry, device=torch.device(device))
+            ry2.requires_grad = True
         if d > 2:
             rz = torch.tensor(data_rz, device=torch.device(device))
             rz.requires_grad = True
+            rz2 = torch.tensor(data_rz, device=torch.device(device))
+            rz2.requires_grad = True
             
         if d == 1:
             oa = torch.exp(Binary_MAP1d.apply(t,rx))
@@ -265,45 +272,66 @@ def test_device_equivalence(d,device_list,asserter):
                 om = Binary_Mean1d.apply(t,rx)
             else:
                 om = Binary_Mean1d_PytorchNative.apply(t,rx)
+            ol = Binary_LBP1d_PytorchNative.apply(t2,rx2)
         elif d == 2:
             oa = torch.exp(Binary_MAP2d.apply(t,rx,ry))
             if alg_type == "cpp":
                 om = Binary_Mean2d.apply(t,rx,ry)
             else:
                 om = Binary_Mean2d_PytorchNative.apply(t,rx,ry)
+            ol = Binary_LBP2d_PytorchNative.apply(t2,rx2,ry2)
         elif d == 3:
             oa = torch.exp(Binary_MAP3d.apply(t,rx,ry,rz))
             if alg_type == "cpp":
                 om = Binary_Mean3d.apply(t,rx,ry,rz)
             else:
                 om = Binary_Mean3d_PytorchNative.apply(t,rx,ry,rz)
+            ol = Binary_LBP3d_PytorchNative.apply(t2,rx2,ry2,rz2)
         loss = torch.sum(w*om)
         loss.backward()
+        loss2 = torch.sum(w2*ol)
+        loss2.backward()
 
         oa_np = oa.detach().cpu().numpy()
         om_np = om.detach().cpu().numpy()
+        ol_np = ol.detach().cpu().numpy()
         ot_np = t.grad.detach().cpu().numpy()
+        ot2_np = t2.grad.detach().cpu().numpy()
         
         #make sure not nan
         asserter.assertFalse(np.any(np.isnan(oa_np)))
         asserter.assertFalse(np.any(np.isnan(om_np)))
         asserter.assertFalse(np.any(np.isnan(ot_np)))
-        res[full_device] = [om_np,ot_np,oa_np]
+        asserter.assertFalse(np.any(np.isnan(ot2_np)))
+        res[full_device] = [om_np,ot_np,ol_np,ot2_np,oa_np]
         
         orx_np = rx.grad.detach().cpu().numpy()
         asserter.assertFalse(np.any(np.isnan(orx_np)))
         res[full_device].append(orx_np)
+        orx2_np = rx2.grad.detach().cpu().numpy()
+        asserter.assertFalse(np.any(np.isnan(orx2_np)))
+        res[full_device].append(orx2_np)
         if d > 1:
             ory_np = ry.grad.detach().cpu().numpy()
             asserter.assertFalse(np.any(np.isnan(ory_np)))
             res[full_device].append(ory_np)
+            ory2_np = ry2.grad.detach().cpu().numpy()
+            asserter.assertFalse(np.any(np.isnan(ory2_np)))
+            res[full_device].append(ory2_np)
         if d > 2:
             orz_np = rz.grad.detach().cpu().numpy() 
             asserter.assertFalse(np.any(np.isnan(orz_np)))
             res[full_device].append(orz_np)
+            orz2_np = rz2.grad.detach().cpu().numpy() 
+            asserter.assertFalse(np.any(np.isnan(orz2_np)))
+            res[full_device].append(orz2_np)
                            
 
-    name = ['om_np','ot_np','oa_np','orx_np']
+    name = ['om_np','ot_np','ol_np','ot2_np','oa_np','orx_np']
+    if d > 1:
+        name += ['ory_np','ory2_np']
+    if d > 2:
+        name += ['orz_np','orz2_np']
     for i,dev1 in enumerate(device_list):
         for dev2 in device_list[(i+1):]:
             diffs = [APD(res[dev1][j],res[dev2][j]) for j in range(len(name))]
