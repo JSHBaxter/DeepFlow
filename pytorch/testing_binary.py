@@ -12,7 +12,7 @@ from binary_deepflow import Binary_LBP1d_PytorchNative, Binary_LBP2d_PytorchNati
 
 b=1
 c=1
-x=2**6
+x=2**12
 epsilon = 0.01
 
 def APD(v1,v2):
@@ -21,7 +21,7 @@ def APD(v1,v2):
     return 0 if den == 0 else 100*num/den
 
 def get_size_into(d):
-    x_used = int(x**(2/(d+1))+0.5)
+    x_used = int(x**(1/d)+0.5)
     return tuple( [b,c]+[x_used for i in range(d)] ), tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
 def test_no_smoothness(d,full_device,asserter):
@@ -232,12 +232,12 @@ def test_device_equivalence(d,device_list,asserter):
     size_info, size_red_info, axes = get_size_into(d)
 
     data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
-    data_w = 100*np.random.normal(0,1,size=size_info).astype(np.float32)
-    data_rx = (np.random.uniform(size=size_info)+0.00001).astype(np.float32)/(2**(d-1))
+    data_w = np.random.normal(0,1,size=size_info).astype(np.float32)
+    data_rx = (np.random.uniform(size=size_info)+0.00001).astype(np.float32)/(2**(d+1))
     if d > 1:
-        data_ry = (np.random.uniform(size=size_info)+0.00001).astype(np.float32)/(2**(d-1))
+        data_ry = (np.random.uniform(size=size_info)+0.00001).astype(np.float32)/(2**(d+1))
     if d > 2:
-        data_rz= (np.random.uniform(size=size_info)+0.00001).astype(np.float32)/(2**(d-1))
+        data_rz= (np.random.uniform(size=size_info)+0.00001).astype(np.float32)/(2**(d+1))
 
     res = {}
     for full_device in device_list:
