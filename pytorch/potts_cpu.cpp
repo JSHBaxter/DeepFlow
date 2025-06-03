@@ -149,8 +149,6 @@ void potts_meanpass_1d_cpu_back(torch::Tensor g, torch::Tensor u, torch::Tensor 
 	float * const rx_buf = rx.data_ptr<float>();
 	float * const u_buf = u.data_ptr<float>();
 	float * const g_buf = g.data_ptr<float>();
-
-    std::cout << u_buf << " " << u_buf[0] << std::endl;
     
 	//make output tensor  
 	float * const g_data_buf = g_data.data_ptr<float>();
