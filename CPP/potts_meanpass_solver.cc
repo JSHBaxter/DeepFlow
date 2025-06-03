@@ -148,7 +148,6 @@ void POTTS_MEANPASS_GRADIENT<DEV>::allocate_buffers(float* buffer, float** const
     d_y = g_u+n_s*n_c;
     float* carry_over_tmp[] = {g_u, d_y};
     const float* c_carry_over_tmp[] = {u};
-    std::cout << "\t" << u << " " << g_u << " " << d_y << std::endl;
     spatial_flow->allocate_buffers(d_y+n_s*n_c,carry_over_tmp,c_carry_over_tmp);
 }
 
