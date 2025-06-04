@@ -10,15 +10,18 @@ from binary_deepflow import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
 from binary_deepflow import Binary_Mean1d_PytorchNative,Binary_Mean2d_PytorchNative,Binary_Mean3d_PytorchNative
 from binary_deepflow import Binary_LBP1d_PytorchNative, Binary_LBP2d_PytorchNative, Binary_LBP3d_PytorchNative
 
-b=1
-c=1
+b=2
+c=4
 x=2**12
 epsilon = 0.01
 
 def APD(v1,v2):
     num = np.sum(np.abs(v1-v2))
     den = 0.5*np.sum(np.abs(v1)+np.abs(v2))
-    return 0 if den == 0 else 100*num/den
+    
+    if den > epsilon/100:
+        return 100*num/den
+    return 100*num
 
 def get_size_into(d):
     x_used = int(x**(1/d)+0.5)
@@ -104,6 +107,11 @@ def test_no_smoothness(d,full_device,asserter):
         if not (abs(val_df-val_d) < epsilon):
             print(data_t)
             print(om_np)
+            asserter.assertTrue(APD(val_df,val_d) < epsilon)
+    for val_df, val_d in zip(ol_np.flatten(),data_t.flatten()):
+        if not (abs(val_df-val_d) < epsilon):
+            print(data_t)
+            print(ol_np)
             asserter.assertTrue(APD(val_df,val_d) < epsilon)
     
     #ensure gradient wrt data terms are passed immediately through

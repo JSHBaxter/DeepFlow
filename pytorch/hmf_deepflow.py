@@ -5,13 +5,16 @@ from deepflow_function import DeepFlowFunction
 
 def check_ordering(p,b,l):
     p = p.cpu().numpy().copy()
+    is_leaf = np.ones(size=b,dtype=int)
     if len(p) != b:
         raise Exception("Length of the ordering is not correct")
     for i,pspec in enumerate(p):
         if i < pspec:
             raise Exception("Parents must occur before children in the tree",i,pspec)
-    if not np.any(p==-1):
-        raise Exception("Tree must have a root")
+        if pspec > -1:
+            is_leaf[pspec] = 0
+    if np.sum(is_leaf) != l:
+        raise Exception("Incorrect number of leaves")
         
 class HMF_MAP1d(torch.autograd.Function):
 

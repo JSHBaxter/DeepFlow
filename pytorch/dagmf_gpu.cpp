@@ -43,7 +43,7 @@ void dagmf_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out
 	int data_sizes [1] = {n_x};
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s, rx_buf + b*n_sr};
-		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 1, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
+		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, false, 1, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
 		solver->run();
         delete solver;
 	}
@@ -87,7 +87,7 @@ void dagmf_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int data_sizes [2] = {n_x,n_y};
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr};
-		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 2, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
+		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, false, 2, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
 		solver->run();
         delete solver;
 	}
@@ -132,7 +132,7 @@ void dagmf_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry,
 	int data_sizes [3] = {n_x,n_y,n_z};
 	for(int b = 0; b < n_b; b++){
         const float* const inputs[] = {data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr, rz_buf + b*n_sr};
-		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 3, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
+		auto solver = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, false, 3, data_sizes, n_c, n_r, inputs, out_buf+b*n_s);
 		solver->run();
         delete solver;
 	}
@@ -178,7 +178,7 @@ void dagmf_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor o
 	for(int b = 0; b < n_b; b++){
         float* const buffers[] = {u_init_buf, data_buf + b*n_s, rx_buf + b*n_sr};
 		
-		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 1, data_sizes, n_c, n_r, buffers+1, u_init_buf);
+		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, false, 1, data_sizes, n_c, n_r, buffers+1, u_init_buf);
 		solver_auglag->run();
         delete solver_auglag;
 		exp(dev,u_init_buf,u_init_buf,n_s);
@@ -277,7 +277,7 @@ void dagmf_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	for(int b = 0; b < n_b; b++){
         float* const buffers[] = {u_init_buf, data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr};
 		
-		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 2, data_sizes, n_c, n_r, buffers+1, u_init_buf);
+		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, false, 2, data_sizes, n_c, n_r, buffers+1, u_init_buf);
 		solver_auglag->run();
         delete solver_auglag;
 		exp(dev,u_init_buf,u_init_buf,n_s);
@@ -381,7 +381,7 @@ void dagmf_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor r
 	for(int b = 0; b < n_b; b++){
         float* const buffers[] = {u_init_buf, data_buf + b*n_s, rx_buf + b*n_sr, ry_buf + b*n_sr, rz_buf + b*n_sr};
 		
-		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, bottom_up_list, 3, data_sizes, n_c, n_r, buffers+1, u_init_buf);
+		auto solver_auglag = new DAGMF_AUGLAG_SOLVER<CUDA_DEVICE>(dev, bottom_up_list, false, 3, data_sizes, n_c, n_r, buffers+1, u_init_buf);
 		solver_auglag->run();
         delete solver_auglag;
 		exp(dev,u_init_buf,u_init_buf,n_s);
