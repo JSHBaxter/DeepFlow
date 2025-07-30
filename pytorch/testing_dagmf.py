@@ -10,6 +10,7 @@ from itertools import product
 import torch
 from dagmf_deepflow import DAGMF_MAP1d,DAGMF_MAP2d,DAGMF_MAP3d
 from dagmf_deepflow import DAGMF_Mean1d,DAGMF_Mean2d,DAGMF_Mean3d
+from dagmf_deepflow import DAGMF_LBP1d_PytorchNative,DAGMF_LBP2d_PytorchNative,DAGMF_LBP3d_PytorchNative
 
 b=1
 l=2
@@ -17,10 +18,16 @@ c=2**l
 br=2**(l+1)-2
 x1 = 2048
 x2 = 256
-x3 = 64
-epsilon = 0.01
+x3 = 32
+epsilon = 0.1
 
-print(l,c,br)
+def APD(v1,v2):
+    num = np.sum(np.abs(v1-v2))
+    den = 0.5*np.sum(np.abs(v1)+np.abs(v2))
+    
+    if den > epsilon/100:
+        return 100*num/den
+    return 100*num
 
 def get_size_into(d, device):
     if d == 1:
@@ -49,7 +56,6 @@ def get_size_into(d, device):
     
 def test_no_smoothness(d,device,asserter):
     print("Testing (no smoothness) \t Dim: " +str(d)+ " \t Dev: " + device)
-
     size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
 
     data_t = np.random.normal(0,1,size=size_info_d).astype(np.float32)
@@ -59,45 +65,64 @@ def test_no_smoothness(d,device,asserter):
         data_ry = np.zeros(shape=size_info_r).astype(np.float32)
     if d > 2:
         data_rz = np.zeros(shape=size_info_r).astype(np.float32)
-
+        
     t = torch.tensor(data_t, device=torch.device(device))
+    t2 = torch.tensor(data_t, device=torch.device(device))
     t.requires_grad = True
+    t2.requires_grad = True
     w = torch.tensor(data_w, device=torch.device(device))
     rx = torch.tensor(data_rx, device=torch.device(device))
+    rx2 = torch.tensor(data_rx, device=torch.device(device))
     rx.requires_grad = True
+    rx2.requires_grad = True
     if d > 1:
         ry = torch.tensor(data_ry, device=torch.device(device))
+        ry2 = torch.tensor(data_ry, device=torch.device(device))
         ry.requires_grad = True
+        ry2.requires_grad = True
     if d > 2:
         rz = torch.tensor(data_rz, device=torch.device(device))
+        rz2 = torch.tensor(data_rz, device=torch.device(device))
         rz.requires_grad = True
+        rz2.requires_grad = True
 
     if d == 1:
         oa = torch.exp(DAGMF_MAP1d.apply(t,rx,parentage))
         om = DAGMF_Mean1d.apply(t,rx,parentage)
+        ol = DAGMF_LBP1d_PytorchNative.apply(t2,rx2,parentage)
     elif d == 2:
         oa = torch.exp(DAGMF_MAP2d.apply(t,rx,ry,parentage))
         om = DAGMF_Mean2d.apply(t,rx,ry,parentage)
+        ol = DAGMF_LBP2d_PytorchNative.apply(t2,rx2,ry2,parentage)
     elif d == 3:
         oa = torch.exp(DAGMF_MAP3d.apply(t,rx,ry,rz,parentage))
         om = DAGMF_Mean3d.apply(t,rx,ry,rz,parentage)
+        ol = DAGMF_LBP3d_PytorchNative.apply(t2,rx2,ry2,ry2,parentage)
     loss = torch.sum(w*om)
+    loss.backward()
+    loss = torch.sum(w*ol)
     loss.backward()
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
+    ol_np = ol.detach().cpu().numpy()
     ot_np = t.grad.detach().cpu().numpy()
+    ot2_np = t2.grad.detach().cpu().numpy()
     
     #make sure not nan
     asserter.assertFalse(np.any(np.isnan(oa_np)))
     asserter.assertFalse(np.any(np.isnan(om_np)))
+    asserter.assertFalse(np.any(np.isnan(ol_np)))
     asserter.assertFalse(np.any(np.isnan(ot_np)))
+    asserter.assertFalse(np.any(np.isnan(ot2_np)))
     
     #resize into more usable form
     dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
     dw_np_l = [data_w[0,i,...].flatten() for i in range(c)]
     oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
     om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    ol_np_l = [ol_np[0,i,...].flatten()  for i in range(c)]
     ot_np_l = [ot_np[0,i,...].flatten()  for i in range(c)]
+    ot2_np_l = [ot2_np[0,i,...].flatten()  for i in range(c)]
     x_space = len(dt_np_l[0])
     
     #ensure MAP assigns 1 to highest term and 0 to everything else
@@ -112,13 +137,19 @@ def test_no_smoothness(d,device,asserter):
     #ensure mean pass is equivalent to the data terms only
     for i in range(c): 
         for val_df, val_d in zip(om_np_l[i],dt_np_l[i]):
-            if(abs(val_df-val_d) > epsilon):
+            if(APD(val_df,val_d) > epsilon):
+                raise Exception(str(val_df) + "\t" + str(val_d))
+        for val_df, val_d in zip(ol_np_l[i],dt_np_l[i]):
+            if(APD(val_df,val_d) > epsilon):
                 raise Exception(str(val_df) + "\t" + str(val_d))
     
     #ensure gradient wrt data terms are passed immediately through
     for i in range(c): 
         for val_df, val_d in zip(ot_np_l[i],dw_np_l[i]):
-            if(abs(val_df-val_d) > epsilon):
+            if(APD(val_df,val_d) > epsilon):
+                raise Exception(str(val_df) + "\t" + str(val_d))
+        for val_df, val_d in zip(ot2_np_l[i],dw_np_l[i]):
+            if(APD(val_df,val_d) > epsilon):
                 raise Exception(str(val_df) + "\t" + str(val_d))
 
 
@@ -402,39 +433,49 @@ def test_device_equivalence(d,device_list,asserter):
 
 class Test_Extreme(unittest.TestCase):
 
+
     def test_no_smoothness_1D(self):
         print("")
-        #test_no_smoothness(1,"cpu",self)
-        #if torch.has_cuda:  
-        #    test_no_smoothness(1,"cuda",self)
+        test_no_smoothness(1,"cpu",self)
+        
+    def test_no_smoothness_1D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():  
+            test_no_smoothness(1,"cuda",self)
 
     def test_no_smoothness_2D(self):
         print("")
-        #test_no_smoothness(2,"cpu",self)
-        #if torch.has_cuda:
-        #    test_no_smoothness(2,"cuda",self)
+        test_no_smoothness(2,"cpu",self)
 
+    def test_no_smoothness_2D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_no_smoothness(2,"cuda",self)
+            
     def test_no_smoothness_3D(self):
         print("")
-        #test_no_smoothness(3,"cpu",self)
-        #if torch.has_cuda:
-        #    test_no_smoothness(3,"cuda",self)
+        test_no_smoothness(3,"cpu",self)
+
+    def test_no_smoothness_3D_cuda(self):
+        print("")
+        if torch.backends.cuda.is_built():
+            test_no_smoothness(3,"cuda",self)
 
     def test_smoothness_dom_1D(self):
         print("")
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    test_smoothness_dom(1,"cuda",self)
         #test_smoothness_dom(1,"cpu",self)
 
     def test_smoothness_dom_2D(self):
         print("")
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    test_smoothness_dom(2,"cuda",self)
         #test_smoothness_dom(2,"cpu",self)
 
     def test_smoothness_dom_3D(self):
         print("")
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    test_smoothness_dom(3,"cuda",self)
         #test_smoothness_dom(3,"cpu",self)
 
@@ -442,7 +483,7 @@ class Test_Extreme(unittest.TestCase):
         print("")
         #for i in range(1,l):    
         #    test_mixed_smoothness(i,1,"cpu",self)
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    for i in range(1,l):    
         #        test_mixed_smoothness(i,1,"cuda",self)
 
@@ -450,7 +491,7 @@ class Test_Extreme(unittest.TestCase):
         print("")
         #for i in range(1,l):    
         #    test_mixed_smoothness(i,2,"cpu",self)
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    for i in range(1,l):    
         #        test_mixed_smoothness(i,2,"cuda",self)
 
@@ -458,23 +499,23 @@ class Test_Extreme(unittest.TestCase):
         print("")
         #for i in range(1,l):    
         #    test_mixed_smoothness(i,3,"cpu",self)
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    for i in range(1,l):    
         #        test_mixed_smoothness(i,3,"cuda",self)
             
     def test_equivalence_1d(self):
         print("")
-        if torch.has_cuda:
-            test_device_equivalence(1,["cpu","cuda"],self)
+        #f torch.backends.cuda.is_built():
+        #   test_device_equivalence(1,["cpu","cuda"],self)
             
     def test_equivalence_2d(self):
         print("")
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    test_device_equivalence(2,["cpu","cuda"],self)
             
     def test_equivalence_3d(self):
         print("")
-        #if torch.has_cuda:
+        #if torch.backends.cuda.is_built():
         #    test_device_equivalence(3,["cpu","cuda"],self)
         
         

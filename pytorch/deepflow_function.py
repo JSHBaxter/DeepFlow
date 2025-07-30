@@ -15,5 +15,5 @@ class DeepFlowFunction:
                 if except_channels and i==1:
                     continue
                 if dim[0] != dim[1]:
-                    raise Exception("Tensor shapes must match")
+                    raise Exception("Tensor shapes must match", v1.shape, v2.shape)
                     return

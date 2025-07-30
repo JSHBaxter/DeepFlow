@@ -10,15 +10,24 @@ from itertools import product
 import torch
 from hmf_deepflow import HMF_MAP1d,HMF_MAP2d,HMF_MAP3d
 from hmf_deepflow import HMF_Mean1d,HMF_Mean2d,HMF_Mean3d
+from hmf_deepflow import HMF_LBP1d_PytorchNative, HMF_LBP2d_PytorchNative, HMF_LBP3d_PytorchNative
 
 b=1
 l=3
 c=2**l
 br=2**(l+1)-2
-x1 = 256
+x1 = 2**12
 x2 = 256
-x3 = 64
-epsilon = 0.01
+x3 = 32
+epsilon = 0.1
+
+def APD(v1,v2):
+    num = np.sum(np.abs(v1-v2))
+    den = 0.5*np.sum(np.abs(v1)+np.abs(v2))
+    
+    if den > epsilon/100:
+        return 100*num/den
+    return 100*num
 
 
 
@@ -54,43 +63,62 @@ def test_no_smoothness(d,device,asserter):
         data_rz = np.zeros(shape=size_info_r).astype(np.float32)
 
     t = torch.tensor(data_t, device=torch.device(device))
+    t2 = torch.tensor(data_t, device=torch.device(device))
     t.requires_grad = True
+    t2.requires_grad = True
     w = torch.tensor(data_w, device=torch.device(device))
     rx = torch.tensor(data_rx, device=torch.device(device))
+    rx2 = torch.tensor(data_rx, device=torch.device(device))
     rx.requires_grad = True
+    rx2.requires_grad = True
     if d > 1:
         ry = torch.tensor(data_ry, device=torch.device(device))
+        ry2 = torch.tensor(data_ry, device=torch.device(device))
         ry.requires_grad = True
+        ry2.requires_grad = True
     if d > 2:
         rz = torch.tensor(data_rz, device=torch.device(device))
+        rz2 = torch.tensor(data_rz, device=torch.device(device))
         rz.requires_grad = True
+        rz2.requires_grad = True
 
     if d == 1:
         oa = torch.exp(HMF_MAP1d.apply(t,rx,parentage))
         om = HMF_Mean1d.apply(t,rx,parentage)
+        ol = HMF_LBP1d_PytorchNative.apply(t2,rx2,parentage)
     elif d == 2:
         oa = torch.exp(HMF_MAP2d.apply(t,rx,ry,parentage))
         om = HMF_Mean2d.apply(t,rx,ry,parentage)
+        ol = HMF_LBP2d_PytorchNative.apply(t2,rx2,ry2,parentage)
     elif d == 3:
         oa = torch.exp(HMF_MAP3d.apply(t,rx,ry,rz,parentage))
         om = HMF_Mean3d.apply(t,rx,ry,rz,parentage)
+        ol = HMF_LBP3d_PytorchNative.apply(t2,rx2,ry2,ry2,parentage)
     loss = torch.sum(w*om)
+    loss.backward()
+    loss = torch.sum(w*ol)
     loss.backward()
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
+    ol_np = ol.detach().cpu().numpy()
     ot_np = t.grad.detach().cpu().numpy()
+    ot2_np = t2.grad.detach().cpu().numpy()
     
     #make sure not nan
     asserter.assertFalse(np.any(np.isnan(oa_np)))
     asserter.assertFalse(np.any(np.isnan(om_np)))
+    asserter.assertFalse(np.any(np.isnan(ol_np)))
     asserter.assertFalse(np.any(np.isnan(ot_np)))
+    asserter.assertFalse(np.any(np.isnan(ot2_np)))
     
     #resize into more usable form
     dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
     dw_np_l = [data_w[0,i,...].flatten() for i in range(c)]
     oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
     om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    ol_np_l = [ol_np[0,i,...].flatten()  for i in range(c)]
     ot_np_l = [ot_np[0,i,...].flatten()  for i in range(c)]
+    ot2_np_l = [ot2_np[0,i,...].flatten()  for i in range(c)]
     x_space = len(dt_np_l[0])
     
     #ensure MAP assigns 1 to highest term and 0 to everything else
@@ -105,13 +133,19 @@ def test_no_smoothness(d,device,asserter):
     #ensure mean pass is equivalent to the data terms only
     for i in range(c): 
         for val_df, val_d in zip(om_np_l[i],dt_np_l[i]):
-            if(abs(val_df-val_d) > epsilon):
+            if(APD(val_df,val_d) > epsilon):
+                raise Exception(str(val_df) + "\t" + str(val_d))
+        for val_df, val_d in zip(ol_np_l[i],dt_np_l[i]):
+            if(APD(val_df,val_d) > epsilon):
                 raise Exception(str(val_df) + "\t" + str(val_d))
     
     #ensure gradient wrt data terms are passed immediately through
     for i in range(c): 
         for val_df, val_d in zip(ot_np_l[i],dw_np_l[i]):
-            if(abs(val_df-val_d) > epsilon):
+            if(APD(val_df,val_d) > epsilon):
+                raise Exception(str(val_df) + "\t" + str(val_d))
+        for val_df, val_d in zip(ot2_np_l[i],dw_np_l[i]):
+            if(APD(val_df,val_d) > epsilon):
                 raise Exception(str(val_df) + "\t" + str(val_d))
 
 
@@ -120,15 +154,15 @@ def test_smoothness_dom(d,device,asserter):
 
     size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
 
-    data_t = 1*np.random.uniform(0,1,size=size_info_d).astype(np.float32)
+    data_t = 0.5*np.random.normal(0,1,size=size_info_d).astype(np.float32)
     sums = [np.sum(data_t[:,i,...]) for i in range(c)]
     winner = sums.index(max(sums))
     data_t[:,winner,...] += 0.05*np.random.uniform(0,1,size=data_t[:,winner,...].shape)
-    data_rx = (20*max(size_info_d[2:(2+d)])*x1+np.zeros(shape=size_info_r)).astype(np.float32)
+    data_rx = (2*np.ones(shape=size_info_r)).astype(np.float32)
     if d > 1:
-        data_ry = (20*max(size_info_d[2:(2+d)])*x1+np.zeros(shape=size_info_r)).astype(np.float32)
+        data_ry = (2*np.ones(shape=size_info_r)).astype(np.float32)
     if d > 2:
-        data_rz = (20*max(size_info_d[2:(2+d)])*x1+np.zeros(shape=size_info_r)).astype(np.float32)
+        data_rz = (2*np.ones(shape=size_info_r)).astype(np.float32)
 
     t = torch.tensor(data_t, device=torch.device(device))
     t.requires_grad = True
@@ -142,23 +176,29 @@ def test_smoothness_dom(d,device,asserter):
     if d == 1:
         oa = torch.exp(HMF_MAP1d.apply(t,rx,parentage))
         om = HMF_Mean1d.apply(t,rx,parentage)
+        ol = HMF_LBP1d_PytorchNative.apply(t,rx,parentage)
     elif d == 2:
         oa = torch.exp(HMF_MAP2d.apply(t,rx,ry,parentage))
         om = HMF_Mean2d.apply(t,rx,ry,parentage)
+        ol = HMF_LBP2d_PytorchNative.apply(t,rx,ry,parentage)
     elif d == 3:
         oa = torch.exp(HMF_MAP3d.apply(t,rx,ry,rz,parentage))
         om = HMF_Mean3d.apply(t,rx,ry,rz,parentage)
+        ol = HMF_LBP3d_PytorchNative.apply(t,rx,ry,ry,parentage)
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
+    ol_np = ol.detach().cpu().numpy()
     
     #make sure not nan
     asserter.assertFalse(np.any(np.isnan(oa_np)))
     asserter.assertFalse(np.any(np.isnan(om_np)))
+    asserter.assertFalse(np.any(np.isnan(ol_np)))
     
     #resize into more usable form
     dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
     oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
     om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    ol_np_l = [ol_np[0,i,...].flatten()  for i in range(c)]
     x_space = len(dt_np_l[0])
     
     #ensure MAP assigns 1 to highest terms
@@ -179,7 +219,7 @@ def test_mixed_smoothness(levels,d,device,asserter):
     size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
 
     #first crack at making data terms
-    data_t = np.random.uniform(0,1,size=size_info_d).astype(np.float32)
+    data_t = np.random.normal(0,1,size=size_info_d).astype(np.float32)
     
     # find the 'winning' subtree
     highest_idx = [data_t[0,i,...].flatten()  for i in range(c)]
@@ -198,36 +238,30 @@ def test_mixed_smoothness(levels,d,device,asserter):
     if d == 1:
         for i_b,i_x in product(range(b),range(size_info_d[2])):
             winner = winner_subtree[np.argmax(data_t[i_b,winner_subtree,i_x])]
-            #winner_subtree[int(np.random.uniform()*len(winner_subtree))]
-            #data_t[i_b,winner_subtree,i_x] -= boost/len(winner_subtree)
             data_t[i_b,winner,i_x] += boost
     elif d == 2:
         for i_b,i_x,i_y in product(range(b),range(size_info_d[2]),range(size_info_d[3])):
             winner = winner_subtree[np.argmax(data_t[i_b,winner_subtree,i_x,i_y])]
-            #winner = winner_subtree[int(np.random.uniform()*len(winner_subtree))]
-            #data_t[i_b,winner_subtree,i_x,i_y] -= boost/len(winner_subtree)
             data_t[i_b,winner,i_x,i_y] += boost
     elif d == 3:
         for i_b,i_x,i_y,i_z in product(range(b),range(size_info_d[2]),range(size_info_d[3]),range(size_info_d[4])):
             winner = winner_subtree[np.argmax(data_t[i_b,winner_subtree,i_x,i_y,i_z])]
-            #winner = winner_subtree[int(np.random.uniform()*len(winner_subtree))]
-            #data_t[i_b,winner_subtree,i_x,i_y,i_z] -= boost/len(winner_subtree)
             data_t[i_b,winner,i_x,i_y,i_z] += boost
         
     #add in high smoothness terms
-    data_rx = np.zeros(shape=size_info_r).astype(np.float32)
+    data_rx = 0.01*np.random.uniform(0,1,size=size_info_r).astype(np.float32)/br
     if d > 1:
-        data_ry = np.zeros(shape=size_info_r).astype(np.float32)
+        data_ry = 0.01*np.random.uniform(0,1,size=size_info_r).astype(np.float32)/br
     if d > 2:
-        data_rz = np.zeros(shape=size_info_r).astype(np.float32)
+        data_rz = 0.01*np.random.uniform(0,1,size=size_info_r).astype(np.float32)/br
     if l > 0:
         start_from_term = 0
         up_to_term = 2**(levels+1)-2
-        data_rx[:,start_from_term:up_to_term,...] += 20*max(size_info_d[2:(2+d)])
+        data_rx[:,start_from_term:up_to_term,...] += 2
         if d > 1:
-            data_ry[:,start_from_term:up_to_term,...] += 20*max(size_info_d[2:(2+d)])
+            data_ry[:,start_from_term:up_to_term,...] += 2
         if d > 2:
-            data_ry[:,start_from_term:up_to_term,...] += 20*max(size_info_d[2:(2+d)])
+            data_ry[:,start_from_term:up_to_term,...] += 2
     
     t = torch.tensor(data_t, device=torch.device(device))
     rx = torch.tensor(data_rx, device=torch.device(device))
@@ -239,23 +273,29 @@ def test_mixed_smoothness(levels,d,device,asserter):
     if d == 1:
         oa = torch.exp(HMF_MAP1d.apply(t,rx,parentage))
         om = HMF_Mean1d.apply(t,rx,parentage)
+        ol = HMF_LBP1d_PytorchNative.apply(t,rx,parentage)
     elif d == 2:
         oa = torch.exp(HMF_MAP2d.apply(t,rx,ry,parentage))
         om = HMF_Mean2d.apply(t,rx,ry,parentage)
+        ol = HMF_LBP2d_PytorchNative.apply(t,rx,ry,parentage)
     elif d == 3:
         oa = torch.exp(HMF_MAP3d.apply(t,rx,ry,rz,parentage))
         om = HMF_Mean3d.apply(t,rx,ry,rz,parentage)
+        ol = HMF_LBP3d_PytorchNative.apply(t,rx,ry,ry,parentage)
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
+    ol_np = ol.detach().cpu().numpy()
     
     #make sure not nan
     asserter.assertFalse(np.any(np.isnan(oa_np)))
     asserter.assertFalse(np.any(np.isnan(om_np)))
+    asserter.assertFalse(np.any(np.isnan(ol_np)))
     
     #resize into more usable form
     dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
     oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
     om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    ol_np_l = [ol_np[0,i,...].flatten()  for i in range(c)]
     x_space = len(dt_np_l[0])
     
     #ensure MAP assigns 0 to terms not in the 'best' tree
@@ -391,7 +431,6 @@ def test_device_equivalence(d,device_list,asserter):
 
 class Test_Extreme(unittest.TestCase):
 
-    """
     def test_no_smoothness_1D(self):
         print("")
         test_no_smoothness(1,"cpu",self)
@@ -409,7 +448,7 @@ class Test_Extreme(unittest.TestCase):
         print("")
         if torch.backends.cuda.is_built():
             test_no_smoothness(2,"cuda",self)
-
+            
     def test_no_smoothness_3D(self):
         print("")
         test_no_smoothness(3,"cpu",self)
@@ -418,7 +457,7 @@ class Test_Extreme(unittest.TestCase):
         print("")
         if torch.backends.cuda.is_built():
             test_no_smoothness(3,"cuda",self)
-
+            
     def test_smoothness_dom_1D(self):
         print("")
         test_smoothness_dom(1,"cpu",self)
@@ -478,13 +517,12 @@ class Test_Extreme(unittest.TestCase):
         if torch.backends.cuda.is_built():
             for i in range(1,l):    
                 test_mixed_smoothness(i,3,"cuda",self)
-"""
 
     def test_equivalence_1d(self):
         print("")
         if torch.backends.cuda.is_built():
             test_device_equivalence(1,["cpu","cuda"],self)
-"""      
+            
     def test_equivalence_2d(self):
         print("")
         if torch.backends.cuda.is_built():
@@ -494,7 +532,6 @@ class Test_Extreme(unittest.TestCase):
         print("")
         if torch.backends.cuda.is_built():
             test_device_equivalence(3,["cpu","cuda"],self)
-"""   
 
 
 if __name__ == '__main__':

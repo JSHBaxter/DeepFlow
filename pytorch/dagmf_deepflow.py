@@ -2,6 +2,7 @@ import torch
 import deepflow
 from deepflow_function import DeepFlowFunction
 from itertools import product
+from unhmf_deepflow import UNHMF_LBP1d_PytorchNative, UNHMF_LBP2d_PytorchNative, UNHMF_LBP3d_PytorchNative
 
 def check_ordering(p,b,l):
     if len(p) != b**2:
@@ -9,6 +10,62 @@ def check_ordering(p,b,l):
     for i,(par,chi) in enumerate(product(range(b),range(b))):
         if par >= chi and int(p[i].item()) != 0:
             raise Exception("Parents must occur before children in the tree",i,par,chi)
+
+def mix_regularisation_terms(p,b,br,l,device,rx,sx,ry=None,sy=None,rz=None,sz=None):
+    p = p.detach().cpu().reshape(br,br).numpy().astype(int)
+    if sy is not None:
+        if sz is not None:
+            rx_eff = torch.zeros((b,l,l,sx,sy,sz),device=device)
+            ry_eff = torch.zeros((b,l,l,sx,sy,sz),device=device)
+            rz_eff = torch.zeros((b,l,l,sx,sy,sz),device=device)
+        else:
+            rx_eff = torch.zeros((b,l,l,sx,sy),device=device)
+            ry_eff = torch.zeros((b,l,l,sx,sy),device=device)
+    else:
+        rx_eff = torch.zeros((b,l,l,sx),device=device)
+        
+    #find the leaves
+    leafs = list(range(br))
+    for i in range(br):
+        for j in range(br):
+            if p[j,i] == 1 and j in leafs:
+                leafs.remove(j)
+        
+    #get the ancestors for each leaf
+    parents = []
+    for i in range(l):
+        to_check = [leafs[i]]
+        parents.append([])
+        while to_check:
+            pi = to_check.pop(0)
+            parents[-1].append(pi)
+            for j in range(br):
+                if p[j,pi] > 0:
+                    to_check.append(j)
+        
+    #go through every pair and add reg terms for non-shared parents
+    for i in range(l):
+        for j in range(i+1,l):
+            intersection = [x for x in parents[i] if x in parents[j]]
+            for pb in [x for x in parents[i]+parents[j] if x not in intersection]:
+                rx_eff[:,i,j,...] += rx[:,pb,...]
+                if sy is not None:
+                    ry_eff[:,i,j,...] += ry[:,pb,...]
+                if sz is not None:
+                    rz_eff[:,i,j,...] += rz[:,pb,...]
+            #make symmetric
+            rx_eff[:,j,i,...] = rx_eff[:,i,j,...]
+            if sy is not None:
+                ry_eff[:,j,i,...] = ry_eff[:,i,j,...]
+            if sz is not None:
+                rz_eff[:,j,i,...] = rz_eff[:,i,j,...]
+                
+    #return the containers for the grouped terms
+    if sz is not None:
+        return rx_eff, ry_eff, rz_eff
+    if sy is not None:
+        return rx_eff, ry_eff
+    return rx_eff
             
 class DAGMF_MAP1d(torch.autograd.Function):
 
@@ -164,3 +221,33 @@ class DAGMF_Mean3d(torch.autograd.Function):
             deepflow.dagmf_meanpass_3d_cpu_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz, p)
         return grad_d, grad_rx, grad_ry, grad_rz, torch.zeros_like(p)
         
+class DAGMF_LBP1d_PytorchNative:
+
+    @staticmethod
+    def apply(d, rx, p):
+        DeepFlowFunction.check_var_dims([d,rx],1,True)
+        b,c,sx,br = d.shape[0],d.shape[1],d.shape[2],rx.shape[1]
+        check_ordering(p,br,c)
+        rx_eff = mix_regularisation_terms(p,b,br,c,d.device,rx,sx)
+        return UNHMF_LBP1d_PytorchNative.apply(d,rx_eff)
+    
+class DAGMF_LBP2d_PytorchNative:
+
+    @staticmethod
+    def apply(d, rx, ry, p):
+        DeepFlowFunction.check_var_dims([d,rx,ry],2,True)
+        b,c,sx,sy,br = d.shape[0],d.shape[1],d.shape[2],d.shape[3],rx.shape[1]
+        check_ordering(p,rx.shape[1],d.shape[1])
+        rx_eff, ry_eff = mix_regularisation_terms(p,b,br,c,d.device,rx,sx,ry,sy)
+        return UNHMF_LBP2d_PytorchNative.apply(d,rx_eff,ry_eff)
+        
+class DAGMF_LBP3d_PytorchNative:
+
+    @staticmethod
+    def apply(d, rx, ry, rz, p):
+        DeepFlowFunction.check_var_dims([d,rx,ry,rz],3,True)
+        b,c,sx,sy,sz,br = d.shape[0],d.shape[1],d.shape[2],d.shape[3],d.shape[4],rx.shape[1]
+        check_ordering(p,rx.shape[1],d.shape[1])
+        rx_eff, ry_eff, rz_eff = mix_regularisation_terms(p,b,br,c,d.device,rx,sx,ry,sy,rz,sz)
+        return UNHMF_LBP3d_PytorchNative.apply(d,rx_eff,ry_eff,rz_eff)
+            

@@ -192,7 +192,7 @@ class Potts_LBP1d_PytorchNative(torch.autograd.Function):
             a = torch.sum(erx[:,:,:-1] * mvxd, 1, keepdim=True)
             mexd += erx[:,:,:-1] * (a - erx[:,:,:-1]*mvxd)
             mexu = mvxu.clone()
-            a = torch.sum(erx[:,:,1:] * mvxu, 1, keepdim=True)
+            a = torch.sum(erx[:,:,:-1] * mvxu, 1, keepdim=True)
             mexu += erx[:,:,:-1] * (a - erx[:,:,:-1]*mvxu)
             
             iter+=1
@@ -385,7 +385,7 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
         elif decay_const <= Potts_LBP2d_PytorchNative.epsilon:
             max_num_iters = 1
         else:
-            max_num_iters = int(math.log(Potts_LBP1d_PytorchNative.epsilon) / math.log(decay_const))
+            max_num_iters = int(math.log(Potts_LBP2d_PytorchNative.epsilon) / math.log(decay_const))
         
         iter = 0
         while True:
@@ -424,20 +424,16 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
             #compute edge to vertex messages
             mexd = mvxd.clone()
             a = torch.sum(erx[:,:,:-1,:] * mvxd, dim=1)
-            for i in range(c):
-                mexd[:,i,:,:] += erx[:,i,:-1,:] * (a - erx[:,i,:-1,:]*mvxd[:,i,:,:])
+            mexd += erx[:,:,:-1,:] * (a - erx[:,:,:-1,:]*mvxd)
             mexu = mvxu.clone()
             a = torch.sum(erx[:,:,:-1,:] * mvxu, dim=1)
-            for i in range(c):
-                mexu[:,i,:,:] += erx[:,i,:-1,:] * (a - erx[:,i,:-1,:]*mvxu[:,i,:,:])
+            mexu += erx[:,:,:-1,:] * (a - erx[:,:,:-1,:]*mvxu)
             meyd = mvyd.clone()
             a = torch.sum(ery[:,:,:,:-1] * mvyd, dim=1)
-            for i in range(c):
-                meyd[:,i,:,:] += ery[:,i,:,:-1] * (a - ery[:,i,:,:-1]*mvyd[:,i,:,:])
+            meyd += ery[:,:,:,:-1] * (a - ery[:,:,:,:-1]*mvyd)
             meyu = mvyu.clone()
             a = torch.sum(ery[:,:,:,:-1] * mvyu, dim=1)
-            for i in range(c):
-                meyu[:,i,:,:] += ery[:,i,:,:-1] * (a - ery[:,i,:,:-1]*mvyu[:,i,:,:])
+            meyu += ery[:,:,:,:-1] * (a - ery[:,:,:,:-1]*mvyu)
             
             iter+=1
             if iter >= max_num_iters:
@@ -741,7 +737,7 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
         elif decay_const <= Potts_LBP3d_PytorchNative.epsilon:
             max_num_iters = 1
         else:
-            max_num_iters = int(math.log(Potts_LBP1d_PytorchNative.epsilon) / math.log(decay_const))
+            max_num_iters = int(math.log(Potts_LBP3d_PytorchNative.epsilon) / math.log(decay_const))
         
         iter = 0
         while True:
@@ -806,28 +802,22 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #compute edge to vertex messages
             mexd = mvxd.clone()
             a = torch.sum(erx[:,:,:-1,:,:] * mvxd, dim=1)
-            for i in range(c):
-                mexd[:,i,:,:,:] += erx[:,i,:-1,:,:] * (a - erx[:,i,:-1,:,:]*mvxd[:,i,:,:,:])
+            mexd += erx[:,:,:-1,:,:] * (a - erx[:,:,:-1,:,:]*mvxd)
             mexu = mvxu.clone()
             a = torch.sum(erx[:,:,:-1,:,:] * mvxu, dim=1)
-            for i in range(c):
-                mexu[:,i,:,:,:] += erx[:,i,:-1,:,:] * (a - erx[:,i,:-1,:,:]*mvxu[:,i,:,:,:])
+            mexu += erx[:,:,:-1,:,:] * (a - erx[:,:,:-1,:,:]*mvxu)
             meyd = mvyd.clone()
             a = torch.sum(ery[:,:,:,:-1,:] * mvyd, dim=1)
-            for i in range(c):
-                meyd[:,i,:,:,:] += ery[:,i,:,:-1,:] * (a - ery[:,i,:,:-1,:]*mvyd[:,i,:,:,:])
+            meyd += ery[:,:,:,:-1,:] * (a - ery[:,:,:,:-1,:]*mvyd)
             meyu = mvyu.clone()
             a = torch.sum(ery[:,:,:,:-1,:] * mvyu, dim=1)
-            for i in range(c):
-                meyu[:,i,:,:,:] += ery[:,i,:,:-1,:] * (a - ery[:,i,:,:-1,:]*mvyu[:,i,:,:,:])
+            meyu += ery[:,:,:,:-1,:] * (a - ery[:,:,:,:-1,:]*mvyu)
             mezd = mvzd.clone()
             a = torch.sum(erz[:,:,:,:,:-1] * mvzd, dim=1)
-            for i in range(c):
-                mezd[:,i,:,:,:] += erz[:,i,:,:,:-1] * (a - erz[:,i,:,:,:-1]*mvzd[:,i,:,:,:])
+            mezd += erz[:,:,:,:,:-1] * (a - erz[:,:,:,:,:-1]*mvzd)
             mezu = mvzu.clone()
             a = torch.sum(erz[:,:,:,:,:-1] * mvzu, dim=1)
-            for i in range(c):
-                mezu[:,i,:,:,:] += erz[:,i,:,:,:-1] * (a - erz[:,i,:,:,:-1]*mvzu[:,i,:,:,:])
+            mezu += erz[:,:,:,:,:-1] * (a - erz[:,:,:,:,:-1]*mvzu)
             
             iter+=1
             if iter >= max_num_iters:
