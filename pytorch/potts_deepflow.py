@@ -102,8 +102,8 @@ class Potts_Mean1d_PytorchNative(torch.autograd.Function):
         while True:
             
             energy = -d
-            energy[:,:,:-1] += rx[:,:,:-1]*(2*u[:,:,1:]-1)
-            energy[:,:,1:] += rx[:,:,:-1]*(2*u[:,:,:-1]-1)
+            energy[:,:,:-1] += rx[:,:,:-1]*(u[:,:,1:]-1)
+            energy[:,:,1:] += rx[:,:,:-1]*(u[:,:,:-1]-1)
             u_new = torch.exp(energy) / torch.sum(torch.exp(energy),1)
             change = torch.max(torch.abs(u_new-u))
             u_new = u
@@ -129,12 +129,12 @@ class Potts_Mean1d_PytorchNative(torch.autograd.Function):
         while True:
             
             grad_d += dE
-            grad_rx[:,:,:-1] += (2*u[:,:,1:]-1)* dE[:,:,:-1]
-            grad_rx[:,:,:-1] += (2*u[:,:,:-1]-1)* dE[:,:,1:]
+            grad_rx[:,:,:-1] += (u[:,:,1:]-1)* dE[:,:,:-1]
+            grad_rx[:,:,:-1] += (u[:,:,:-1]-1)* dE[:,:,1:]
             
             new_du = torch.zeros_like(u)
-            new_du[:,:,1:] += 2*dE[:,:,:-1]*rx[:,:,:-1]
-            new_du[:,:,:-1] += 2*dE[:,:,1:]*rx[:,:,:-1]
+            new_du[:,:,1:] += dE[:,:,:-1]*rx[:,:,:-1]
+            new_du[:,:,:-1] += dE[:,:,1:]*rx[:,:,:-1]
             
             new_dE = new_du * (u - torch.sum(torch.unsqueeze(u,2),torch.unsqueeze(u,1),dim=1))
             
@@ -305,10 +305,10 @@ class Potts_Mean2d_PytorchNative(torch.autograd.Function):
         while True:
             
             energy = -d
-            energy[:,:,:-1,:] += rx[:,:,:-1,:]*(2*u[:,:,1:,:]-1)
-            energy[:,:,1:,:] += rx[:,:,:-1,:]*(2*u[:,:,:-1,:]-1)
-            energy[:,:,:,:-1] += ry[:,:,:,:-1]*(2*u[:,:,:,1:]-1)
-            energy[:,:,:,1:] += ry[:,:,:,:-1]*(2*u[:,:,:,:-1]-1)
+            energy[:,:,:-1,:] += rx[:,:,:-1,:]*(u[:,:,1:,:]-1)
+            energy[:,:,1:,:] += rx[:,:,:-1,:]*(u[:,:,:-1,:]-1)
+            energy[:,:,:,:-1] += ry[:,:,:,:-1]*(u[:,:,:,1:]-1)
+            energy[:,:,:,1:] += ry[:,:,:,:-1]*(u[:,:,:,:-1]-1)
             u_new = torch.exp(energy) / torch.sum(torch.exp(energy),1)
             change = torch.max(torch.abs(u_new-u))
             u_new = u
@@ -334,16 +334,16 @@ class Potts_Mean2d_PytorchNative(torch.autograd.Function):
         while True:
             
             grad_d += dE
-            grad_rx[:,:,:-1,:] += (2*u[:,:,1:,:]-1)* dE[:,:,:-1,:]
-            grad_rx[:,:,:-1,:] += (2*u[:,:,:-1,:]-1)* dE[:,:,1:,:]
-            grad_ry[:,:,:,:-1] += (2*u[:,:,:,1:]-1)* dE[:,:,:,:-1]
-            grad_ry[:,:,:,:-1] += (2*u[:,:,:,:-1]-1)* dE[:,:,:,1:]
+            grad_rx[:,:,:-1,:] += (u[:,:,1:,:]-1)* dE[:,:,:-1,:]
+            grad_rx[:,:,:-1,:] += (u[:,:,:-1,:]-1)* dE[:,:,1:,:]
+            grad_ry[:,:,:,:-1] += (u[:,:,:,1:]-1)* dE[:,:,:,:-1]
+            grad_ry[:,:,:,:-1] += (u[:,:,:,:-1]-1)* dE[:,:,:,1:]
             
             new_du = torch.zeros_like(u)
-            new_du[:,:,1:,:] += 2*dE[:,:,:-1,:]*rx[:,:,:-1,:]
-            new_du[:,:,:-1,:] += 2*dE[:,:,1:,:]*rx[:,:,:-1,:]
-            new_du[:,:,:,1:] += 2*dE[:,:,:,:-1]*ry[:,:,:,:-1]
-            new_du[:,:,:,:-1] += 2*dE[:,:,:,1:]*ry[:,:,:,:-1]
+            new_du[:,:,1:,:] += dE[:,:,:-1,:]*rx[:,:,:-1,:]
+            new_du[:,:,:-1,:] += dE[:,:,1:,:]*rx[:,:,:-1,:]
+            new_du[:,:,:,1:] += dE[:,:,:,:-1]*ry[:,:,:,:-1]
+            new_du[:,:,:,:-1] += dE[:,:,:,1:]*ry[:,:,:,:-1]
             
             new_dE = new_du * (u - torch.sum(torch.unsqueeze(u,2),torch.unsqueeze(u,1),dim=1))
             
@@ -641,12 +641,12 @@ class Potts_Mean3d_PytorchNative(torch.autograd.Function):
         while True:
             
             energy = torch.zeros_like(u)
-            energy[:,:,:-1,:,:] += rx[:,:,:-1,:,:]*(2*u[:,:,1:,:,:]-1)
-            energy[:,:,1:,:,:] += rx[:,:,:-1,:,:]*(2*u[:,:,:-1,:,:]-1)
-            energy[:,:,:,:-1,:] += ry[:,:,:,:-1,:]*(2*u[:,:,:,1:,:]-1)
-            energy[:,:,:,1:,:] += ry[:,:,:,:-1,:]*(2*u[:,:,:,:-1,:]-1)
-            energy[:,:,:,:,:-1] += rz[:,:,:,:,:-1]*(2*u[:,:,:,:,1:]-1)
-            energy[:,:,:,:,1:] += rz[:,:,:,:,:-1]*(2*u[:,:,:,:,:-1]-1)
+            energy[:,:,:-1,:,:] += rx[:,:,:-1,:,:]*(u[:,:,1:,:,:]-1)
+            energy[:,:,1:,:,:] += rx[:,:,:-1,:,:]*(u[:,:,:-1,:,:]-1)
+            energy[:,:,:,:-1,:] += ry[:,:,:,:-1,:]*(u[:,:,:,1:,:]-1)
+            energy[:,:,:,1:,:] += ry[:,:,:,:-1,:]*(u[:,:,:,:-1,:]-1)
+            energy[:,:,:,:,:-1] += rz[:,:,:,:,:-1]*(u[:,:,:,:,1:]-1)
+            energy[:,:,:,:,1:] += rz[:,:,:,:,:-1]*(u[:,:,:,:,:-1]-1)
             u_new = torch.exp(energy) / torch.sum(torch.exp(energy),1)
             change = torch.max(torch.abs(u_new-u))
             u_new = u
@@ -675,20 +675,20 @@ class Potts_Mean3d_PytorchNative(torch.autograd.Function):
         while True:
             
             grad_d += dE
-            grad_rx[:,:,:-1,:,:] += (2*u[:,:,1:,:,:]-1)* dE[:,:,:-1,:,:]
-            grad_rx[:,:,:-1,:,:] += (2*u[:,:,:-1,:,:]-1)* dE[:,:,1:,:,:]
-            grad_ry[:,:,:,:-1,:] += (2*u[:,:,:,1:,:]-1)* dE[:,:,:,:-1,:]
-            grad_ry[:,:,:,:-1,:] += (2*u[:,:,:,:-1,:]-1)* dE[:,:,:,1:,:]
-            grad_rz[:,:,:,:,:-1] += (2*u[:,:,:,:,1:]-1)* dE[:,:,:,:,:-1]
-            grad_rz[:,:,:,:,:-1] += (2*u[:,:,:,:,:-1]-1)* dE[:,:,:,:,1:]
+            grad_rx[:,:,:-1,:,:] += (u[:,:,1:,:,:]-1)* dE[:,:,:-1,:,:]
+            grad_rx[:,:,:-1,:,:] += (u[:,:,:-1,:,:]-1)* dE[:,:,1:,:,:]
+            grad_ry[:,:,:,:-1,:] += (u[:,:,:,1:,:]-1)* dE[:,:,:,:-1,:]
+            grad_ry[:,:,:,:-1,:] += (u[:,:,:,:-1,:]-1)* dE[:,:,:,1:,:]
+            grad_rz[:,:,:,:,:-1] += (u[:,:,:,:,1:]-1)* dE[:,:,:,:,:-1]
+            grad_rz[:,:,:,:,:-1] += (u[:,:,:,:,:-1]-1)* dE[:,:,:,:,1:]
             
             new_du = torch.zeros_like(u)
-            new_du[:,:,1:,:,:] += 2*dE[:,:,:-1,:,:]*rx[:,:,:-1,:,:]
-            new_du[:,:,:-1,:,:] += 2*dE[:,:,1:,:,:]*rx[:,:,:-1,:,:]
-            new_du[:,:,:,1:,:] += 2*dE[:,:,:,:-1,:]*ry[:,:,:,:-1,:]
-            new_du[:,:,:,:-1,:] += 2*dE[:,:,:,1:,:]*ry[:,:,:,:-1,:]
-            new_du[:,:,:,:,1:] += 2*dE[:,:,:,:,:-1]*rz[:,:,:,:,:-1]
-            new_du[:,:,:,:,:-1] += 2*dE[:,:,:,:,1:]*rz[:,:,:,:,:-1]
+            new_du[:,:,1:,:,:] += dE[:,:,:-1,:,:]*rx[:,:,:-1,:,:]
+            new_du[:,:,:-1,:,:] += dE[:,:,1:,:,:]*rx[:,:,:-1,:,:]
+            new_du[:,:,:,1:,:] += dE[:,:,:,:-1,:]*ry[:,:,:,:-1,:]
+            new_du[:,:,:,:-1,:] += dE[:,:,:,1:,:]*ry[:,:,:,:-1,:]
+            new_du[:,:,:,:,1:] += dE[:,:,:,:,:-1]*rz[:,:,:,:,:-1]
+            new_du[:,:,:,:,:-1] += dE[:,:,:,:,1:]*rz[:,:,:,:,:-1]
             
             new_dE = new_du * (u - torch.sum(torch.unsqueeze(u,2),torch.unsqueeze(u,1),dim=1))
             
