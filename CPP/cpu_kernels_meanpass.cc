@@ -22,27 +22,27 @@ void calculate_r_eff_channels_last(float* r_eff, const float* rx, const float* r
 
         //in z+
         if(z < n_z-1)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]-0.5);
 
         //in z-
         if(z > 0)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)] * (u[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rz[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)] * (u[idxc(x,n_x,y,n_y,z-1,n_z,c,n_c)]-0.5);
 
         //in y+
         if(y < n_y-1)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]-0.5);
 
         //in y-
         if(y > 0)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)] * (u[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)] * (u[idxc(x,n_x,y-1,n_y,z,n_z,c,n_c)]-0.5);
 
         //in x+
         if(x < n_x-1)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]-0.5);
 
         //in x-
         if(x > 0)
-            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)] * (u[idxc(x-1,n_x,y,n_y,z,n_z,c,n_c)]-0.5);
 
     }
 }
@@ -56,19 +56,19 @@ void calculate_r_eff_channels_last(float* r_eff, const float* rx, const float* r
         
         //in y+
         if(y < n_y-1)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y,n_y,c,n_c)] * (u[idxc(x,n_x,y+1,n_y,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y,n_y,c,n_c)] * (u[idxc(x,n_x,y+1,n_y,c,n_c)]-0.5);
 
         //in y-
         if(y > 0)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,c,n_c)] * (u[idxc(x,n_x,y-1,n_y,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += ry[idxc(x,n_x,y-1,n_y,c,n_c)] * (u[idxc(x,n_x,y-1,n_y,c,n_c)]-0.5);
 
         //in x+
         if(x < n_x-1)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x,n_x,y,n_y,c,n_c)] * (u[idxc(x+1,n_x,y,n_y,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x,n_x,y,n_y,c,n_c)] * (u[idxc(x+1,n_x,y,n_y,c,n_c)]-0.5);
 
         //in x-
         if(x > 0)
-            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,c,n_c)] * (u[idxc(x-1,n_x,y,n_y,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,y,n_y,c,n_c)] += rx[idxc(x-1,n_x,y,n_y,c,n_c)] * (u[idxc(x-1,n_x,y,n_y,c,n_c)]-0.5);
 
     }
 }
@@ -81,11 +81,11 @@ void calculate_r_eff_channels_last(float* r_eff, const float* rx, const float* u
 
         //in x+
         if(x < n_x-1)
-            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x,n_x,c,n_c)] * (u[idxc(x+1,n_x,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x,n_x,c,n_c)] * (u[idxc(x+1,n_x,c,n_c)]-0.5);
 
         //in x-
         if(x > 0)
-            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x-1,n_x,c,n_c)] * (u[idxc(x-1,n_x,c,n_c)]-1.0);
+            r_eff[idxc(x,n_x,c,n_c)] += rx[idxc(x-1,n_x,c,n_c)] * (u[idxc(x-1,n_x,c,n_c)]-0.5);
 
     }
 }
@@ -100,27 +100,27 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
 
         //in z+
         if(z < n_z-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z  ,n_z)] * (u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z  ,n_z)] * (u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-0.5);
 
         //in z-
         if(z > 0)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)] * (u[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rz[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)] * (u[idx(c,n_c,x,n_x,y,n_y,z-1,n_z)]-0.5);
 
         //in y+
         if(y < n_y-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y  ,n_y,z,n_z)] * (u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y  ,n_y,z,n_z)] * (u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-0.5);
 
         //in y-
         if(y > 0)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)] * (u[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += ry[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)] * (u[idx(c,n_c,x,n_x,y-1,n_y,z,n_z)]-0.5);
 
         //in x+
         if(x < n_x-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x  ,n_x,y,n_y,z,n_z)] * (u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x  ,n_x,y,n_y,z,n_z)] * (u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-0.5);
 
         //in x-
         if(x > 0)
-            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)] * (u[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += rx[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)] * (u[idx(c,n_c,x-1,n_x,y,n_y,z,n_z)]-0.5);
 
     }
 }
@@ -134,19 +134,19 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
         
         //in y+
         if(y < n_y-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y  ,n_y)] * (u[idx(c,n_c,x,n_x,y+1,n_y)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y  ,n_y)] * (u[idx(c,n_c,x,n_x,y+1,n_y)]-0.5);
 
         //in y-
         if(y > 0)
-            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y-1,n_y)] * (u[idx(c,n_c,x,n_x,y-1,n_y)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += ry[idx(c,n_c,x,n_x,y-1,n_y)] * (u[idx(c,n_c,x,n_x,y-1,n_y)]-0.5);
 
         //in x+
         if(x < n_x-1)
-            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x  ,n_x,y,n_y)] * (u[idx(c,n_c,x+1,n_x,y,n_y)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x  ,n_x,y,n_y)] * (u[idx(c,n_c,x+1,n_x,y,n_y)]-0.5);
 
         //in x-
         if(x > 0)
-            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x-1,n_x,y,n_y)] * (u[idx(c,n_c,x-1,n_x,y,n_y)]-1.0);
+            r_eff[idx(c,n_c,x,n_x,y,n_y)] += rx[idx(c,n_c,x-1,n_x,y,n_y)] * (u[idx(c,n_c,x-1,n_x,y,n_y)]-0.5);
 
     }
 }
@@ -159,11 +159,11 @@ void calculate_r_eff_channels_first(float* r_eff, const float* rx, const float* 
 
         //in x+
         if(x < n_x-1)
-            r_eff[idx(c,n_c,x,n_x)] += rx[idx(c,n_c,x,n_x)] * (u[idx(c,n_c,x+1,n_x)]-1.0);
+            r_eff[idx(c,n_c,x,n_x)] += rx[idx(c,n_c,x,n_x)] * (u[idx(c,n_c,x+1,n_x)]-0.5);
 
         //in x-
         if(x > 0)
-            r_eff[idx(c,n_c,x,n_x)] += rx[idx(c,n_c,x-1,n_x)] * (u[idx(c,n_c,x-1,n_x)]-1.0);
+            r_eff[idx(c,n_c,x,n_x)] += rx[idx(c,n_c,x-1,n_x)] * (u[idx(c,n_c,x-1,n_x)]-0.5);
 
     }
 }
@@ -429,22 +429,22 @@ void get_reg_gradients_channels_last(const float* g, const float* u, float* g_rx
 		
 		//for z
 		if( z < n_z - 1 ){
-			float up_contra = (u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
-			float dn_contra = (u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)];
+			float up_contra = (u[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)]-0.5f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			float dn_contra = (u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-0.5f) * g[idxc(x,n_x,y,n_y,z+1,n_z,c,n_c)];
 			g_rz[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += tau * (up_contra + dn_contra);
 		}
 
 		//for y
 		if( y < n_y - 1 ){
-			float up_contra = (u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
-			float dn_contra = (u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)];
+			float up_contra = (u[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)]-0.5f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			float dn_contra = (u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-0.5f) * g[idxc(x,n_x,y+1,n_y,z,n_z,c,n_c)];
 			g_ry[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += tau * (up_contra + dn_contra);
 		}
 
 		//for x
 		if( x < n_x - 1){
-			float up_contra = (u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
-			float dn_contra = (u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-1.0f) * g[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)];
+			float up_contra = (u[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)]-0.5f) * g[idxc(x,n_x,y,n_y,z,n_z,c,n_c)];
+			float dn_contra = (u[idxc(x,n_x,y,n_y,z,n_z,c,n_c)]-0.5f) * g[idxc(x+1,n_x,y,n_y,z,n_z,c,n_c)];
 			g_rx[idxc(x,n_x,y,n_y,z,n_z,c,n_c)] += tau * (up_contra + dn_contra);
 		}
 	}
@@ -458,15 +458,15 @@ void get_reg_gradients_channels_last(const float* g, const float* u, float* g_rx
 
 		//for y
 		if( y < n_y - 1 ){
-			float up_contra = (u[idxc(x,n_x,y+1,n_y,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,c,n_c)];
-			float dn_contra = (u[idxc(x,n_x,y,n_y,c,n_c)]-1.0f) * g[idxc(x,n_x,y+1,n_y,c,n_c)];
+			float up_contra = (u[idxc(x,n_x,y+1,n_y,c,n_c)]-0.5f) * g[idxc(x,n_x,y,n_y,c,n_c)];
+			float dn_contra = (u[idxc(x,n_x,y,n_y,c,n_c)]-0.5f) * g[idxc(x,n_x,y+1,n_y,c,n_c)];
 			g_ry[idxc(x,n_x,y,n_y,c,n_c)] += tau * (up_contra + dn_contra);
 		}
 
 		//for x
 		if( x < n_x - 1){
-			float up_contra = (u[idxc(x+1,n_x,y,n_y,c,n_c)]-1.0f) * g[idxc(x,n_x,y,n_y,c,n_c)];
-			float dn_contra = (u[idxc(x,n_x,y,n_y,c,n_c)]-1.0f) * g[idxc(x+1,n_x,y,n_y,c,n_c)];
+			float up_contra = (u[idxc(x+1,n_x,y,n_y,c,n_c)]-0.5f) * g[idxc(x,n_x,y,n_y,c,n_c)];
+			float dn_contra = (u[idxc(x,n_x,y,n_y,c,n_c)]-0.5f) * g[idxc(x+1,n_x,y,n_y,c,n_c)];
 			g_rx[idxc(x,n_x,y,n_y,c,n_c)] += tau * (up_contra + dn_contra);
 		}
 	}
@@ -479,8 +479,8 @@ void get_reg_gradients_channels_last(const float* g, const float* u, float* g_rx
 
 		//for x
 		if( x < n_x - 1){
-			float up_contra = (u[idxc(x+1,n_x,c,n_c)]-1.0f) * g[idxc(x,n_x,c,n_c)];
-			float dn_contra = (u[idxc(x,n_x,c,n_c)]-1.0f) * g[idxc(x+1,n_x,c,n_c)];
+			float up_contra = (u[idxc(x+1,n_x,c,n_c)]-0.5f) * g[idxc(x,n_x,c,n_c)];
+			float dn_contra = (u[idxc(x,n_x,c,n_c)]-0.5f) * g[idxc(x+1,n_x,c,n_c)];
 			g_rx[idxc(x,n_x,c,n_c)] += tau * (up_contra + dn_contra);
 		}
 	}
@@ -494,22 +494,22 @@ void get_reg_gradients_channels_first(const float* g, const float* u, float* g_r
 		
 		//for z
 		if( z < n_z - 1 ){
-			float up_contra = (u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
-			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)];
+			float up_contra = (u[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)]-0.5f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-0.5f) * g[idx(c,n_c,x,n_x,y,n_y,z+1,n_z)];
 			g_rz[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += tau * (up_contra + dn_contra);
 		}
 
 		//for y
 		if( y < n_y - 1 ){
-			float up_contra = (u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
-			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)];
+			float up_contra = (u[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)]-0.5f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-0.5f) * g[idx(c,n_c,x,n_x,y+1,n_y,z,n_z)];
 			g_ry[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += tau * (up_contra + dn_contra);
 		}
 
 		//for x
 		if( x < n_x - 1){
-			float up_contra = (u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
-			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-1.0f) * g[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)];
+			float up_contra = (u[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)]-0.5f) * g[idx(c,n_c,x,n_x,y,n_y,z,n_z)];
+			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y,z,n_z)]-0.5f) * g[idx(c,n_c,x+1,n_x,y,n_y,z,n_z)];
 			g_rx[idx(c,n_c,x,n_x,y,n_y,z,n_z)] += tau * (up_contra + dn_contra);
 		}
 	}
@@ -522,15 +522,15 @@ void get_reg_gradients_channels_first(const float* g, const float* u, float* g_r
 
 		//for y
 		if( y < n_y - 1 ){
-			float up_contra = (u[idx(c,n_c,x,n_x,y+1,n_y)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y)];
-			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y)]-1.0f) * g[idx(c,n_c,x,n_x,y+1,n_y)];
+			float up_contra = (u[idx(c,n_c,x,n_x,y+1,n_y)]-0.5f) * g[idx(c,n_c,x,n_x,y,n_y)];
+			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y)]-0.5f) * g[idx(c,n_c,x,n_x,y+1,n_y)];
 			g_ry[idx(c,n_c,x,n_x,y,n_y)] += tau * (up_contra + dn_contra);
 		}
 
 		//for x
 		if( x < n_x - 1){
-			float up_contra = (u[idx(c,n_c,x+1,n_x,y,n_y)]-1.0f) * g[idx(c,n_c,x,n_x,y,n_y)];
-			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y)]-1.0f) * g[idx(c,n_c,x+1,n_x,y,n_y)];
+			float up_contra = (u[idx(c,n_c,x+1,n_x,y,n_y)]-0.5f) * g[idx(c,n_c,x,n_x,y,n_y)];
+			float dn_contra = (u[idx(c,n_c,x,n_x,y,n_y)]-0.5f) * g[idx(c,n_c,x+1,n_x,y,n_y)];
 			g_rx[idx(c,n_c,x,n_x,y,n_y)] += tau * (up_contra + dn_contra);
 		}
 	}
@@ -542,8 +542,8 @@ void get_reg_gradients_channels_first(const float* g, const float* u, float* g_r
 
 		//for x
 		if( x < n_x - 1){
-			float up_contra = (u[idx(c,n_c,x+1,n_x)]-1.0f) * g[idx(c,n_c,x,n_x)];
-			float dn_contra = (u[idx(c,n_c,x,n_x)]-1.0f) * g[idx(c,n_c,x+1,n_x)];
+			float up_contra = (u[idx(c,n_c,x+1,n_x)]-0.5f) * g[idx(c,n_c,x,n_x)];
+			float dn_contra = (u[idx(c,n_c,x,n_x)]-0.5f) * g[idx(c,n_c,x+1,n_x)];
 			g_rx[idx(c,n_c,x,n_x)] += tau * (up_contra + dn_contra);
 		}
 	}

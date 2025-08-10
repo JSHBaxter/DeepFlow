@@ -19,22 +19,22 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     int n_s = n_x*n_y*n_z;
     for(int c = 0; c < n_c; c++){
         //for z
-        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
-        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (u[c*n_s+i+1]-0.5f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (u[c*n_s+i]-0.5f) * g[c*n_s+i+1] : 0.0f;
         float derivative = ((c*n_s+i < n_c*n_s) ? g_rz[c*n_s+i] : 0.0f) + tau*(( (z < n_z-1) ? up_contra + dn_contra : 0.0f));
         if(i < n_s)
             g_rz[c*n_s+i] = derivative;
         
         //for y
-        up_contra = (c*n_s+i+n_z < n_c*n_s) ? (2.0f*u[c*n_s+i+n_z]-1.0f) * g[c*n_s+i] : 0.0f;
-        dn_contra = (c*n_s+i+n_z < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z] : 0.0f;
+        up_contra = (c*n_s+i+n_z < n_c*n_s) ? (u[c*n_s+i+n_z]-0.5f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_z < n_c*n_s) ? (u[c*n_s+i]-0.5f) * g[c*n_s+i+n_z] : 0.0f;
         derivative = ((c*n_s+i < n_c*n_s) ? g_ry[c*n_s+i] : 0.0f) + tau*(( (y < n_y-1) ? up_contra + dn_contra : 0.0f));
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (2.0f*u[c*n_s+i+n_z*n_y]-1.0f) * g[c*n_s+i] : 0.0f;
-        dn_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_z*n_y] : 0.0f;
+        up_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (u[c*n_s+i+n_z*n_y]-0.5f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_y*n_z < n_c*n_s) ? (u[c*n_s+i]-0.5f) * g[c*n_s+i+n_z*n_y] : 0.0f;
         derivative = ((c*n_s+i < n_c*n_s) ? g_rx[c*n_s+i] : 0.0f) + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
@@ -50,15 +50,15 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     for(int c = 0; c < n_c; c++){
         
         //for y
-        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
-        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (u[c*n_s+i+1]-0.5f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (u[c*n_s+i]-0.5f) * g[c*n_s+i+1] : 0.0f;
         float derivative = ((c*n_s+i < n_c*n_s) ? g_ry[c*n_s+i] : 0.0f) + tau*(( (y < n_y-1) ? up_contra + dn_contra : 0.0f));
         if(i < n_s)
             g_ry[c*n_s+i] = derivative;
         
         //for x
-        up_contra = (c*n_s+i+n_y < n_c*n_s) ? (2.0f*u[c*n_s+i+n_y]-1.0f) * g[c*n_s+i] : 0.0f;
-        dn_contra = (c*n_s+i+n_y < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+n_y] : 0.0f;
+        up_contra = (c*n_s+i+n_y < n_c*n_s) ? (u[c*n_s+i+n_y]-0.5f) * g[c*n_s+i] : 0.0f;
+        dn_contra = (c*n_s+i+n_y < n_c*n_s) ? (u[c*n_s+i]-0.5f) * g[c*n_s+i+n_y] : 0.0f;
         derivative = ((c*n_s+i < n_c*n_s) ? g_rx[c*n_s+i] : 0.0f) + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
@@ -72,8 +72,8 @@ __global__ void populate_reg_mean_gradients_and_add_kernel(const float* g, const
     int n_s = n_x;
     for(int c = 0; c < n_c; c++){
         //for x
-        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i+1]-1.0f) * g[c*n_s+i] : 0.0f;
-        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (2.0f*u[c*n_s+i]-1.0f) * g[c*n_s+i+1] : 0.0f;
+        float up_contra = (c*n_s+i+1 < n_c*n_s) ? (u[c*n_s+i+1]-0.5f) * g[c*n_s+i] : 0.0f;
+        float dn_contra = (c*n_s+i+1 < n_c*n_s) ? (u[c*n_s+i]-0.5f) * g[c*n_s+i+1] : 0.0f;
         float derivative = ((c*n_s+i < n_c*n_s) ? g_rx[c*n_s+i] : 0.0f) + tau*(( (x < n_x-1) ? up_contra + dn_contra: 0.0f));
         if(i < n_s)
             g_rx[c*n_s+i] = derivative;
@@ -120,13 +120,13 @@ void change_to_diff(const CUDA_DEVICE& dev, float* transfer, float* diff, const 
 
 __device__ float get_effective_reg_kernel_up(const float* u, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d, const int n_d){
         float ut = (c*n_s+i+a < n_c*n_s) ? u[c*n_s+i+a] : 0.0f;
-        ut = 2.0f*ut -1.0f;
+        ut = ut -0.5f;
         float rt = (c*n_s+i < n_c*n_s) ? r[c*n_s+i] : 0.0f;
         return (d < n_d-1) ? ut*rt : 0.0f;
 }
 __device__ float get_effective_reg_kernel_dn(const float* u, const float* r, const int c, const int n_c, const int n_s, const int i, const int a, const int d){
         float ut = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? u[c*n_s+i-a] : 0.0f;
-        ut = 2.0f*ut -1.0f;
+        ut = ut -0.5f;
         float rt = (c*n_s+i-a >= 0 && c*n_s+i-a < n_c*n_s) ? r[c*n_s+i-a] : 0.0f;
         return (d > 0) ? ut*rt : 0.0f;
 }
