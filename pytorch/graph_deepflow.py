@@ -1,105 +1,143 @@
 import torch
+from graph_deepflow_function import DenseGraph_LBP_Categorical_PytorchNative, DenseGraph_MFE_Categorical_PytorchNative, DenseGraph_MAP_Categorical_PytorchNative
+from graph_deepflow_function import DenseGraph_LBP_Binary_PytorchNative, DenseGraph_MFE_Binary_PytorchNative, DenseGraph_MAP_Binary_PytorchNative
+import math
 
-class DenseGraph_LBP_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-4
+class BinaryDeepFlow(torch.nn.Module):
+    def __init__(self, solve_type="LBP",activation=True,test_type="MAP") -> None:
+        super().__init__()
+        self.solve_type = solve_type
+        self.test_type = test_type
+        self.activation = activation
     
-    @staticmethod
-    def forward(ctx, d, r):
-        b,c,N = d.shape[0],d.shape[1],d.shape[2]
-        if len(d.shape) != 3:
-            raise Exception("Data term tensor has wrong number of dimensions")
-        if len(r.shape) != 5:
-            raise Exception("Regularisation tensor has wrong number of dimensions")
-        if r.shape[0] != b:
-            raise Exception("Regularisation tensor shape doesn't reflect number of batches")
-        if r.shape[1] != c or r.shape[2] != c:
-            raise Exception("Regularisation tensor shape doesn't reflect number of nodes")
-        if r.shape[3] != N or r.shape[4] != N:
-            raise Exception("Regularisation tensor shape doesn't reflect number of labels")
-            
-        ed = torch.exp(d)
-        er = torch.exp(-r)
-        mv = torch.ones_like(er[:,:,0,:,:])
-        me = torch.ones_like(er[:,:,0,:,:])
+    def forward(self,d,r):
         
-        #get the L1 decay constant to determine number of iterations //TODO
-        n_neigh = torch.count_nonzero(r[:,:,:,0,1], dim=1)
-        torch.min(torch.prod(torch.sort(er,dim=1)[0][:,0:2,:],dim=1))
+        #if we are in training or only "soft" mode, always use training solvers
+        if self.training or self.test_type is None:
             
-            
-        #use the decay constant to find the number of iterations to perform
-        if decay_const >= 1-DenseGraph_LBP_PytorchNative.epsilon:
-            #not guaranteed to converge, should throw error
-            max_num_iters = 10*sx
-        elif decay_const <= DenseGraph_LBP_PytorchNative.epsilon:
-            max_num_iters = 1
-        else:
-            max_num_iters = int(math.log(DenseGraph_LBP_PytorchNative.epsilon) / math.log(decay_const))
-        
-        iter = 0
-        while True:
-            
-            #compute vertex to edge messages
-            mv = ed * (torch.product(me,dim=2) / torch.permute(me,(0,1,3,2)))
-            #for i in range(N): for j in range(N): mv[:,:,i,j] = ed[:,:,i] * torch.product(me[:,:,:,i],dim=-1) / me[:,:,j,i]
-            
-            
-            #renormalise messages
-            av = torch.sum(mvxu,1,keepdim=True)
-            mv /= av
-            
-            #compute edge to vertex messages
-            me = torch.sum(er * torch.unsqueeze(torch.permute(mv,(0,1,3,2)),dim=2), dim=2)
+            #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
+            if self.solve_type == "LBP":
+                me0, me1 = DenseGraph_LBP_Binary_PytorchNative.apply(d,r)
+                marginal_logit = d + torch.sum(torch.log(me1),dim=2) - torch.sum(torch.log(me0),dim=2)
                 
-            iter+=1
-            if iter >= max_num_iters:
-                break
-        
-        #calculate the marginal (logistic domain so normalise by subtracting out the contributions to label 0)
-        marginal = d + torch.sum(torch.log(me,dim=2))
-        
-        #save context for backwards pass and return the marginal
-        ctx.save_for_backward(ed,er,mv,me,av,torch.tensor(max_num_iters))
-        return marginal
+            #if the testing time type is set to the logarithm of the partition function, use a Bethe approximation (side result of LBP)
+            elif self.solve_type == "LPF":
+                epsilon = 10**-10
+                N = d.shape[2]
+                me0, me1 = DenseGraph_LBP_Binary_PytorchNative.apply(d,r)
+                
+                #estimate the marginals for each node
+                marginal_node_0 = torch.prod(me0,dim=2)
+                marginal_node_1 = torch.exp(d)*torch.prod(me1,dim=2)
+                marginal_node_0, marginal_node_1 = marginal_node_0 / (marginal_node_0+marginal_node_1), marginal_node_1 / (marginal_node_0+marginal_node_1)
+                
+                #estimate the joint marginals for each edge
+                marginal_joint_00 = torch.unsqueeze(marginal_node_0,dim=-2)*torch.unsqueeze(marginal_node_0,dim=-1) / me0**2
+                marginal_joint_10 = torch.unsqueeze(marginal_node_1,dim=-2)*torch.unsqueeze(marginal_node_0,dim=-1) / (me0*me1)
+                marginal_joint_01 = torch.unsqueeze(marginal_node_0,dim=-2)*torch.unsqueeze(marginal_node_1,dim=-1) / (me0*me1)
+                marginal_joint_11 = torch.unsqueeze(marginal_node_1,dim=-2)*torch.unsqueeze(marginal_node_1,dim=-1) / me1**2
+                marginal_joint_norm = marginal_joint_00 + marginal_joint_01 + marginal_joint_10 + marginal_joint_11
+                marginal_joint_00 = marginal_joint_00 / marginal_joint_norm * (1-torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1))
+                marginal_joint_01 = marginal_joint_01 / marginal_joint_norm * (1-torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1))
+                marginal_joint_10 = marginal_joint_10 / marginal_joint_norm * (1-torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1))
+                marginal_joint_11 = marginal_joint_11 / marginal_joint_norm * (1-torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1))
+                
+                #estimate the partition function using Bethe approximation
+                log_ZB = torch.sum( -marginal_joint_00*torch.log(marginal_joint_00+epsilon)
+                                   + marginal_joint_10*(r-torch.log(marginal_joint_10+epsilon)) 
+                                   + marginal_joint_01*(r-torch.log(marginal_joint_01+epsilon))
+                                   - marginal_joint_11*torch.log(marginal_joint_11+epsilon), dim=(2,3))
+                log_ZB += (N-1)*torch.sum(  marginal_node_0*torch.log(marginal_node_0+epsilon)
+                                          + marginal_node_1*torch.log(marginal_node_1+epsilon))
+                
+                #return partition function
+                return log_ZB
+            
+                
+            #if we are in mean field estimation, get the marginal estimate directly
+            elif self.solve_type == "MFE":
+                marginal_logit = DenseGraph_MFE_Binary_PytorchNative.apply(d,r)
+                
+            #throw error if solution type is unknown
+            else:
+                raise Exception("Uknown solve type: " + str(self.solve_type))
+                
+            #return the marginal estimate, pushed through the final activation function if need be
+            return torch.sigmoid(marginal_logit) if self.activation else marginal_logit
+            
+        elif self.test_type == "MAP":
+            return DenseGraph_MAP_Binary_PytorchNative.apply(d,r)
+            
+        else:
+                raise Exception("Uknown test-time solve type: " + str(self.solve_type))
+            
+            
+
+class PottsDeepFlow(torch.nn.Module):
+    def __init__(self, solve_type="LBP",activation=True,test_type=None) -> None:
+        super().__init__()
+        self.solve_type = solve_type
+        self.test_type = test_type
+        self.activation = activation
     
-    @staticmethod 
-    def backward(ctx, grad_output):
-        ed,erx,mvxu,mvxd,mexu,mexd,avxu,avxd,max_num_iters = ctx.saved_tensors
-        b,c,sx = ed.shape[0],ed.shape[1],ed.shape[2]
-        max_num_iters = int(max_num_iters.cpu().item())
-        grad_d =  torch.zeros_like(ed) #(will multiply out the ed at the end, keeps everything in exponential domain)
-        grad_rx = torch.zeros_like(erx)
-        prod_me = torch.product(me,dim=2)
-        
-        #backprop through final layer
-        #marginal = d.clone() + torch.sum(torch.log(me,dim=2))
-        grad_me = torch.unsqueeze(grad_output,2) / me
-        
-        iter = 0
-        while True:
+    def forward(self,d,r):
+                
+        #if we are in training or only "soft" mode, always use training solvers
+        if self.training or self.test_type is None:
             
-            #backprop back to vertex messages
-            #me = torch.sum(er * torch.unsqueeze(torch.permute(mv,(0,1,3,2)),dim=2), dim=2)
-            grad_mv = torch.permute(torch.sum(torch.unsqueeze(grad_me,2)*er,2),(0,1,3,2))
-            grad_rx += torch.unsqueeze(grad_me,2)*torch.unsqueeze(torch.permute(mv,(0,1,3,2)),dim=2)
-                        
-            #backprop through renormalisation
-            grad_mv = (grad_mv - torch.sum(grad_mv*mv,1,keepdim=True)) / av
+            #transform Potts regularisation to more general form (for non-MAP solvers)
+            N = d.shape[2]
+            r = torch.unsqueeze(r,dim=1)+torch.unsqueeze(r,dim=2) * (1-torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1),dim=2))
             
-            #backprop back to edge messages //TODO
-            #mv = ed * torch.product(me,dim=2) / torch.permute(me,(0,1,3,2))
-            grad_ed = torch.sum(grad_mv * (torch.product(me,dim=2) / torch.permute(me,(0,1,3,2))), -1)
-            grad_me = -torch.permute(grad_mv * ed * torch.product(me,dim=2),(0,1,3,2)) / me**2
-            for j in range(N):
-                grad_me += torch.unsqueeze((grad_mv[:,:,:,j] * ed * prod_me),2) / (me*me[:,:,j,:])
+            #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
+            if self.solve_type == "LBP":
+                me = DenseGraph_LBP_Categorical_PytorchNative.apply(d,r)
+                marginal_logit = d + torch.sum(torch.log(me),dim=2)
+                
+            #if the testing time type is set to the logarithm of the partition function, use a Bethe approximation (side result of LBP)
+            elif self.solve_type == "LPF":
+                epsilon = 10**-10
+                me = DenseGraph_LBP_Categorical_PytorchNative.apply(d,r)
+                
+                #estimate the marginals for each node
+                marginal_node = torch.exp(d)*torch.prod(me0,dim=2)
+                marginal_node /= torch.sum(marginal_node,dim=1)
+                
+                #estimate the joint marginals for each edge
+                marginal_joint = torch.unsqueeze(torch.unsqueeze(marginal_node_0,dim=-2),dim=1)*torch.unsqueeze(torch.unsqueeze(marginal_node_0,dim=-1),dim=2) / (me*torch.permute(me,(0,2,1,3,4)))
+                marginal_joint = marginal_joint / torch.sum(torch.sum(marginal_joint_norm,dim=1,keepdim=True),dim=2,keepdim=True) * (1-torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1),dim=2))
+                
+                #estimate the partition function using Bethe approximation
+                log_ZB = torch.sum( -marginal_joint_00*torch.log(marginal_joint_00+epsilon)
+                                   + marginal_joint_10*(r-torch.log(marginal_joint_10+epsilon)) 
+                                   + marginal_joint_01*(r-torch.log(marginal_joint_01+epsilon))
+                                   - marginal_joint_11*torch.log(marginal_joint_11+epsilon), dim=(2,3))
+                log_ZB += (N-1)*torch.sum(  marginal_node_0*torch.log(marginal_node_0+epsilon)
+                                          + marginal_node_1*torch.log(marginal_node_1+epsilon))
+                
+                #return partition function
+                return log_ZB
             
-            iter+=1
-            if iter >= max_num_iters:
-                break
-        
-        #correct to no longer be in the exponential domain
-        grad_rx *= erx
-        grad_d = grad_d*ed + grad_output
-        
-        return grad_d, grad_rx
+                
+            #if we are in mean field estimation, get the marginal estimate directly
+            elif self.solve_type == "MFE":
+                marginal_logit = DenseGraph_MFE_Categorical_PytorchNative.apply(d,r)
+                
+            #throw error if solution type is unknown
+            else:
+                raise Exception("Uknown solve type: " + str(self.solve_type))
+                
+            #return the marginal estimate, pushed through the final activation function if need be
+            return torch.softmax(marginal_logit,dim=1) if self.activation else marginal_logit
+            
+        elif self.test_type == "MAP":
+            #transform Potts regularisation to more general form (for MAP solvers)
+            c, N = d.shape[1], d.shape[2]
+            r = torch.unsqueeze(r,dim=2)*torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(torch.eye(c),dim=0),dim=-1),dim=-1)*(1-torch.unsqueeze(torch.unsqueeze(torch.unsqueeze(torch.eye(N),dim=0),dim=1),dim=2))
+            
+            return DenseGraph_MAP_Categorical_PytorchNative.apply(d,r)
+            
+        else:
+            raise Exception("Uknown test-time solve type: " + str(self.solve_type))
+            
