@@ -1,0 +1,10 @@
+Lists of coding tasks to do in order of importance:
+- update interfaces for other models (done for binary and dense graphs) to make more uniform and Torch-y
+- update testing codes to use these new interfaces
+- add flags in interfaces to chose pytorch native vs. cpp implementations
+- write negative log-likelihood-based loss functions for each class
+- write scripts for testing the timing of the different implementations (pytorch/cpp & cpu/cuda) uder different loads
+- write cpp/cuda implementations of parallel loopy belief propagation
+- implement and test the scale-based system for arbitrarily high regularisation terms to overcome convergence limitation
+
+
