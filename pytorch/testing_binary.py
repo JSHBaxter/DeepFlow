@@ -5,10 +5,11 @@ import numpy as np
 import time
 
 import torch
-from binary_deepflow import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
-from binary_deepflow import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
-from binary_deepflow import Binary_Mean1d_PytorchNative,Binary_Mean2d_PytorchNative,Binary_Mean3d_PytorchNative
-from binary_deepflow import Binary_LBP1d_PytorchNative, Binary_LBP2d_PytorchNative, Binary_LBP3d_PytorchNative
+from binary_deepflow import BinaryDeepFlow1d, BinaryDeepFlow2d, BinaryDeepFlow3d
+from binary_deepflow_function import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
+from binary_deepflow_function import Binary_Mean1d,Binary_Mean2d,Binary_Mean3d
+from binary_deepflow_function import Binary_Mean1d_PytorchNative,Binary_Mean2d_PytorchNative,Binary_Mean3d_PytorchNative
+from binary_deepflow_function import Binary_LBP1d_PytorchNative, Binary_LBP2d_PytorchNative, Binary_LBP3d_PytorchNative
 
 b=2
 c=4
@@ -68,21 +69,21 @@ def test_no_smoothness(d,full_device,asserter):
             om = Binary_Mean1d.apply(t,rx)
         else:
             om = Binary_Mean1d_PytorchNative.apply(t,rx)
-        ol = Binary_LBP1d_PytorchNative.apply(t2,rx2)
+        ol = BinaryDeepFlow1d(solve_type="LBP",activation=False,test_type=None)(t2,rx2)
     elif d == 2:
         oa = torch.exp(Binary_MAP2d.apply(t,rx,ry))
         if alg_type == "cpp":
             om = Binary_Mean2d.apply(t,rx,ry)
         else:
             om = Binary_Mean2d_PytorchNative.apply(t,rx,ry)
-        ol = Binary_LBP2d_PytorchNative.apply(t2,rx2,ry2)
+        ol = BinaryDeepFlow2d(solve_type="LBP",activation=False,test_type=None)(t2,rx2,ry2)
     elif d == 3:
         oa = torch.exp(Binary_MAP3d.apply(t,rx,ry,rz))
         if alg_type == "cpp":
             om = Binary_Mean3d.apply(t,rx,ry,rz)
         else:
             om = Binary_Mean3d_PytorchNative.apply(t,rx,ry,rz)
-        ol = Binary_LBP3d_PytorchNative.apply(t2,rx2,ry2,rz2)
+        ol = BinaryDeepFlow3d(solve_type="LBP",activation=False,test_type=None)(t2,rx2,ry2,rz2)
     
     loss = torch.sum(w*om)
     loss.backward()
@@ -123,7 +124,7 @@ def test_no_smoothness(d,full_device,asserter):
     for val_df, val_d in zip(ot2_np.flatten(),data_w.flatten()):
         if not (abs(val_df-val_d) < epsilon):
             print(data_w)
-            print(ot_np)
+            print(ot2_np)
             asserter.assertTrue(APD(val_df,val_d) < epsilon)
     
     #ensure MAP assigns 1 to positive terms
@@ -169,21 +170,21 @@ def test_smoothness_dom(d,full_device,asserter):
             om = Binary_Mean1d.apply(t,rx)
         else:
             om = Binary_Mean1d_PytorchNative.apply(t,rx)
-        ol = Binary_LBP1d_PytorchNative.apply(t,rx)
+        ol = BinaryDeepFlow1d(solve_type="LBP",activation=False,test_type=None)(t,rx)
     elif d == 2:
         oa = torch.exp(Binary_MAP2d.apply(t,rx,ry))
         if alg_type == "cpp":
             om = Binary_Mean2d.apply(t,rx,ry)
         else:
             om = Binary_Mean2d_PytorchNative.apply(t,rx,ry)
-        ol = Binary_LBP2d_PytorchNative.apply(t,rx,ry)
+        ol = BinaryDeepFlow2d(solve_type="LBP",activation=False,test_type=None)(t,rx,ry)
     elif d == 3:
         oa = torch.exp(Binary_MAP3d.apply(t,rx,ry,rz))
         if alg_type == "cpp":
             om = Binary_Mean3d.apply(t,rx,ry,rz)
         else:
             om = Binary_Mean3d_PytorchNative.apply(t,rx,ry,rz)
-        ol = Binary_LBP3d_PytorchNative.apply(t,rx,ry,rz)
+        ol = BinaryDeepFlow3d(solve_type="LBP",activation=False,test_type=None)(t,rx,ry,rz)
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
     ol_np = ol.detach().cpu().numpy()
@@ -280,21 +281,21 @@ def test_device_equivalence(d,device_list,asserter):
                 om = Binary_Mean1d.apply(t,rx)
             else:
                 om = Binary_Mean1d_PytorchNative.apply(t,rx)
-            ol = Binary_LBP1d_PytorchNative.apply(t2,rx2)
+            ol = BinaryDeepFlow1d(solve_type="LBP",activation=False,test_type=None)(t2,rx2)
         elif d == 2:
             oa = torch.exp(Binary_MAP2d.apply(t,rx,ry))
             if alg_type == "cpp":
                 om = Binary_Mean2d.apply(t,rx,ry)
             else:
                 om = Binary_Mean2d_PytorchNative.apply(t,rx,ry)
-            ol = Binary_LBP2d_PytorchNative.apply(t2,rx2,ry2)
+            ol = BinaryDeepFlow2d(solve_type="LBP",activation=False,test_type=None)(t2,rx2,ry2)
         elif d == 3:
             oa = torch.exp(Binary_MAP3d.apply(t,rx,ry,rz))
             if alg_type == "cpp":
                 om = Binary_Mean3d.apply(t,rx,ry,rz)
             else:
                 om = Binary_Mean3d_PytorchNative.apply(t,rx,ry,rz)
-            ol = Binary_LBP3d_PytorchNative.apply(t2,rx2,ry2,rz2)
+            ol = BinaryDeepFlow3d(solve_type="LBP",activation=False,test_type=None)(t2,rx2,ry2,rz2)
         loss = torch.sum(w*om)
         loss.backward()
         loss2 = torch.sum(w2*ol)
@@ -419,15 +420,18 @@ class Test_Extreme(unittest.TestCase):
     
     def test_equivalence_1d(self):
         print("")
-        test_device_equivalence(1,["cuda","cpu","python_cuda","python_cpu"],self);
+        if torch.backends.cuda.is_built():
+            test_device_equivalence(1,["cuda","cpu","python_cuda","python_cpu"],self);
         
     def test_equivalence_2d(self):
         print("")
-        test_device_equivalence(2,["cuda","cpu","python_cuda","python_cpu"],self);
+        if torch.backends.cuda.is_built():
+            test_device_equivalence(2,["cuda","cpu","python_cuda","python_cpu"],self);
         
     def test_equivalence_3d(self):
         print("")
-        test_device_equivalence(3,["cuda","cpu","python_cuda","python_cpu"],self);
+        if torch.backends.cuda.is_built():
+            test_device_equivalence(3,["cuda","cpu","python_cuda","python_cpu"],self);
 
 if __name__ == '__main__':
     unittest.main()
