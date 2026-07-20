@@ -51,3 +51,9 @@ At the moment, the project is designed for Linux and make. Depending on the
 NVCC compiler used for the CUDA portions, one may need to set the corresponding
 C compiler to a particular version using the C make variable.
 
+    
+--- NOTE LOG ---
+    
+(Please note that the TensorFlow portions are no longer being supported as we are
+moving to a more research-friend PyTorch-native philosophy for new algorithm
+development. Your understanding is appreciated.)
