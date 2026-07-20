@@ -1,15 +1,36 @@
 import torch
-from binary_deepflow_function import Binary_MAP1d, Binary_Mean1d, Binary_Mean1d_PytorchNative, Binary_LBP1d_PytorchNative
-from binary_deepflow_function import Binary_MAP2d, Binary_Mean2d, Binary_Mean2d_PytorchNative, Binary_LBP2d_PytorchNative
-from binary_deepflow_function import Binary_MAP3d, Binary_Mean3d, Binary_Mean3d_PytorchNative, Binary_LBP3d_PytorchNative
+from binary_deepflow_function import Binary_MAP1d, Binary_Mean1d_PytorchNative, Binary_LBP1d_PytorchNative, BinaryDeepFlow1dLoss_functional
+from binary_deepflow_function import Binary_MAP2d, Binary_Mean2d_PytorchNative, Binary_LBP2d_PytorchNative, BinaryDeepFlow2dLoss_functional
+from binary_deepflow_function import Binary_MAP3d, Binary_Mean3d_PytorchNative, Binary_LBP3d_PytorchNative, BinaryDeepFlow3dLoss_functional
 import math
+from torch.nn.functional import pad
 
+class BinaryDeepFlow1dLoss(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.f = BinaryDeepFlow1dLoss_functional()
+    def forward(self, d, rx, marginals_u, marginals_jx, y):
+        return self.f.apply(d, rx, marginals_u, marginals_jx, y)
+
+class BinaryDeepFlow2dLoss(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.f = BinaryDeepFlow2dLoss_functional()
+    def forward(self, d, rx, ry, marginals_u, marginals_jx, marginals_jy, y):
+        return self.f.apply(d, rx, ry, marginals_u, marginals_jx, marginals_jy, y)
+                
+class BinaryDeepFlow3dLoss(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.f = BinaryDeepFlow3dLoss_functional()
+    def forward(self, d, rx, ry, rz, marginals_u, marginals_jx, marginals_jy, marginals_jz):
+        return self.f.apply(d, rx, ry, rz, marginals_u, marginals_jx, marginals_jy, marginals_jz, y)
+    
 class BinaryDeepFlow1d(torch.nn.Module):
-    def __init__(self, solve_type="LBP",activation=True,test_type="MAP") -> None:
+    def __init__(self, solve_type="LBP",test_type="MAP") -> None:
         super().__init__()
         self.solve_type = solve_type
         self.test_type = test_type
-        self.activation = activation
         
     def forward(self,d,rx):
         
@@ -17,64 +38,47 @@ class BinaryDeepFlow1d(torch.nn.Module):
         if self.training or self.test_type is None:
             
             #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
-            if self.solve_type == "LBP" or self.solve_type == "FULL_MARGINALS":
+            if self.solve_type == "LBP":
                 mexu0,mexu1,mexd0,mexd1 = Binary_LBP1d_PytorchNative.apply(d,rx)
                 
-                #calculate the marginal (logistic domain so normalise by subtracting out the contributions to label 0)
-                if self.solve_type == "LBP" and self.activation == False:
-                    marginal_logit = d.clone()
-                    marginal_logit[:,:,:-1] -= torch.log(mexd0)
-                    marginal_logit[:,:,1:] -= torch.log(mexu0)
-                    marginal_logit[:,:,:-1] += torch.log(mexd1)
-                    marginal_logit[:,:,1:] += torch.log(mexu1)
-                    return marginal_logit
+                marginal_node_0 = torch.exp(-d * (d > 0) ) * pad(mexd0,(0,1),value=1) * pad(mexu0,(1,0),value=1)
+                marginal_node_1 = torch.exp( d * (d < 0) ) * pad(mexd1,(0,1),value=1) * pad(mexu1,(1,0),value=1)
+                am = marginal_node_0 + marginal_node_1
+                marginals_u = marginal_node_1 / am
                 
-                #calculate the marginal in a less expensive way (still need to normalise)
-                ed = torch.exp(d)
-                marginal_node_0 = torch.ones_like(d)
-                marginal_node_0[:,:,:-1] *= mexd0
-                marginal_node_0[:,:,1:] *= mexu0
-                marginal_node_1 = ed.clone()
-                marginal_node_1[:,:,:-1] *= mexd1
-                marginal_node_1[:,:,1:] *= mexu1
-                am = marginal_node_0+marginal_node_1
-                if self.solve_type == "LBP" and self.activation == True:
-                    return marginal_node_1 / am
+                epsilon = 10**-16
+                er = torch.exp(-rx)
+                marginal_joint_00 =               marginal_node_0[:,:,:-1] * marginal_node_0[:,:,1:] / (mexu0*mexd0+epsilon)
+                marginal_joint_01 = er[:,:,:-1] * marginal_node_0[:,:,:-1] * marginal_node_1[:,:,1:] / (mexu1*mexd0+epsilon)
+                marginal_joint_10 = er[:,:,:-1] * marginal_node_1[:,:,:-1] * marginal_node_0[:,:,1:] / (mexu0*mexd1+epsilon)
+                marginal_joint_11 =               marginal_node_1[:,:,:-1] * marginal_node_1[:,:,1:] / (mexu1*mexd1+epsilon)
                 
-                #estimate the joint marginals for each edge (can use the unnormalised marginals to speed things up, assuming all things are non-zero)
-                erx = torch.exp(-rx)
-                marginal_joint_x_00 =                marginal_node_0[:,:,:-1] * marginal_node_0[:,:,1:] / (mexu0*mexd0)
-                marginal_joint_x_01 = erx[:,:,:-1] * marginal_node_0[:,:,:-1] * marginal_node_1[:,:,1:] / (mexu1*mexd0)
-                marginal_joint_x_10 = erx[:,:,:-1] * marginal_node_1[:,:,:-1] * marginal_node_0[:,:,1:] / (mexu0*mexd1)
-                marginal_joint_x_11 =                marginal_node_1[:,:,:-1] * marginal_node_1[:,:,1:] / (mexu1*mexd1)
-                marginal_joint_x_norm = marginal_joint_x_00 + marginal_joint_x_01 + marginal_joint_x_10 + marginal_joint_x_11
-                
-                #assert(self.solve_type == "FULL_MARGINALS")
-                return marginal_node_1 / am, (marginal_joint_x_01+marginal_joint_x_10) / marginal_joint_x_norm
+                marginal_joint_num = marginal_joint_01 + marginal_joint_10
+                marginal_joint_den = marginal_joint_00 + marginal_joint_01 + marginal_joint_10 + marginal_joint_11
+                marginals_j = marginal_joint_num / marginal_joint_den
                 
             #if we are in mean field estimation, get the marginal estimate directly
             elif self.solve_type == "MFE":
-                marginal_logit = Binary_Mean1d_PytorchNative.apply(d,rx)
-                return torch.sigmoid(marginal_logit) if self.activation else marginal_logit
+                marginals_u, marginals_j = Binary_Mean1d_PytorchNative.apply(d,rx)
                 
             #throw error if solution type is unknown
             else:
                 raise Exception("Uknown solve type: " + str(self.solve_type))
+                
+            return marginals_u, marginals_j
             
         elif self.test_type == "MAP":
             return Binary_MAP1d.apply(d,rx)
             
         else:
             raise Exception("Uknown test-time solve type: " + str(self.solve_type))
-                
-                
-                
+
 class BinaryDeepFlow2d(torch.nn.Module):
-    def __init__(self, solve_type="LBP",activation=True,test_type="MAP") -> None:
+    
+    def __init__(self, solve_type="LBP",test_type="MAP") -> None:
         super().__init__()
         self.solve_type = solve_type
         self.test_type = test_type
-        self.activation = activation
         
     def forward(self,d,rx,ry):
         
@@ -82,73 +86,50 @@ class BinaryDeepFlow2d(torch.nn.Module):
         if self.training or self.test_type is None:
             
             #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
-            if self.solve_type == "LBP" or self.solve_type == "FULL_MARGINALS":
+            if self.solve_type == "LBP":
                 mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1 = Binary_LBP2d_PytorchNative.apply(d,rx,ry)
                 
-                #calculate the marginal (logistic domain so normalise by subtracting out the contributions to label 0)
-                if self.solve_type == "LBP" and self.activation == False:
-                    marginal_logit = d.clone()
-                    marginal_logit[:,:,:-1,:] -= torch.log(mexd0)
-                    marginal_logit[:,:,1:,:] -= torch.log(mexu0)
-                    marginal_logit[:,:,:-1,:] += torch.log(mexd1)
-                    marginal_logit[:,:,1:,:] += torch.log(mexu1)
-                    marginal_logit[:,:,:,:-1] -= torch.log(meyd0)
-                    marginal_logit[:,:,:,1:] -= torch.log(meyu0)
-                    marginal_logit[:,:,:,:-1] += torch.log(meyd1)
-                    marginal_logit[:,:,:,1:] += torch.log(meyu1)
-                    return marginal_logit
+                marginal_node_0 = torch.exp(-d * (d > 0) ) * pad(mexd0,(0,0,0,1),value=1) * pad(mexu0,(0,0,1,0),value=1) * pad(meyd0,(0,1,0,0),value=1) * pad(meyu0,(1,0,0,0),value=1)
+                marginal_node_1 = torch.exp( d * (d < 0) ) * pad(mexd1,(0,0,0,1),value=1) * pad(mexu1,(0,0,1,0),value=1) * pad(meyd1,(0,1,0,0),value=1) * pad(meyu1,(1,0,0,0),value=1)
+                am = marginal_node_0 + marginal_node_1
+                marginals_u = marginal_node_1 / am
                 
-                #estimate the marginals for each node
-                ed = torch.exp(d)
-                marginal_node_0 = torch.ones_like(d)
-                marginal_node_0[:,:,:-1,:] *= mexd0
-                marginal_node_0[:,:,1:,:] *= mexu0
-                marginal_node_0[:,:,:,:-1] *= meyd0
-                marginal_node_0[:,:,:,1:] *= meyu0
-                marginal_node_1 = ed.clone()
-                marginal_node_1[:,:,:-1,:] *= mexd1
-                marginal_node_1[:,:,1:,:] *= mexu1
-                marginal_node_1[:,:,:,:-1] *= meyd1
-                marginal_node_1[:,:,:,1:] *= meyu1
-                am = marginal_node_0+marginal_node_1
-                if self.solve_type == "LBP" and self.activation == True:
-                    return marginal_node_1 / am
-                
-                #estimate the joint marginals for each edge (can use the unnormalised marginals to speed things up, assuming all things are non-zero)
+                epsilon = 10**-16
                 erx = torch.exp(-rx)
-                marginal_joint_x_00 =                  marginal_node_0[:,:,:-1,:] * marginal_node_0[:,:,1:,:] / (mexu0*mexd0)
-                marginal_joint_x_01 = erx[:,:,:-1,:] * marginal_node_0[:,:,:-1,:] * marginal_node_1[:,:,1:,:] / (mexu1*mexd0)
-                marginal_joint_x_10 = erx[:,:,:-1,:] * marginal_node_1[:,:,:-1,:] * marginal_node_0[:,:,1:,:] / (mexu0*mexd1)
-                marginal_joint_x_11 =                  marginal_node_1[:,:,:-1,:] * marginal_node_1[:,:,1:,:] / (mexu1*mexd1)
                 ery = torch.exp(-ry)
-                marginal_joint_y_00 =                  marginal_node_0[:,:,:,:-1] * marginal_node_0[:,:,:,1:] / (meyu0*meyd0)
-                marginal_joint_y_01 = ery[:,:,:,:-1] * marginal_node_0[:,:,:,:-1] * marginal_node_1[:,:,:,1:] / (meyu1*meyd0)
-                marginal_joint_y_10 = ery[:,:,:,:-1] * marginal_node_1[:,:,:,:-1] * marginal_node_0[:,:,:,1:] / (meyu0*meyd1)
-                marginal_joint_y_11 =                  marginal_node_1[:,:,:,:-1] * marginal_node_1[:,:,:,1:] / (meyu1*meyd1)
-                marginal_joint_x_norm = marginal_joint_x_00 + marginal_joint_x_01 + marginal_joint_x_10 + marginal_joint_x_11
-                marginal_joint_y_norm = marginal_joint_y_00 + marginal_joint_y_01 + marginal_joint_y_10 + marginal_joint_y_11
+                marginal_joint_00_x =                  marginal_node_0[:,:,:-1,:] * marginal_node_0[:,:,1:,:] / (mexu0*mexd0+epsilon)
+                marginal_joint_01_x = erx[:,:,:-1,:] * marginal_node_0[:,:,:-1,:] * marginal_node_1[:,:,1:,:] / (mexu1*mexd0+epsilon)
+                marginal_joint_10_x = erx[:,:,:-1,:] * marginal_node_1[:,:,:-1,:] * marginal_node_0[:,:,1:,:] / (mexu0*mexd1+epsilon)
+                marginal_joint_11_x =                  marginal_node_1[:,:,:-1,:] * marginal_node_1[:,:,1:,:] / (mexu1*mexd1+epsilon)
+                marginal_joint_00_y =                  marginal_node_0[:,:,:,:-1] * marginal_node_0[:,:,:,1:] / (meyu0*meyd0+epsilon)
+                marginal_joint_01_y = ery[:,:,:,:-1] * marginal_node_0[:,:,:,:-1] * marginal_node_1[:,:,:,1:] / (meyu1*meyd0+epsilon)
+                marginal_joint_10_y = ery[:,:,:,:-1] * marginal_node_1[:,:,:,:-1] * marginal_node_0[:,:,:,1:] / (meyu0*meyd1+epsilon)
+                marginal_joint_11_y =                  marginal_node_1[:,:,:,:-1] * marginal_node_1[:,:,:,1:] / (meyu1*meyd1+epsilon)
                 
-                #assert(self.solve_type == "FULL_MARGINALS")
-                return marginal_node_1 / am, (marginal_joint_x_01+marginal_joint_x_10) / marginal_joint_x_norm, (marginal_joint_y_01+marginal_joint_y_10) / marginal_joint_y_norm
+                marginal_joint_num_x = marginal_joint_01_x + marginal_joint_10_x
+                marginal_joint_den_x = marginal_joint_00_x + marginal_joint_01_x + marginal_joint_10_x + marginal_joint_11_x
+                marginals_jx = marginal_joint_num_x / marginal_joint_den_x
+                marginal_joint_num_y = marginal_joint_01_y + marginal_joint_10_y
+                marginal_joint_den_y = marginal_joint_00_y + marginal_joint_01_y + marginal_joint_10_y + marginal_joint_11_y
+                marginals_jy = marginal_joint_num_y / marginal_joint_den_y
             
             #if we are in mean field estimation, get the marginal estimate directly
             elif self.solve_type == "MFE":
-                marginal_logit = Binary_Mean2d_PytorchNative.apply(d,rx,ry)
-                return torch.sigmoid(marginal_logit) if self.activation else marginal_logit
+                marginals_u, marginals_jx, marginals_jy = Binary_Mean2d_PytorchNative.apply(d,rx,ry)
                 
             #throw error if solution type is unknown
             else:
                 raise Exception("Uknown solve type: " + str(self.solve_type))
-                
+            
+            return marginals_u, marginals_jx, marginals_jy
             
         elif self.test_type == "MAP":
             return Binary_MAP2d.apply(d,rx,ry)
             
         else:
-                raise Exception("Uknown test-time solve type: " + str(self.solve_type))
-                
-                
-                
+            raise Exception("Uknown test-time solve type: " + str(self.solve_type))
+
+
 class BinaryDeepFlow3d(torch.nn.Module):
     def __init__(self, solve_type="LBP",activation=True,test_type="MAP") -> None:
         super().__init__()
@@ -156,86 +137,59 @@ class BinaryDeepFlow3d(torch.nn.Module):
         self.test_type = test_type
         self.activation = activation
         
-    def forward(self,d,rx,ry):
+    def forward(self,d,rx,ry,rz):
         
         #if we are in training or only "soft" mode, always use training solvers
         if self.training or self.test_type is None:
             
             #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
-            if self.solve_type == "LBP" or self.solve_type == "FULL_MARGINALS":
+            if self.solve_type == "LBP":
                 mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1,mezu0,mezu1,mezd0,mezd1 = Binary_LBP3d_PytorchNative.apply(d,rx,ry,rz)
                 
-                #calculate the marginal (logistic domain so normalise by subtracting out the contributions to label 0)
-                if self.solve_type == "LBP" and self.activation == False:
-                    marginal_logit = d.clone()
-                    marginal_logit[:,:,:-1,:,:] -= torch.log(mexd0)
-                    marginal_logit[:,:,1:,:,:] -= torch.log(mexu0)
-                    marginal_logit[:,:,:-1,:,:] += torch.log(mexd1)
-                    marginal_logit[:,:,1:,:,:] += torch.log(mexu1)
-                    marginal_logit[:,:,:,:-1,:] -= torch.log(meyd0)
-                    marginal_logit[:,:,:,1:,:] -= torch.log(meyu0)
-                    marginal_logit[:,:,:,:-1,:] += torch.log(meyd1)
-                    marginal_logit[:,:,:,1:,:] += torch.log(meyu1)
-                    marginal_logit[:,:,:,:,:-1] -= torch.log(mezd0)
-                    marginal_logit[:,:,:,:,1:] -= torch.log(mezu0)
-                    marginal_logit[:,:,:,:,:-1] += torch.log(mezd1)
-                    marginal_logit[:,:,:,:,1:] += torch.log(mezu1)
-                    return marginal_logit
+                marginal_node_0 = torch.exp(-d * (d > 0) ) * pad(mexd0,(0,0,0,0,0,1),value=1) * pad(mexu0,(0,0,0,0,1,0),value=1) * pad(meyd0,(0,0,0,1,0,0),value=1) * pad(meyu0,(0,0,1,0,0,0),value=1) * pad(mezd0,(0,1,0,0,0,0),value=1) * pad(mezu0,(1,0,0,0,0,0),value=1)
+                marginal_node_1 = torch.exp( d * (d < 0) ) * pad(mexd1,(0,0,0,0,0,1),value=1) * pad(mexu1,(0,0,0,0,1,0),value=1) * pad(meyd1,(0,0,0,1,0,0),value=1) * pad(meyu1,(0,0,1,0,0,0),value=1) * pad(mezd1,(0,1,0,0,0,0),value=1) * pad(mezu1,(1,0,0,0,0,0),value=1)
+                am = marginal_node_0 + marginal_node_1
+                marginals_u = marginal_node_1 / am
                 
-                #estimate the marginals for each node
-                ed = torch.exp(d)
-                marginal_node_0 = torch.ones_like(d)
-                marginal_node_0[:,:,:-1,:,:] *= mexd0
-                marginal_node_0[:,:,1:,:,:] *= mexu0
-                marginal_node_0[:,:,:,:-1,:] *= meyd0
-                marginal_node_0[:,:,:,1:,:] *= meyu0
-                marginal_node_0[:,:,:,:,:-1] *= mezd0
-                marginal_node_0[:,:,:,:,1:] *= mezu0
-                marginal_node_1 = ed.clone()
-                marginal_node_1[:,:,:-1,:,:] *= mexd1
-                marginal_node_1[:,:,1:,:,:] *= mexu1
-                marginal_node_1[:,:,:,:-1,:] *= meyd1
-                marginal_node_1[:,:,:,1:,:] *= meyu1
-                marginal_node_1[:,:,:,:,:-1] *= mezd1
-                marginal_node_1[:,:,:,:,1:] *= mezu1
-                am = marginal_node_0+marginal_node_1
-                if self.solve_type == "LBP" and self.activation == True:
-                    return marginal_node_1 / am
-                
-                #estimate the joint marginals for each edge (can use the unnormalised marginals to speed things up, assuming all things are non-zero)
+                epsilon = 10**-16
                 erx = torch.exp(-rx)
-                marginal_joint_x_00 =                    marginal_node_0[:,:,:-1,:,:] * marginal_node_0[:,:,1:,:,:] / (mexu0*mexd0)
-                marginal_joint_x_01 = erx[:,:,:-1,:,:] * marginal_node_0[:,:,:-1,:,:] * marginal_node_1[:,:,1:,:,:] / (mexu1*mexd0)
-                marginal_joint_x_10 = erx[:,:,:-1,:,:] * marginal_node_1[:,:,:-1,:,:] * marginal_node_0[:,:,1:,:,:] / (mexu0*mexd1)
-                marginal_joint_x_11 =                    marginal_node_1[:,:,:-1,:,:] * marginal_node_1[:,:,1:,:,:] / (mexu1*mexd1)
                 ery = torch.exp(-ry)
-                marginal_joint_y_00 =                    marginal_node_0[:,:,:,:-1,:] * marginal_node_0[:,:,:,1:,:] / (meyu0*meyd0)
-                marginal_joint_y_01 = ery[:,:,:,:-1,:] * marginal_node_0[:,:,:,:-1,:] * marginal_node_1[:,:,:,1:,:] / (meyu1*meyd0)
-                marginal_joint_y_10 = ery[:,:,:,:-1,:] * marginal_node_1[:,:,:,:-1,:] * marginal_node_0[:,:,:,1:,:] / (meyu0*meyd1)
-                marginal_joint_y_11 =                    marginal_node_1[:,:,:,:-1,:] * marginal_node_1[:,:,:,1:,:] / (meyu1*meyd1)
                 erz = torch.exp(-rz)
-                marginal_joint_z_00 =                    marginal_node_0[:,:,:,:,:-1] * marginal_node_0[:,:,:,:,1:] / (mezu0*mezd0)
-                marginal_joint_z_01 = ery[:,:,:,:,:-1] * marginal_node_0[:,:,:,:,:-1] * marginal_node_1[:,:,:,:,1:] / (mezu1*mezd0)
-                marginal_joint_z_10 = ery[:,:,:,:,:-1] * marginal_node_1[:,:,:,:,:-1] * marginal_node_0[:,:,:,:,1:] / (mezu0*mezd1)
-                marginal_joint_z_11 =                    marginal_node_1[:,:,:,:,:-1] * marginal_node_1[:,:,:,:,1:] / (mezu1*mezd1)
-                marginal_joint_x_norm = marginal_joint_x_00 + marginal_joint_x_01 + marginal_joint_x_10 + marginal_joint_x_11
-                marginal_joint_y_norm = marginal_joint_y_00 + marginal_joint_y_01 + marginal_joint_y_10 + marginal_joint_y_11
-                marginal_joint_z_norm = marginal_joint_z_00 + marginal_joint_z_01 + marginal_joint_z_10 + marginal_joint_z_11
+                marginal_joint_00_x =                    marginal_node_0[:,:,:-1,:,:] * marginal_node_0[:,:,1:,:,:] / (mexu0*mexd0+epsilon)
+                marginal_joint_01_x = erx[:,:,:-1,:,:] * marginal_node_0[:,:,:-1,:,:] * marginal_node_1[:,:,1:,:,:] / (mexu1*mexd0+epsilon)
+                marginal_joint_10_x = erx[:,:,:-1,:,:] * marginal_node_1[:,:,:-1,:,:] * marginal_node_0[:,:,1:,:,:] / (mexu0*mexd1+epsilon)
+                marginal_joint_11_x =                    marginal_node_1[:,:,:-1,:,:] * marginal_node_1[:,:,1:,:,:] / (mexu1*mexd1+epsilon)
+                marginal_joint_00_y =                    marginal_node_0[:,:,:,:-1,:] * marginal_node_0[:,:,:,1:,:] / (meyu0*meyd0+epsilon)
+                marginal_joint_01_y = ery[:,:,:,:-1,:] * marginal_node_0[:,:,:,:-1,:] * marginal_node_1[:,:,:,1:,:] / (meyu1*meyd0+epsilon)
+                marginal_joint_10_y = ery[:,:,:,:-1,:] * marginal_node_1[:,:,:,:-1,:] * marginal_node_0[:,:,:,1:,:] / (meyu0*meyd1+epsilon)
+                marginal_joint_11_y =                    marginal_node_1[:,:,:,:-1,:] * marginal_node_1[:,:,:,1:,:] / (meyu1*meyd1+epsilon)
+                marginal_joint_00_z =                    marginal_node_0[:,:,:,:,:-1] * marginal_node_0[:,:,:,:,1:] / (mezu0*mezd0+epsilon)
+                marginal_joint_01_z = erz[:,:,:,:,:-1] * marginal_node_0[:,:,:,:,:-1] * marginal_node_1[:,:,:,:,1:] / (mezu1*mezd0+epsilon)
+                marginal_joint_10_z = erz[:,:,:,:,:-1] * marginal_node_1[:,:,:,:,:-1] * marginal_node_0[:,:,:,:,1:] / (mezu0*mezd1+epsilon)
+                marginal_joint_11_z =                    marginal_node_1[:,:,:,:,:-1] * marginal_node_1[:,:,:,:,1:] / (mezu1*mezd1+epsilon)
                 
-                #assert(self.solve_type == "FULL_MARGINALS")
-                return marginal_node_1 / am, (marginal_joint_x_01+marginal_joint_x_10) / marginal_joint_x_norm, (marginal_joint_y_01+marginal_joint_y_10) / marginal_joint_y_norm, (marginal_joint_z_01+marginal_joint_z_10) / marginal_joint_z_norm
+                marginal_joint_num_x = marginal_joint_01_x + marginal_joint_10_x
+                marginal_joint_den_x = marginal_joint_00_x + marginal_joint_01_x + marginal_joint_10_x + marginal_joint_11_x
+                marginals_jx = marginal_joint_num_x / marginal_joint_den_x
+                marginal_joint_num_y = marginal_joint_01_y + marginal_joint_10_y
+                marginal_joint_den_y = marginal_joint_00_y + marginal_joint_01_y + marginal_joint_10_y + marginal_joint_11_y
+                marginals_jy = marginal_joint_num_y / marginal_joint_den_y
+                marginal_joint_num_z = marginal_joint_01_z + marginal_joint_10_z
+                marginal_joint_den_z = marginal_joint_00_z + marginal_joint_01_z + marginal_joint_10_z + marginal_joint_11_z
+                marginals_jz = marginal_joint_num_z / marginal_joint_den_z
             
             #if we are in mean field estimation, get the marginal estimate directly
             elif self.solve_type == "MFE":
-                marginal_logit = Binary_Mean3d_PytorchNative.apply(d,rx,ry,rz)
-                return torch.sigmoid(marginal_logit) if self.activation else marginal_logit
+                marginals_u, marginals_jx, marginals_jy, marginals_jz = Binary_Mean3d_PytorchNative.apply(d,rx,ry,rz)
                 
             #throw error if solution type is unknown
             else:
                 raise Exception("Uknown solve type: " + str(self.solve_type))
             
+            return marginals_u, marginals_jx, marginals_jy, marginals_jz
+            
         elif self.test_type == "MAP":
             return Binary_MAP3d.apply(d,rx,ry,rz)
             
         else:
-                raise Exception("Uknown test-time solve type: " + str(self.solve_type))
+            raise Exception("Uknown test-time solve type: " + str(self.solve_type))
