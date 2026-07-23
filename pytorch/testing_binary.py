@@ -27,7 +27,11 @@ def get_size_info(d):
     x_used = int(x**(1/d)+0.5)
     return tuple( [b,c]+[x_used for i in range(d)] ), [tuple([b,c]+[x_used - (1 if i==i2 else 0) for i in range(d)]) for i2 in range(d)], tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
-def run_all_solvers(d,t,t2,r,r2):
+def BINARY_run_all_solvers(t,t2,r,r2):
+    if type(r) is list:
+        d = len(r)
+    else:
+        d = 0
     if d == 0:
         print(1,"Running MAP estimation",datetime.datetime.now())
         oa = DenseGraph_MAP_Binary_PytorchNative.apply(t,r)
@@ -98,7 +102,7 @@ def test_no_smoothness_graph(full_device,asserter):
     r2.requires_grad = True
     
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(0,t,t2,r,r2)
+    oa, om, omj, ol, olj = BINARY_run_all_solvers(t,t2,r,r2)
     
     #run the gradient solvers on random losses
     loss = torch.sum(w*om) + torch.sum(wr*omj)
@@ -209,7 +213,7 @@ def test_no_smoothness(d,full_device,asserter):
         r2.append(rz2)
 
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(d,t,t2,r,r2)
+    oa, om, omj, ol, olj = BINARY_run_all_solvers(t,t2,r,r2)
     
     #run the gradient solvers on random losses
     loss = torch.sum(w*om) + sum([torch.sum(wj*j) for wj,j in zip(wl,omj)])
@@ -350,7 +354,7 @@ def test_no_data(d,full_device,asserter):
         r2.append(rz2)
 
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(d,t,t2,r,r2)
+    oa, om, omj, ol, olj = BINARY_run_all_solvers(t,t2,r,r2)
     
     #run the gradient solvers on random losses (only for marginals
     loss = torch.sum(w*om)
@@ -443,7 +447,7 @@ def test_smoothness_dom(d,full_device,asserter):
         r.append(rz)
 
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(d,t,t,r,r)
+    oa, om, omj, ol, olj = BINARY_run_all_solvers(t,t,r,r)
     
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()

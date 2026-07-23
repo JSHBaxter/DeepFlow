@@ -13,6 +13,8 @@ from potts_deepflow_function import Potts_MAP1d,Potts_MAP2d,Potts_MAP3d
 from binary_deepflow import BinaryDeepFlow1d, BinaryDeepFlow2d, BinaryDeepFlow3d
 from binary_deepflow_function import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
 
+from testing_binary import BINARY_run_all_solvers
+
 b=1
 c=int(4*random.uniform(0,1))+3
 x=2**6
@@ -23,7 +25,7 @@ def get_size_info(d):
     x_used = int(x**(1/d)+0.5)
     return tuple( [b,c]+[x_used for i in range(d)] ), [tuple([b,c]+[x_used - (1 if i==i2 else 0) for i in range(d)]) for i2 in range(d)], tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
-def run_all_solvers(t,t2,r,r2):
+def POTTS_run_all_solvers(t,t2,r,r2):
     d = len(r)
     if d == 1:
         print(1,"Running MAP estimation",datetime.datetime.now())
@@ -139,7 +141,7 @@ def test_no_smoothness(d,full_device,asserter):
         r2.append(rz2)
 
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(t,t2,r,r2)
+    oa, om, omj, ol, olj = POTTS_run_all_solvers(t,t2,r,r2)
     
     #run the gradient solvers on random losses
     loss = torch.sum(w*om) + sum([torch.sum(wj*j) for wj,j in zip(wl,omj)])
@@ -274,7 +276,7 @@ def test_no_data(d,full_device,asserter):
         r2.append(rz2)
 
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(t,t2,r,r2)
+    oa, om, omj, ol, olj = POTTS_run_all_solvers(t,t2,r,r2)
     
     #run the gradient solvers on random losses
     loss = torch.sum(w*om)
@@ -346,7 +348,7 @@ def test_smoothness_dom(d,full_device,asserter):
         r.append(rz)
 
     #run the solvers
-    oa, om, omj, ol, olj = run_all_solvers(t,t,r,r)
+    oa, om, omj, ol, olj = POTTS_run_all_solvers(t,t,r,r)
     
     oa_np = oa.detach().cpu().numpy()
     om_np = om.detach().cpu().numpy()
@@ -472,52 +474,9 @@ def test_mimic_binary(d,full_device,asserter):
         r2_bin.append(rz2_bin)
         wl_bin.append(wz_bin)
         
-    d = len(r)
-    if d == 1:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = Potts_MAP1d.apply(t,r[0])
-        oa_bin = Binary_MAP1d.apply(t_bin,r_bin[0])
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omj = PottsDeepFlow1d(solve_type="MFE",test_type=None)(t,r[0])
-        om_bin, omj_bin = BinaryDeepFlow1d(solve_type="MFE",test_type=None)(t_bin,r_bin[0])
-        omj = [omj]
-        omj_bin = [omj_bin]
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, olj = PottsDeepFlow1d(solve_type="LBP",test_type=None)(t2,r2[0])
-        ol_bin, olj_bin = BinaryDeepFlow1d(solve_type="LBP",test_type=None)(t2_bin,r2_bin[0])
-        olj = [olj]
-        olj_bin = [olj_bin]
-        print(4,datetime.datetime.now())
-    elif d == 2:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = Potts_MAP2d.apply(t,r[0],r[1])
-        oa_bin = Potts_MAP2d.apply(t,r[0],r[1])
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omjx, omjy = PottsDeepFlow2d(solve_type="MFE",test_type=None)(t,r[0],r[1])
-        om_bin, omjx_bin, omjy_bin = BinaryDeepFlow2d(solve_type="MFE",test_type=None)(t_bin,r_bin[0],r_bin[1])
-        omj = [omjx, omjy]
-        omj_bin = [omjx_bin, omjy_bin]
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, oljx, oljy = PottsDeepFlow2d(solve_type="LBP",test_type=None)(t2,r2[0],r2[1])
-        ol_bin, oljx_bin, oljy_bin = BinaryDeepFlow2d(solve_type="LBP",test_type=None)(t2_bin,r2_bin[0],r2_bin[1])
-        olj = [oljx, oljy]
-        olj_bin = [oljx_bin, oljy_bin]
-        print(4,datetime.datetime.now())
-    elif d == 3:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = Potts_MAP3d.apply(t,r[0],r[1],r[2])
-        oa_bin = Potts_MAP3d.apply(t_bin,r_bin[0],r_bin[1],r_bin[2])
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omjx, omjy, omjz = PottsDeepFlow3d(solve_type="MFE",test_type=None)(t,r[0],r[1],r[2])
-        om_bin, omjx_bin, omjy_bin, omjz_bin = BinaryDeepFlow3d(solve_type="MFE",test_type=None)(t_bin,r_bin[0],r_bin[1],r_bin[2])
-        omj = [omjx, omjy, omjz]
-        omj_bin = [omjx_bin, omjy_bin, omjz_bin]
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, oljx, oljy, oljz = PottsDeepFlow3d(solve_type="LBP",test_type=None)(t2,r2[0],r2[1],r2[2])
-        ol_bin, oljx_bin, oljy_bin, oljz_bin = BinaryDeepFlow3d(solve_type="LBP",test_type=None)(t2_bin,r2_bin[0],r2_bin[1],r2_bin[2])
-        olj = [oljx, oljy, oljz]
-        olj_bin = [oljx_bin, oljy_bin, oljz_bin]
-        print(4,datetime.datetime.now())
+    #run both sets of solvers
+    oa, om, omj, ol, olj = POTTS_run_all_solvers(t,t2,r,r2)
+    oa_bin, om_bin, omj_bin, ol_bin, olj_bin = BINARY_run_all_solvers(t_bin,t2_bin,r_bin,r2_bin)
         
     #run the gradient solvers on random losses
     all_losses = []
