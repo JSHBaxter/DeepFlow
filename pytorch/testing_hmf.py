@@ -421,7 +421,7 @@ def test_smoothness_dom(d,full_device,asserter):
         asserter.assertTrue(False)
     
 class Test_Extreme(unittest.TestCase):
-    '''def test_no_smoothness_1D(self):
+    def test_no_smoothness_1D(self):
         print("")
         test_no_smoothness(1,"pytorch_cpu",self)
         #print("")
@@ -462,7 +462,7 @@ class Test_Extreme(unittest.TestCase):
         test_smoothness_dom(1,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(1,"pytorch_cuda",self)   
-'''
+        
     def test_smoothness_2D(self):
         print("")
         test_smoothness_dom(2,"pytorch_cpu",self)
