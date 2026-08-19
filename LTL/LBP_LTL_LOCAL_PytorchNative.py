@@ -63,7 +63,42 @@ class LBP_LTL_LOCAL_PytorchNative:
             return d, r_eff*r_eff_multiplier.detach()
         else:
             return d, r_eff_multiplier.detach()
+    
+    @staticmethod
+    def make_dr_eff(d,r,groups,leaves):
+        b,ct,N = d.shape[0],d.shape[1],d.shape[2]
+        c = len(leaves)
+        p_r = torch.zeros((1,c*c,ct), dtype=d.dtype, device=d.device)
+        unshared = {}
         
+        #create container for regularisation terms
+        for l1,l2 in product(leaves,leaves):
+            unshared[(l1,l2)] = [] if l1 == l2 else [l1,l2]
+        for g in groups:
+            l_in = g.leaves
+            l_out = leaves - l_in
+            for l1,l2 in product(l_in,l_out):
+                unshared[(l1,l2)].append(g)
+                unshared[(l2,l1)].append(g)
+        for l1,l2 in product(leaves,leaves):
+            for g in unshared[(l1,l2)]:
+                p_r[:,l1.index*c+l2.index,g.index] = 1
+        if r is not None:
+            r_eff = torch.exp(-torch.matmul(p_r.detach(),r.unsqueeze(0)).view(b,c,c,N-1))
+        else:
+            r_eff = None
+        
+        #create container for data terms
+        p_d = torch.zeros((1,c,ct), dtype=d.dtype, device=d.device)
+        for l in leaves:
+            p_d[:,l.index,l.index] = 1
+        for g in groups:
+            for l in g.leaves:
+                p_d[:,l.index,g.index] = 1
+        d_eff = torch.matmul(p_d.detach(),d)
+        return d_eff, r_eff
+            
+    
     @staticmethod
     def cleanup(hierarchy):
         return

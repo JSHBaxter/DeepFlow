@@ -142,6 +142,10 @@ class LBP_LTL_GLOBAL_PytorchNative:
         return d, r_eff_ret, r_bda_inter.detach(), r_bda_tempo.detach()
 
     @staticmethod
+    def make_dr_eff(d,r,groups,leaves):
+        return LBP_LTL_LOCAL_PytorchNative.make_dr_eff(d,r,groups,leaves)
+    
+    @staticmethod
     def cleanup(hierarchy):
         for l in list(hierarchy.leaves)+list(hierarchy.groups):
             if hasattr(l,"c_index"):
@@ -172,9 +176,8 @@ class LBP_LTL_GLOBAL_PytorchNative:
             mext = torch.ones((b,ct,sx),device=d.device,dtype=torch.float64)
             metx = torch.ones((b,c,sx),device=d.device,dtype=torch.float64)
 
-            max_num_iters = 3*sx
             first_type_iters = 2*sx
-            max_num_iters = 2*sx
+            max_num_iters = 200*sx
 
             iter = 0
             ed = torch.exp((d-torch.amax(d,1,keepdims=True)))
@@ -472,7 +475,7 @@ class LBP_LTL_GLOBAL_PytorchNative:
         
         @staticmethod
         def backward(ctx, grad_output):
-            if len(ctx.saved_tensors) == 9:
+            if len(ctx.saved_tensors) == 7:
                 grad_ed, grad_rx = LBP_LTL_LOCAL_PytorchNative.MAP.backward(ctx,grad_output)
                 return grad_ed, grad_rx, None, None
             (d, er_eff, er_bda_inter, er_bda_tempo, 
