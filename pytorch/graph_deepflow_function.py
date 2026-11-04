@@ -373,7 +373,7 @@ class DenseGraph_MAP_Binary_PytorchNative(torch.autograd.Function):
     @staticmethod
     def forward(ctx, d, r):
         b,c,N = binary_input_check(d,r)
-
+        
         epsilon = 10**-4
         cc = 0.25
         tau = 0.1/(N-1)

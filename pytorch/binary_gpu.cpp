@@ -39,6 +39,34 @@ void binary_auglag_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ou
 	}
 }
 
+void binary_auglag_1dstar_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor lx, torch::Tensor out) {
+    CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
+    
+	//get tensor sizing information
+	int n_b = data.size(0);
+	int n_c = data.size(1);
+	int n_x = data.size(2);
+	int n_s = n_x;
+	
+	//get input buffers
+	float * const data_buf = data.data_ptr<float>();
+	float * const rx_buf = rx.data_ptr<float>();
+	float * const lx_buf = rx.data_ptr<float>();
+
+	//make output tensor  
+	float * const out_buf = out.data_ptr<float>();
+    
+	//create and run the solver
+	int data_sizes[1] = {n_x};
+	for(int b = 0; b < n_b; b++){
+        const float* const inputs[] = {data_buf + b*n_s*n_c, rx_buf + b*n_s*n_c, lx_buf + b*n_s*n_c};
+        float* const out_buff_curr = out_buf + b*n_s*n_c;
+		auto solver = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, true, 1, data_sizes, n_c, inputs, out_buff_curr);
+		solver->run();
+        delete solver;
+	}
+}
+
 void binary_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor out) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
 
@@ -63,6 +91,38 @@ void binary_auglag_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry
         const float* const inputs[] = {data_buf + b*n_s*n_c, rx_buf + b*n_s*n_c, ry_buf + b*n_s*n_c};
         float* const out_buff_curr = out_buf + b*n_s*n_c;
 		auto solver = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, 2, data_sizes, n_c, inputs, out_buff_curr);
+		solver->run();
+        delete solver;
+	}
+}
+
+void binary_auglag_2dstar_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, 
+                                                  torch::Tensor lx, torch::Tensor ly, torch::Tensor out) {
+    CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
+
+	//get tensor sizing information
+	int n_b = data.size(0);
+	int n_c = data.size(1);
+	int n_x = data.size(2);
+	int n_y = data.size(3);
+	int n_s = n_x*n_y;
+	
+	//get input buffers
+	float * const data_buf = data.data_ptr<float>();
+	float * const rx_buf = rx.data_ptr<float>();
+	float * const ry_buf = ry.data_ptr<float>();
+	float * const lx_buf = lx.data_ptr<float>();
+	float * const ly_buf = ly.data_ptr<float>();
+
+	//make output tensor  
+	float * const out_buf = out.data_ptr<float>();
+
+	//create and run the solver
+	int data_sizes[2] = {n_x,n_y};
+	for(int b = 0; b < n_b; b++){
+        const float* const inputs[] = {data_buf + b*n_s*n_c, rx_buf + b*n_s*n_c, ry_buf + b*n_s*n_c, lx_buf + b*n_s*n_c, ly_buf + b*n_s*n_c};
+        float* const out_buff_curr = out_buf + b*n_s*n_c;
+		auto solver = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, true, 2, data_sizes, n_c, inputs, out_buff_curr);
 		solver->run();
         delete solver;
 	}
@@ -99,6 +159,41 @@ void binary_auglag_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry
 	}
 }
 
+void binary_auglag_3dstar_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor ry, torch::Tensor rz, 
+                                                  torch::Tensor lx, torch::Tensor ly, torch::Tensor lz, torch::Tensor out) {
+    CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
+
+	//get tensor sizing information
+	int n_b = data.size(0);
+	int n_c = data.size(1);
+	int n_x = data.size(2);
+	int n_y = data.size(3);
+	int n_z = data.size(4);
+	int n_s = n_x*n_y*n_z;
+	
+	//get input buffers
+	float * const data_buf = data.data_ptr<float>();
+	float * const rx_buf = rx.data_ptr<float>();
+	float * const ry_buf = ry.data_ptr<float>();
+	float * const rz_buf = rz.data_ptr<float>();
+	float * const lx_buf = lx.data_ptr<float>();
+	float * const ly_buf = ly.data_ptr<float>();
+	float * const lz_buf = lz.data_ptr<float>();
+
+	//make output tensor  
+	float * const out_buf = out.data_ptr<float>();
+
+	//create and run the solver
+	int data_sizes[3] = {n_x,n_y,n_z};
+	for(int b = 0; b < n_b; b++){
+        const float* const inputs[] = {data_buf + b*n_s*n_c, rx_buf + b*n_s*n_c, ry_buf + b*n_s*n_c, rz_buf + b*n_s*n_c, lx_buf + b*n_s*n_c, ly_buf + b*n_s*n_c, lz_buf + b*n_s*n_c};
+        float* const out_buff_curr = out_buf + b*n_s*n_c;
+		auto solver = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, true, 3, data_sizes, n_c, inputs, out_buff_curr);
+		solver->run();
+        delete solver;
+	}
+}
+
 void binary_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor out) {
     CUDA_DEVICE dev = { .dev_number = data.get_device(), .stream = c10::cuda::getCurrentCUDAStream(data.get_device()) };
 
@@ -126,8 +221,7 @@ void binary_meanpass_1d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 		
 		auto solver_auglag = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, 1, data_sizes, n_c, buffers+1, buffers[0]);
 		solver_auglag->run();
-		exp(dev,u_init_buf,u_init_buf,n_s*n_c);
-        delete solver_auglag;
+		delete solver_auglag;
 		
 		auto solver_meanpass = new BINARY_MEANPASS_SOLVER<CUDA_DEVICE>(dev, 1, data_sizes, n_c, buffers, out_buf+b*n_s*n_c);
 		solver_meanpass->run();
@@ -196,8 +290,7 @@ void binary_meanpass_2d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 		
 		auto solver_auglag = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, 2, data_sizes, n_c, buffers+1, buffers[0]);
 		solver_auglag->run();
-		exp(dev,u_init_buf,u_init_buf,n_s*n_c);
-        delete solver_auglag;
+		delete solver_auglag;
 		
 		auto solver_meanpass = new BINARY_MEANPASS_SOLVER<CUDA_DEVICE>(dev, 2, data_sizes, n_c, buffers, out_buf+b*n_s*n_c);
 		solver_meanpass->run();
@@ -274,8 +367,7 @@ void binary_meanpass_3d_gpu(torch::Tensor data, torch::Tensor rx, torch::Tensor 
 		
 		auto solver_auglag = new BINARY_AUGLAG_SOLVER<CUDA_DEVICE>(dev, false, 3, data_sizes, n_c, buffers+1, buffers[0]);
 		solver_auglag->run();
-		exp(dev,u_init_buf,u_init_buf,n_s*n_c);
-        delete solver_auglag;
+		delete solver_auglag;
 		
 		auto solver_meanpass = new BINARY_MEANPASS_SOLVER<CUDA_DEVICE>(dev, 3, data_sizes, n_c, buffers, out_buf+b*n_s*n_c);
 		solver_meanpass->run();
@@ -325,6 +417,9 @@ void binary_gpu_bindings(py::module & m) {
   m.def("binary_auglag_1d_gpu_forward", &binary_auglag_1d_gpu, "deepflow binary_auglag_1d_gpu_forward");
   m.def("binary_auglag_2d_gpu_forward", &binary_auglag_2d_gpu, "deepflow binary_auglag_2d_gpu_forward");
   m.def("binary_auglag_3d_gpu_forward", &binary_auglag_3d_gpu, "deepflow binary_auglag_3d_gpu_forward");
+  m.def("binary_auglag_1dstar_gpu_forward", &binary_auglag_1dstar_gpu, "deepflow binary_auglag_1dstar_gpu_forward");
+  m.def("binary_auglag_2dstar_gpu_forward", &binary_auglag_2dstar_gpu, "deepflow binary_auglag_2dstar_gpu_forward");
+  m.def("binary_auglag_3dstar_gpu_forward", &binary_auglag_3dstar_gpu, "deepflow binary_auglag_3dstar_gpu_forward");
   m.def("binary_meanpass_1d_gpu_forward", &binary_meanpass_1d_gpu, "deepflow binary_meanpass_1d_gpu_forward");
   m.def("binary_meanpass_2d_gpu_forward", &binary_meanpass_2d_gpu, "deepflow binary_meanpass_2d_gpu_forward");
   m.def("binary_meanpass_3d_gpu_forward", &binary_meanpass_3d_gpu, "deepflow binary_meanpass_3d_gpu_forward");

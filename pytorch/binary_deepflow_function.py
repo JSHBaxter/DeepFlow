@@ -80,8 +80,8 @@ class BinaryDeepFlow3dLoss_functional(torch.autograd.Function):
                torch.zeros_like(marginals_rz), \
                torch.zeros_like(y)
     
-def Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,er,meu0,med0,meu1,med1):
-    dims = len(er)
+def Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,meu0,med0,meu1,med1):
+    dims = len(meu0)
     mvu0 = [None for i in range(dims)]
     mvd0 = [None for i in range(dims)]
     mvu1 = [None for i in range(dims)]
@@ -186,12 +186,15 @@ def Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,er,meu0,m
     #and return messages
     return mvu0, mvd0, mvu1, mvd1
     
-def Binary_LBPnD_PytorchNative_forward(d,r):
-    dims = len(r)
-    DeepFlowFunction.check_var_dims([d,]+r,dims)
+def Binary_LBPnD_PytorchNative_forward(d, ru, rd):
+    dims = len(ru)
+    DeepFlowFunction.check_var_dims([d,]+ru,dims)
+    DeepFlowFunction.check_var_dims([d,]+rd,dims)
     b,c,s = d.shape[0],d.shape[1],d.shape[2:]
+    alpha = 0.05
     
     #create containers for edge messages
+    m_epsilon = 10**-10
     meu0 = []
     med0 = []
     meu1 = []
@@ -212,9 +215,12 @@ def Binary_LBPnD_PytorchNative_forward(d,r):
         err_med1.append(torch.zeros(s_prime,device=d.device))
     
     #calculate theoretical worst decay rate
-    epsilon = 10**-6
-    max_reg = max([torch.max(ri) for ri in r])
+    epsilon = 10**-4
+    max_reg = max([torch.max(torch.nan_to_num(ri,nan=0,posinf=0,neginf=0)) for ri in ru+rd])
     min_decay_const = (2*dims-1)*(1-torch.exp(-max_reg/2))/(1+torch.exp(-max_reg/2))
+    has_infs = [not torch.all(torch.isfinite(ri)) for ri in ru+rd]
+    if any(has_infs):
+        min_decay_const = 1
     
     #get a maximum number of iterations to perform
     max_num_iters = None
@@ -222,54 +228,58 @@ def Binary_LBPnD_PytorchNative_forward(d,r):
         max_num_iters = 1
     if min_decay_const > epsilon and min_decay_const < 1-epsilon:
         max_num_iters = int((log(epsilon)) / log(min_decay_const)) + 1
-    if max_num_iters is None or max_num_iters > 20*sum(s):
-        max_num_iters = 20*sum(s)
+    if max_num_iters is None or max_num_iters > (10*sum(s) if len(s) > 1 else s[0]):
+        max_num_iters = (10*sum(s) if len(s) > 1 else s[0]+1)
     max_num_iters += 10
+    if dims==1 and max_num_iters > 2*s[0]:
+        max_num_iters = 2*s[0]
+    max_num_iters /= alpha
     
     #adjust terms according to temperature
     ed1 = torch.exp(d * (d<0))
     ed0 = torch.exp(-d * (d>0))
-    er = [torch.exp(-ri) for ri in r]
+    eru = [torch.exp(-ri) for ri in ru]
+    erd = [torch.exp(-ri) for ri in rd]
     
     iter = 0
     while True:
         
-        mvu0, mvd0, mvu1, mvd1 = Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0, ed1, er,meu0,med0,meu1,med1)
+        mvu0, mvd0, mvu1, mvd1 = Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0, ed1, meu0, med0, meu1, med1)
         
         #normalised messages
-        avu = [mvu0[i]+mvu1[i] for i in range(dims)]
-        avd = [mvd0[i]+mvd1[i] for i in range(dims)]
+        avu = [mvu0[i]+mvu1[i]+2*m_epsilon for i in range(dims)]
+        avd = [mvd0[i]+mvd1[i]+2*m_epsilon for i in range(dims)]
         for i in range(dims):
-            mvu0[i] = mvu0[i] / avu[i]
-            mvu1[i] = mvu1[i] / avu[i]
-            mvd0[i] = mvd0[i] / avd[i]
-            mvd1[i] = mvd1[i] / avd[i]
+            mvu0[i] = (mvu0[i]+m_epsilon) / avu[i]
+            mvu1[i] = (mvu1[i]+m_epsilon) / avu[i]
+            mvd0[i] = (mvd0[i]+m_epsilon) / avd[i]
+            mvd1[i] = (mvd1[i]+m_epsilon) / avd[i]
         
         #compute edge to vertex messages
         for i in range(dims):
             if i == 0:
-                new_med0 = mvd0[i] + er[i][:,:,:-1,...] * mvd1[i]
-                new_med1 = mvd1[i] + er[i][:,:,:-1,...] * mvd0[i]
-                new_meu0 = mvu0[i] + er[i][:,:,:-1,...] * mvu1[i]
-                new_meu1 = mvu1[i] + er[i][:,:,:-1,...] * mvu0[i]
+                new_med0 = mvd0[i] + eru[i][:,:,:-1,...] * mvd1[i]
+                new_med1 = mvd1[i] + erd[i][:,:,:-1,...] * mvd0[i]
+                new_meu0 = mvu0[i] + erd[i][:,:,:-1,...] * mvu1[i]
+                new_meu1 = mvu1[i] + eru[i][:,:,:-1,...] * mvu0[i]
             elif i == 1:
-                new_med0 = mvd0[i] + er[i][:,:,:,:-1,...] * mvd1[i]
-                new_med1 = mvd1[i] + er[i][:,:,:,:-1,...] * mvd0[i]
-                new_meu0 = mvu0[i] + er[i][:,:,:,:-1,...] * mvu1[i]
-                new_meu1 = mvu1[i] + er[i][:,:,:,:-1,...] * mvu0[i]
+                new_med0 = mvd0[i] + eru[i][:,:,:,:-1,...] * mvd1[i]
+                new_med1 = mvd1[i] + erd[i][:,:,:,:-1,...] * mvd0[i]
+                new_meu0 = mvu0[i] + erd[i][:,:,:,:-1,...] * mvu1[i]
+                new_meu1 = mvu1[i] + eru[i][:,:,:,:-1,...] * mvu0[i]
             elif i == 2:
-                new_med0 = mvd0[i] + er[i][:,:,:,:,:-1,...] * mvd1[i]
-                new_med1 = mvd1[i] + er[i][:,:,:,:,:-1,...] * mvd0[i]
-                new_meu0 = mvu0[i] + er[i][:,:,:,:,:-1,...] * mvu1[i]
-                new_meu1 = mvu1[i] + er[i][:,:,:,:,:-1,...] * mvu0[i]
+                new_med0 = mvd0[i] + eru[i][:,:,:,:,:-1,...] * mvd1[i]
+                new_med1 = mvd1[i] + erd[i][:,:,:,:,:-1,...] * mvd0[i]
+                new_meu0 = mvu0[i] + erd[i][:,:,:,:,:-1,...] * mvu1[i]
+                new_meu1 = mvu1[i] + eru[i][:,:,:,:,:-1,...] * mvu0[i]
             err_med0[i] = med0[i] - new_med0
             err_med1[i] = med1[i] - new_med1
             err_meu0[i] = meu0[i] - new_meu0
             err_meu1[i] = meu1[i] - new_meu1
-            med0[i] = new_med0
-            med1[i] = new_med1
-            meu0[i] = new_meu0
-            meu1[i] = new_meu1
+            med0[i] = (1-alpha)*med0[i] + alpha*new_med0
+            med1[i] = (1-alpha)*med1[i] + alpha*new_med1
+            meu0[i] = (1-alpha)*meu0[i] + alpha*new_meu0
+            meu1[i] = (1-alpha)*meu1[i] + alpha*new_meu1
 
         #calculate early convergence criteria
         max_change = max([torch.sum(torch.abs(em)) for em in err_med0] + 
@@ -279,22 +289,23 @@ def Binary_LBPnD_PytorchNative_forward(d,r):
         
                 
         iter+=1
-        if iter > max_num_iters or max_change < 0*epsilon:
+        if max_change < epsilon or iter > max_num_iters:
             break
     
     #finally return the edge messages (all else can be discarded / easily reconstructed)
-    #print(min_decay_const,max_num_iters,iter,max_change)
+    print(min_decay_const,max_num_iters,iter,max_change)
     return meu0, med0, meu1, med1, iter
     
     
 def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_med1, 
-                                meu0, med0, meu1, med1, d, r, max_num_iters):
-    dims = len(r)
+                                meu0, med0, meu1, med1, d, ru, rd, max_num_iters):
+    dims = len(ru)
     numels = prod(d.shape[2:])
     sumels = sum(d.shape[2:])
     grad_d0 =  torch.zeros_like(d) #(will multiply out the ed at the end, keeps everything in exponential domain)
     grad_d1 =  torch.zeros_like(d) #(will multiply out the ed at the end, keeps everything in exponential domain)
-    grad_r = [torch.zeros_like(ri) for ri in r]
+    grad_ru = [torch.zeros_like(ri) for ri in ru]
+    grad_rd = [torch.zeros_like(ri) for ri in rd]
 
     #see if you can exit early
     max_grad = max([torch.max(torch.abs(gm)) for gm in grad_meu0] + 
@@ -305,17 +316,14 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
         return grad_d, grad_r
     epsilon = (10**-8)*max_grad
     
-    #calculate theoretical worst decay rate
-    max_reg = max([torch.max(ri) for ri in r])
-    min_decay_const = (2*dims-1)*(1-torch.exp(-max_reg/2))/(1+torch.exp(-max_reg/2))
-    
     ed1 = torch.exp(d * (d<0))
     ed0 = torch.exp(-d * (d>0))
-    er = [torch.exp(-ri) for ri in r]
+    eru = [torch.exp(-ri) for ri in ru]
+    erd = [torch.exp(-ri) for ri in rd]
         
     #get vertex messages and make containers for their gradients
     #(save unnormalised version to make gradient computation wrt edge messages easier and a "doubly normalised" version for backprop through normalisation)
-    mvu0, mvd0, mvu1, mvd1 = Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,er,meu0,med0,meu1,med1)
+    mvu0, mvd0, mvu1, mvd1 = Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,meu0,med0,meu1,med1)
     avu = [mvu0[i]+mvu1[i] for i in range(dims)]
     avd = [mvd0[i]+mvd1[i] for i in range(dims)]
     dnmvu0, dnmvu1 = [mvu0[i]/avu[i]**2 for i in range(dims)], [mvu1[i]/avu[i]**2 for i in range(dims)]
@@ -339,23 +347,26 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
         
         for i in range(dims):
             if i == 0:
-                grad_mvu0[i] = grad_meu0[i] + er[i][:,:,:-1,...]*grad_meu1[i]
-                grad_mvu1[i] = grad_meu1[i] + er[i][:,:,:-1,...]*grad_meu0[i]
-                grad_mvd0[i] = grad_med0[i] + er[i][:,:,:-1,...]*grad_med1[i]
-                grad_mvd1[i] = grad_med1[i] + er[i][:,:,:-1,...]*grad_med0[i]
-                grad_r[i][:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i] + grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
+                grad_mvu0[i] = grad_meu0[i] + eru[i][:,:,:-1,...]*grad_meu1[i]
+                grad_mvu1[i] = grad_meu1[i] + erd[i][:,:,:-1,...]*grad_meu0[i]
+                grad_mvd0[i] = grad_med0[i] + erd[i][:,:,:-1,...]*grad_med1[i]
+                grad_mvd1[i] = grad_med1[i] + eru[i][:,:,:-1,...]*grad_med0[i]
+                grad_ru[i][:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i]
+                grad_rd[i][:,:,:-1,...] += grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
             if i == 1:
-                grad_mvu0[i] = grad_meu0[i] + er[i][:,:,:,:-1,...]*grad_meu1[i]
-                grad_mvu1[i] = grad_meu1[i] + er[i][:,:,:,:-1,...]*grad_meu0[i]
-                grad_mvd0[i] = grad_med0[i] + er[i][:,:,:,:-1,...]*grad_med1[i]
-                grad_mvd1[i] = grad_med1[i] + er[i][:,:,:,:-1,...]*grad_med0[i]
-                grad_r[i][:,:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i] + grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
+                grad_mvu0[i] = grad_meu0[i] + eru[i][:,:,:,:-1,...]*grad_meu1[i]
+                grad_mvu1[i] = grad_meu1[i] + erd[i][:,:,:,:-1,...]*grad_meu0[i]
+                grad_mvd0[i] = grad_med0[i] + erd[i][:,:,:,:-1,...]*grad_med1[i]
+                grad_mvd1[i] = grad_med1[i] + eru[i][:,:,:,:-1,...]*grad_med0[i]
+                grad_ru[i][:,:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i]
+                grad_rd[i][:,:,:,:-1,...] += grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
             if i == 2:
-                grad_mvu0[i] = grad_meu0[i] + er[i][:,:,:,:,:-1,...]*grad_meu1[i]
-                grad_mvu1[i] = grad_meu1[i] + er[i][:,:,:,:,:-1,...]*grad_meu0[i]
-                grad_mvd0[i] = grad_med0[i] + er[i][:,:,:,:,:-1,...]*grad_med1[i]
-                grad_mvd1[i] = grad_med1[i] + er[i][:,:,:,:,:-1,...]*grad_med0[i]
-                grad_r[i][:,:,:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i] + grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
+                grad_mvu0[i] = grad_meu0[i] + eru[i][:,:,:,:,:-1,...]*grad_meu1[i]
+                grad_mvu1[i] = grad_meu1[i] + erd[i][:,:,:,:,:-1,...]*grad_meu0[i]
+                grad_mvd0[i] = grad_med0[i] + erd[i][:,:,:,:,:-1,...]*grad_med1[i]
+                grad_mvd1[i] = grad_med1[i] + eru[i][:,:,:,:,:-1,...]*grad_med0[i]
+                grad_ru[i][:,:,:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i]
+                grad_rd[i][:,:,:,:,:-1,...] += grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
         
         
         #backprop through renormalisation
@@ -364,11 +375,12 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
             grad_mvd0[i], grad_mvd1[i] = dnmvd1[i]*(grad_mvd0[i] - grad_mvd1[i]), dnmvd0[i]*(grad_mvd1[i] - grad_mvd0[i])
 
         #clear gradient buffers for the edge messages (about to compute updated ones
+        alpha = 0.25 #dampening rate
         for i in range(dims):
-            grad_med0[i] *= 0
-            grad_meu0[i] *= 0
-            grad_med1[i] *= 0
-            grad_meu1[i] *= 0
+            grad_med0[i] *= (1-alpha)/alpha
+            grad_meu0[i] *= (1-alpha)/alpha
+            grad_med1[i] *= (1-alpha)/alpha
+            grad_meu1[i] *= (1-alpha)/alpha
 
         #handle data terms
         for ni in range(dims):
@@ -407,11 +419,6 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
                 grad_meu0[ni][:,:,:,:,:-1,...] += grad_mvu0[ni][:,:,:,:,1:,...] * mvu0[ni][:,:,:,:,1:,...] / meu0[ni][:,:,:,:,:-1,...]
                 grad_med1[ni][:,:,:,:,1:,...] += grad_mvd1[ni][:,:,:,:,:-1,...] * mvd1[ni][:,:,:,:,:-1,...] / med1[ni][:,:,:,:,1:,...]
                 grad_med0[ni][:,:,:,:,1:,...] += grad_mvd0[ni][:,:,:,:,:-1,...] * mvd0[ni][:,:,:,:,:-1,...] / med0[ni][:,:,:,:,1:,...]
-        
-        
-        
-        
-        
         
         #put in contributions from other directions
         for di2 in range(dims):
@@ -474,9 +481,12 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
                 grad_med0[di2][:,:,:,:,1:,...] = grad_contribution_0_d_d / med0[di2][:,:,:,:,1:,...]
                 grad_meu0[di2][:,:,:,:,1:,...] = grad_contribution_0_u_d / meu0[di2][:,:,:,:,1:,...]
         
-        
-        
-        
+        #correct for scaling
+        for i in range(dims):
+            grad_med0[i] *= alpha
+            grad_meu0[i] *= alpha
+            grad_med1[i] *= alpha
+            grad_meu1[i] *= alpha
 
         iter+=1
         max_grad = max([torch.max(gm) for gm in grad_med0] +
@@ -484,15 +494,16 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
                        [torch.max(gm) for gm in grad_meu0] +
                        [torch.max(gm) for gm in grad_meu1])
         #print("Binary_LBPnD_PytorchNative_backward",iter,":",max_grad,end="\n")
-        if max_grad <= epsilon or iter > 10*sumels:
+        if max_grad <= epsilon or iter > max_num_iters:
             break
 
     #correct to no longer be in the exponential domain
     for i in range(dims):
-        grad_r[i] *= -er[i]
+        grad_ru[i] *= -eru[i]
+        grad_rd[i] *= -erd[i]
     grad_d = grad_d1 - grad_d0
     
-    return grad_d, grad_r
+    return grad_d, grad_ru, grad_rd
     
 def Binary_MFEnD_forward(d,r):
     epsilon = 10**-4
@@ -697,6 +708,26 @@ class Binary_MAP1d(torch.autograd.Function):
         grad_input *= 0
         return grad_input
     
+class Binary_MAP1dStar(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, d, rx, lx):
+        DeepFlowFunction.check_var_dims([d,rx],1)
+        d, rx = d.contiguous(), rx.contiguous()
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_auglag_1dstar_gpu_forward(d, rx, lx, output)
+        else:
+            deepflow.binary_auglag_1dstar_cpu_forward(d, rx, lx, output)
+        return (output > 0.5).float()
+            
+    #For the optimisers, there is no well defined backwards
+    @staticmethod
+    def backward(ctx, grad_output):
+        grad_input = grad_output.clone()
+        grad_input *= 0
+        return grad_input
+    
 class Binary_MAP2d(torch.autograd.Function):
 
     @staticmethod
@@ -717,6 +748,26 @@ class Binary_MAP2d(torch.autograd.Function):
         grad_input *= 0
         return grad_input
             
+class Binary_MAP2dStar(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, d, rx, ry, lx, ly):
+        DeepFlowFunction.check_var_dims([d,rx,ry],2)
+        d, rx, ry = d.contiguous(), rx.contiguous(), ry.contiguous()
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_auglag_2dstar_gpu_forward(d, rx, ry, lx, ly, output)
+        else:
+            deepflow.binary_auglag_2dstar_cpu_forward(d, rx, ry, lx, ly, output)
+        return (output > 0.5).float()
+            
+    #For the optimisers, there is no well defined backwards
+    @staticmethod
+    def backward(ctx, grad_output):
+        grad_input = grad_output.clone()
+        grad_input *= 0
+        return grad_input
+            
 class Binary_MAP3d(torch.autograd.Function):
         
     @staticmethod
@@ -728,6 +779,26 @@ class Binary_MAP3d(torch.autograd.Function):
             deepflow.binary_auglag_3d_gpu_forward(d, rx, ry, rz, output)
         else:
             deepflow.binary_auglag_3d_cpu_forward(d, rx, ry, rz, output)
+        return (output > 0.5).float()
+        
+    #For the optimisers, there is no well defind backwards
+    @staticmethod
+    def backward(ctx, grad_output):
+        grad_input = grad_output.clone()
+        grad_input *= 0
+        return grad_input
+
+class Binary_MAP3dStar(torch.autograd.Function):
+        
+    @staticmethod
+    def forward(ctx, d, rx, ry, rz, lx, ly, lz):
+        DeepFlowFunction.check_var_dims([d,rx,ry,rz],3)
+        d, rx, ry, rz = d.contiguous(), rx.contiguous(), ry.contiguous(), rz.contiguous()
+        output = torch.zeros_like(d)
+        if d.is_cuda:
+            deepflow.binary_auglag_3dstar_gpu_forward(d, rx, ry, rz, lx, ly, lz, output)
+        else:
+            deepflow.binary_auglag_3dstar_cpu_forward(d, rx, ry, rz, lx, ly, lz, output)
         return (output > 0.5).float()
         
     #For the optimisers, there is no well defind backwards
@@ -782,51 +853,52 @@ class Binary_Mean3d_PytorchNative(torch.autograd.Function):
 class Binary_LBP1d_PytorchNative(torch.autograd.Function):
 
     @staticmethod
-    def forward(ctx, d, rx):
-        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rx,])
+    def forward(ctx, d, rxu, rxd):
+        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rxu,],[rxd,])
         mexu0,mexu1,mexd0,mexd1 = meu0[0],meu1[0],med0[0],med1[0]
-        ctx.save_for_backward(d,rx,mexu0,mexu1,mexd0,mexd1,torch.tensor(num_iters))
+        ctx.save_for_backward(d,rxu,rxd,mexu0,mexu1,mexd0,mexd1,torch.tensor(num_iters))
         return mexu0,mexu1,mexd0,mexd1
     
             
     @staticmethod
     def backward(ctx, grad_mexu0, grad_mexu1, grad_mexd0, grad_mexd1):
-        d,rx,mexu0,mexu1,mexd0,mexd1,max_num_iters = ctx.saved_tensors
+        d,rxu,rxd,mexu0,mexu1,mexd0,mexd1,max_num_iters = ctx.saved_tensors
         
-        grad_d, grad_r = Binary_LBPnD_PytorchNative_backward([grad_mexu0,], [grad_mexd0,],
-                                                      [grad_mexu1,], [grad_mexd1,],
-                                                      [mexu0,], [mexd0,],
-                                                      [mexu1,], [mexd1,],
-                                                      d, [rx,], 
-                                                      int(max_num_iters.cpu().item()))
-        return grad_d, grad_r[0]
+        grad_d, grad_ru, grad_rd = Binary_LBPnD_PytorchNative_backward([grad_mexu0,], [grad_mexd0,],
+                                                                       [grad_mexu1,], [grad_mexd1,],
+                                                                       [mexu0,], [mexd0,],
+                                                                       [mexu1,], [mexd1,],
+                                                                       d, [rxu,],  [rxd,],
+                                                                       int(max_num_iters.cpu().item()))
+        return grad_d, grad_ru[0], grad_rd[0]
 
 class Binary_LBP2d_PytorchNative(torch.autograd.Function):
 
     epsilon = 10**-4
     
     @staticmethod
-    def forward(ctx, d, rx, ry):
-        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rx,ry,])
+    def forward(ctx, d, rxu, rxd, ryu, ryd):
+        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rxu,ryu,],[rxd,ryd,])
         mexu0,mexu1,mexd0,mexd1 = meu0[0],meu1[0],med0[0],med1[0]
         meyu0,meyu1,meyd0,meyd1 = meu0[1],meu1[1],med0[1],med1[1]
-        ctx.save_for_backward(d,rx,ry,mexu0,mexu1,mexd0,mexd1,
+        ctx.save_for_backward(d,rxu,rxd,ryu,ryd,
+                                      mexu0,mexu1,mexd0,mexd1,
                                       meyu0,meyu1,meyd0,meyd1,
                                       torch.tensor(num_iters))
         return mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1
     
     @staticmethod 
     def backward(ctx, grad_mexu0,grad_mexu1,grad_mexd0,grad_mexd1,grad_meyu0,grad_meyu1,grad_meyd0,grad_meyd1):
-        d,rx,ry,mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1,max_num_iters = ctx.saved_tensors
+        d,rxu,rxd,ryu,ryd,mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1,max_num_iters = ctx.saved_tensors
         
-        grad_d, grad_r = Binary_LBPnD_PytorchNative_backward([grad_mexu0,grad_meyu0,], [grad_mexd0,grad_meyd0,],
-                                                      [grad_mexu1,grad_meyu1,], [grad_mexd1,grad_meyd1,],
-                                                      [mexu0,meyu0,], [mexd0,meyd0,],
-                                                      [mexu1,meyu1,], [mexd1,meyd1,],
-                                                      d, [rx,ry,], 
-                                                      int(max_num_iters.cpu().item()))
+        grad_d, grad_ru, grad_rd = Binary_LBPnD_PytorchNative_backward([grad_mexu0,grad_meyu0,], [grad_mexd0,grad_meyd0,],
+                                                                       [grad_mexu1,grad_meyu1,], [grad_mexd1,grad_meyd1,],
+                                                                       [mexu0,meyu0,], [mexd0,meyd0,],
+                                                                       [mexu1,meyu1,], [mexd1,meyd1,],
+                                                                       d, [rxu,ryu,], [rxd,ryd,], 
+                                                                       int(max_num_iters.cpu().item()))
                         
-        return grad_d, grad_r[0], grad_r[1]
+        return grad_d, grad_ru[0], grad_rd[0], grad_ru[1], grad_rd[1]
      
     
 class Binary_LBP3d_PytorchNative(torch.autograd.Function):
@@ -834,12 +906,13 @@ class Binary_LBP3d_PytorchNative(torch.autograd.Function):
     epsilon = 10**-4
     
     @staticmethod
-    def forward(ctx, d, rx, ry, rz):
-        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rx,ry,rz,])
+    def forward(ctx, d, rxu, rxd, ryu, ryd, rzu, rzd):
+        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rxu,ryu,rzu,],[rxd,ryd,rzd,])
         mexu0,mexu1,mexd0,mexd1 = meu0[0],meu1[0],med0[0],med1[0]
         meyu0,meyu1,meyd0,meyd1 = meu0[1],meu1[1],med0[1],med1[1]
         mezu0,mezu1,mezd0,mezd1 = meu0[2],meu1[2],med0[2],med1[2]
-        ctx.save_for_backward(d,rx,ry,rz,mexu0,mexu1,mexd0,mexd1,
+        ctx.save_for_backward(d,rxu,rxd,ryu,ryd,rzu,rzd,
+                                         mexu0,mexu1,mexd0,mexd1,
                                          meyu0,meyu1,meyd0,meyd1,
                                          mezu0,mezu1,mezd0,mezd1,
                                          torch.tensor(num_iters))
@@ -851,15 +924,15 @@ class Binary_LBP3d_PytorchNative(torch.autograd.Function):
                       grad_meyu0, grad_meyu1, grad_meyd0, grad_meyd1,
                       grad_mezu0, grad_mezu1, grad_mezd0, grad_mezd1):
         
-        d,rx,ry,rz,mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1,mezu0,mezu1,mezd0,mezd1,max_num_iters = ctx.saved_tensors
+        d,rxu,rxd,ryu,ryd,rzu,rzd,mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1,mezu0,mezu1,mezd0,mezd1,max_num_iters = ctx.saved_tensors
         
-        grad_d, grad_r = Binary_LBPnD_PytorchNative_backward([grad_mexu0,grad_meyu0,grad_mezu0,], [grad_mexd0,grad_meyd0,grad_mezd0,],
-                                                      [grad_mexu1,grad_meyu1,grad_mezu1,], [grad_mexd1,grad_meyd1,grad_mezd1,],
-                                                      [mexu0,meyu0,mezu0,], [mexd0,meyd0,mezd0,],
-                                                      [mexu1,meyu1,mezu1,], [mexd1,meyd1,mezd1,],
-                                                      d, [rx,ry,rz,], 
-                                                      int(max_num_iters.cpu().item()))
-        return grad_d, grad_r[0], grad_r[1], grad_r[2]
+        grad_d, grad_ru, grad_rd = Binary_LBPnD_PytorchNative_backward([grad_mexu0,grad_meyu0,grad_mezu0,], [grad_mexd0,grad_meyd0,grad_mezd0,],
+                                                                       [grad_mexu1,grad_meyu1,grad_mezu1,], [grad_mexd1,grad_meyd1,grad_mezd1,],
+                                                                       [mexu0,meyu0,mezu0,], [mexd0,meyd0,mezd0,],
+                                                                       [mexu1,meyu1,mezu1,], [mexd1,meyd1,mezd1,],
+                                                                       d, [rxu,ryu,rzu,], [rxd,ryd,rzd,], 
+                                                                       int(max_num_iters.cpu().item()))
+        return grad_d, grad_ru[0], grad_rd[0], grad_ru[1], grad_rd[1], grad_ru[2], grad_rd[2]
 
     
         

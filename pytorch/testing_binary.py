@@ -9,14 +9,15 @@ import itertools
 
 import torch
 from binary_deepflow import BinaryDeepFlow1d, BinaryDeepFlow2d, BinaryDeepFlow3d
-from binary_deepflow_function import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
+from binary_deepflow import BinaryDeepFlow1dStar, BinaryDeepFlow2dStar, BinaryDeepFlow3dStar
+from binary_deepflow_function import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d,Binary_MAP1dStar,Binary_MAP2dStar,Binary_MAP3dStar
 from graph_deepflow import BinaryDeepFlow
 from graph_deepflow_function import DenseGraph_MAP_Binary_PytorchNative
 
-b=1
-c=int(4*random.uniform(0,1))+3
-x=2**15
-x_graph = 4
+b=1#2**(int(3*random.uniform(0,1))+1)
+c=1#int(4*random.uniform(0,1))+3
+x=2**9
+x_graph = 64
 epsilon = 10**-6
 verbosity = True
 
@@ -27,50 +28,74 @@ def get_size_info(d):
     x_used = int(x**(1/d)+0.5)
     return tuple( [b,c]+[x_used for i in range(d)] ), [tuple([b,c]+[x_used - (1 if i==i2 else 0) for i in range(d)]) for i2 in range(d)], tuple( [1,c]+[x_used for i in range(d)] ), tuple([i+2 for i in range(d)])
 
-def BINARY_run_all_solvers(t,t2,r,r2):
+def BINARY_run_all_solvers(t,t2,r,r2, l=None):
     if type(r) is list:
         d = len(r)
     else:
         d = 0
-    if d == 0:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = DenseGraph_MAP_Binary_PytorchNative.apply(t,r)
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omj = BinaryDeepFlow(solve_type="MFE",test_type=None)(t,r)
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, olj = BinaryDeepFlow(solve_type="LBP",test_type=None)(t2,r2)
-        print(4,datetime.datetime.now())
-    elif d == 1:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = Binary_MAP1d.apply(t,r[0])
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omj = BinaryDeepFlow1d(solve_type="MFE",test_type=None)(t,r[0])
-        omj = [omj]
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, olj = BinaryDeepFlow1d(solve_type="LBP",test_type=None)(t2,r2[0])
-        olj = [olj]
-        print(4,datetime.datetime.now())
-    elif d == 2:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = Binary_MAP2d.apply(t,r[0],r[1])
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omjx, omjy = BinaryDeepFlow2d(solve_type="MFE",test_type=None)(t,r[0],r[1])
-        omj = [omjx, omjy]
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, oljx, oljy = BinaryDeepFlow2d(solve_type="LBP",test_type=None)(t2,r2[0],r2[1])
-        olj = [oljx, oljy]
-        print(4,datetime.datetime.now())
-    elif d == 3:
-        print(1,"Running MAP estimation",datetime.datetime.now())
-        oa = Binary_MAP3d.apply(t,r[0],r[1],r[2])
-        print(2,"Running MFE estimation",datetime.datetime.now())
-        om, omjx, omjy, omjz = BinaryDeepFlow3d(solve_type="MFE",test_type=None)(t,r[0],r[1],r[2])
-        omj = [omjx, omjy, omjz]
-        print(3,"Running LBP estimation",datetime.datetime.now())
-        ol, oljx, oljy, oljz = BinaryDeepFlow3d(solve_type="LBP",test_type=None)(t2,r2[0],r2[1],r2[2])
-        olj = [oljx, oljy, oljz]
-        print(4,datetime.datetime.now())
-    return oa, om, omj, ol, olj
+    if l == None:
+        if d == 0:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = DenseGraph_MAP_Binary_PytorchNative.apply(t,r)
+            print(2,"Running MFE estimation",datetime.datetime.now())
+            om, omj = BinaryDeepFlow(solve_type="MFE",test_type=None)(t,r)
+            print(3,"Running LBP estimation",datetime.datetime.now())
+            ol, olj = BinaryDeepFlow(solve_type="LBP",test_type=None)(t2,r2)
+            print(4,datetime.datetime.now())
+        elif d == 1:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = Binary_MAP1d.apply(t,r[0])
+            print(2,"Running MFE estimation",datetime.datetime.now())
+            om, omj = BinaryDeepFlow1d(solve_type="MFE",test_type=None)(t,r[0])
+            omj = [omj]
+            print(3,"Running LBP estimation",datetime.datetime.now())
+            ol, olj = BinaryDeepFlow1d(solve_type="LBP",test_type=None)(t2,r2[0])
+            olj = [olj]
+            print(4,datetime.datetime.now())
+        elif d == 2:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = Binary_MAP2d.apply(t,r[0],r[1])
+            print(2,"Running MFE estimation",datetime.datetime.now())
+            om, omjx, omjy = BinaryDeepFlow2d(solve_type="MFE",test_type=None)(t,r[0],r[1])
+            omj = [omjx, omjy]
+            print(3,"Running LBP estimation",datetime.datetime.now())
+            ol, oljx, oljy = BinaryDeepFlow2d(solve_type="LBP",test_type=None)(t2,r2[0],r2[1])
+            olj = [oljx, oljy]
+            print(4,datetime.datetime.now())
+        elif d == 3:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = Binary_MAP3d.apply(t,r[0],r[1],r[2])
+            print(2,"Running MFE estimation",datetime.datetime.now())
+            om, omjx, omjy, omjz = BinaryDeepFlow3d(solve_type="MFE",test_type=None)(t,r[0],r[1],r[2])
+            omj = [omjx, omjy, omjz]
+            print(3,"Running LBP estimation",datetime.datetime.now())
+            ol, oljx, oljy, oljz = BinaryDeepFlow3d(solve_type="LBP",test_type=None)(t2,r2[0],r2[1],r2[2])
+            olj = [oljx, oljy, oljz]
+            print(4,datetime.datetime.now())
+        return oa, om, omj, ol, olj
+    else:
+        if d == 1:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = Binary_MAP1dStar.apply(t,r[0],l[0])
+            print(3,"Running LBP estimation",datetime.datetime.now())
+            ol, olj = BinaryDeepFlow1dStar(test_type=None)(t,r[0],l[0])
+            olj = [olj]
+            print(4,datetime.datetime.now())
+        elif d == 2:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = Binary_MAP2dStar.apply(t,r[0],r[1],l[0],l[1])
+            print(2,"Running LBP estimation",datetime.datetime.now())
+            ol, oljx, oljy = BinaryDeepFlow2dStar(test_type=None)(t,r[0],r[1],l[0],l[1])
+            olj = [oljx, oljy]
+            print(4,datetime.datetime.now())
+        elif d == 3:
+            print(1,"Running MAP estimation",datetime.datetime.now())
+            oa = Binary_MAP3dStar.apply(t,r[0],r[1],r[2],l[0],l[1],l[2])
+            print(3,"Running LBP estimation",datetime.datetime.now())
+            ol, oljx, oljy, oljz = BinaryDeepFlow3dStar(test_type=None)(t,r[0],r[1],r[2],l[0],l[1],l[2])
+            olj = [oljx, oljy, oljz]
+            print(4,datetime.datetime.now())
+        return oa, ol, olj
 
 def nan_check(m_np, name, verbose=False):
     for m,n in zip(m_np,name):
@@ -154,12 +179,17 @@ def test_no_smoothness_graph(full_device,asserter):
             print("\tGood for "+name)
             
     #ensure gradient wrt data terms are equivalent to just sigmoid
-    print(12,"Checking correctness of gradient calculation")
+    print(12,"Checking correctness of gradient calculation for the data terms")
     true_val = data_w * true_val_marg * (1-true_val_marg)
-    true_val += np.sum(data_wr * np.expand_dims(true_val_marg * (1-true_val_marg),-2) * (1-2*np.expand_dims(true_val_marg,-1)),-1)
-    print(true_val)
-    print(ot_np)
-    print(ot2_np)
+    true_val += np.sum(inv_eye * data_wr * np.expand_dims(true_val_marg * (1-true_val_marg),-1) * (1-2*np.expand_dims(true_val_marg,-2)),-1)
+    true_val += np.sum(inv_eye * data_wr.transpose([0,1,3,2]) * np.expand_dims(true_val_marg * (1-true_val_marg),-1) * (1-2*np.expand_dims(true_val_marg,-2)),-1)
+    for estimate, name in zip([ot2_np, ot_np], ["LBP","MFE"]):
+        for loc, (val_df, val_d) in enumerate(zip(estimate.flatten(),true_val.flatten())):
+            if not (abs(val_df-val_d) < np.sqrt(x_graph)*epsilon):
+                print(name +" predicted gradient ("+str(val_df)+") differs from expected gradient ("+str(val_d)+") at location " + str(loc))
+                asserter.assertTrue(False)
+        if verbosity:
+            print("\tGood for "+name)
             
 def test_no_smoothness(d,full_device,asserter):
     print("Testing (no smoothness) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
@@ -476,9 +506,93 @@ def test_smoothness_dom(d,full_device,asserter):
                     print("Sign is",sign,"but value is",val,"at location",loc)
                     assert(False)
 
+def test_star_nosmoothness(d,full_device,asserter):
+    print("Testing (star, no smoothness) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
+    device = "cuda" if "cuda" in full_device else "cpu"
+    alg_type = "pytorch" if "pytorch" in full_device else "cpp"
+
+    size_info, size_info_j, size_red_info, axes = get_size_info(d)
+
+    #create data terms for testing (smoothness terms should be zero)
+    data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
+    data_rx = np.zeros(shape=size_info).astype(np.float32)
+    if d > 1:
+        data_ry = np.zeros(shape=size_info).astype(np.float32)
+    if d > 2:
+        data_rz = np.zeros(shape=size_info).astype(np.float32)
+
+    #cast to tensors and make duplicates for the other solver mechanism
+    t = torch.tensor(data_t, device=torch.device(device))
+    t.requires_grad = True
+    rx = torch.tensor(data_rx, device=torch.device(device))
+    rx.requires_grad = True
+    r = [rx]
+    if d > 1:
+        ry = torch.tensor(data_ry, device=torch.device(device))
+        ry.requires_grad = True
+        r.append(ry)
+    if d > 2:
+        rz = torch.tensor(data_rz, device=torch.device(device))
+        rz.requires_grad = True
+        r.append(rz)
+
+    #get star terms
+    if d == 1:
+        cx = np.random.uniform()*(size_info[2]/2-0.5) + size_info[2]/4
+        lx = torch.repeat_interleave(torch.repeat_interleave(torch.sign((-1.0+2.0*(torch.arange(size_info[2],device=device) > cx)).float()).unsqueeze(0),size_info[1],0).unsqueeze(0),size_info[0],0)
+        l = [lx,]
+    elif d == 2:
+        cx = np.random.uniform()*(size_info[2]/2-0.5) + size_info[2]/4
+        cy = np.random.uniform()*(size_info[3]/2-0.5) + size_info[2]/4
+        x_idx = torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.arange(size_info[2],device=device).unsqueeze(-1),size_info[3],-1).unsqueeze(0),size_info[1],0).unsqueeze(0),size_info[0],0)
+        y_idx = torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.arange(size_info[3],device=device).unsqueeze(0),size_info[2],0).unsqueeze(0),size_info[1],0).unsqueeze(0),size_info[0],0)
+        lx = torch.zeros_like(rx)
+        lx[:,:,:-1,:] -= (x_idx[:,:,:-1,:] < cx).float()
+        lx[:,:,:-1,:] += (x_idx[:,:,1:,:] >= cx).float()
+        ly = torch.zeros_like(ry)
+        ly[:,:,:,:-1:] -= (y_idx[:,:,:,:-1] < cy).float()
+        ly[:,:,:,:-1:] += (y_idx[:,:,:,1:] >= cy).float()
+        l = [lx,ly]
+    elif d == 3:
+        cx = np.random.uniform()*(size_info[2]/2-0.5) + size_info[2]/4
+        cy = np.random.uniform()*(size_info[3]/2-0.5) + size_info[3]/4
+        cz = np.random.uniform()*(size_info[4]/2-0.5) + size_info[4]/4
+        x_idx = torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.arange(size_info[2],device=device).unsqueeze(-1),size_info[3],-1).unsqueeze(-1),size_info[4],-1).unsqueeze(0),size_info[1],0).unsqueeze(0),size_info[0],0)
+        y_idx = torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.arange(size_info[3],device=device).unsqueeze(-1),size_info[4],-1).unsqueeze(0),size_info[2],0).unsqueeze(0),size_info[1],0).unsqueeze(0),size_info[0],0)
+        z_idx = torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.repeat_interleave(torch.arange(size_info[4],device=device).unsqueeze(0),size_info[3],0).unsqueeze(0),size_info[2],0).unsqueeze(0),size_info[1],0).unsqueeze(0),size_info[0],0)
+        lx = torch.zeros_like(rx)
+        lx[:,:,:-1,:,:] -= (x_idx[:,:,:-1,:] < cx).float()
+        lx[:,:,:-1,:,:] += (x_idx[:,:,1:,:] >= cx).float()
+        ly = torch.zeros_like(ry)
+        ly[:,:,:,:-1:,:] -= (y_idx[:,:,:,:-1,:] < cy).float()
+        ly[:,:,:,:-1:,:] += (y_idx[:,:,:,1:,:] >= cy).float()
+        lz = torch.zeros_like(rz)
+        lz[:,:,:,:,:-1:] -= (z_idx[:,:,:,:,:-1] < cz).float()
+        lz[:,:,:,:,:-1:] += (z_idx[:,:,:,:,1:] >= cz).float()
+        l = [lx,ly,lz]
+        
+                              
+    #run the solvers
+    oa, ol, olj = BINARY_run_all_solvers(t,None,r,None,l)
+    
+    #check correctness wrt edges
+    breakage_oa_x = torch.max( (oa[:,:,1:,...]-oa[:,:,:-1,...]) * lx[:,:,:-1,...] )
+    breakage_ol_x = torch.max( (ol[:,:,1:,...]-ol[:,:,:-1,...]) * lx[:,:,:-1,...] )
+    print(breakage_oa_x)
+    print(breakage_ol_x)
+    if d > 1:
+        breakage_oa_y = torch.max( (oa[:,:,:,1:,...]-oa[:,:,:,:-1,...]) * ly[:,:,:,:-1,...] )
+        breakage_ol_y = torch.max( (ol[:,:,:,1:,...]-ol[:,:,:,:-1,...]) * ly[:,:,:,:-1,...] )
+        print(breakage_oa_y)
+        print(breakage_ol_y)
+    if d > 2:
+        breakage_oa_z = torch.max( (oa[:,:,:,:,1:,...]-oa[:,:,:,:,:-1,...]) * lz[:,:,:,:,:-1,...] )
+        breakage_ol_z = torch.max( (ol[:,:,:,:,1:,...]-ol[:,:,:,:,:-1,...]) * lz[:,:,:,:,:-1,...] )
+        print(breakage_oa_z)
+        print(breakage_ol_z)
+    
                 
 class Test_Extreme(unittest.TestCase):
-    
     def test_ano_smoothness_graph(self):
         print("")
         test_no_smoothness_graph("pytorch_cpu",self)
@@ -538,6 +652,24 @@ class Test_Extreme(unittest.TestCase):
         test_smoothness_dom(3,"pytorch_cpu",self)
         print("")
         test_smoothness_dom(3,"pytorch_cuda",self)
+        
+    def test_star_nosmoothness_1D(self):
+        print("")
+        test_star_nosmoothness(1,"pytorch_cpu",self)
+        print("")
+        test_star_nosmoothness(1,"pytorch_cuda",self)
+    
+    def test_star_nosmoothness_2D(self):
+        print("")
+        test_star_nosmoothness(2,"pytorch_cpu",self)
+        print("")
+        test_star_nosmoothness(2,"pytorch_cuda",self)
+        
+    def test_star_nosmoothness_3D(self):
+        print("")
+        test_star_nosmoothness(3,"pytorch_cpu",self)
+        print("")
+        test_star_nosmoothness(3,"pytorch_cuda",self)
         
 if __name__ == '__main__':
     unittest.main()
