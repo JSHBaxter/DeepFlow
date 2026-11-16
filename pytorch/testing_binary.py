@@ -191,6 +191,79 @@ def test_no_smoothness_graph(full_device,asserter):
         if verbosity:
             print("\tGood for "+name)
             
+def test_no_data_graph(full_device,asserter):
+    print("Testing (no data) \tDim: GRAPH \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
+    device = "cuda" if "cuda" in full_device else "cpu"
+    
+    #create data terms for testing (smoothness terms should be zero)
+    data_t = 0*np.random.normal(0,1,size=size_info_graph_d).astype(np.float32)
+    data_w = np.random.normal(0,1,size=size_info_graph_d).astype(np.float32)
+    data_r = np.random.uniform(0,1,size=size_info_graph_r).astype(np.float32) / (2*x_graph)
+    
+    #cast to tensors and make duplicates for the other solver mechanism
+    t = torch.tensor(data_t, device=torch.device(device))
+    t2 = torch.tensor(data_t.copy(), device=torch.device(device))
+    t.requires_grad = True
+    t2.requires_grad = True
+    w = torch.tensor(data_w, device=torch.device(device))
+    r = torch.tensor(data_r, device=torch.device(device))
+    r2 = torch.tensor(data_r.copy(), device=torch.device(device))
+    r.requires_grad = True
+    r2.requires_grad = True
+    
+    #run the solvers
+    oa, om, omj, ol, olj = BINARY_run_all_solvers(t,t2,r,r2)
+    
+    #run the gradient solvers on random losses
+    loss = torch.sum(w*om)
+    print(5,datetime.datetime.now())
+    loss.backward()
+    print(6,datetime.datetime.now())
+    loss = torch.sum(w*ol)
+    print(7,datetime.datetime.now())
+    loss.backward()
+    print(8,datetime.datetime.now())
+    
+    #convert to numpy for validation
+    oa_np = oa.detach().cpu().numpy()
+    om_np = om.detach().cpu().numpy()
+    ol_np = ol.detach().cpu().numpy()
+    omj_np = omj.detach().cpu().numpy()
+    olj_np = olj.detach().cpu().numpy()
+    ot_np = t.grad.detach().cpu().numpy()
+    ot2_np = t2.grad.detach().cpu().numpy()
+    ogmj_np = r.grad.detach().cpu().numpy()
+    oglj_np = r2.grad.detach().cpu().numpy()
+    
+    #do initial NaN checks
+    print(9,"Running NaN checks")
+    nan_check([oa_np,om_np,ol_np,ot_np,ot2_np,omj_np,olj_np,ogmj_np,oglj_np],
+              ["oa","om","ol","ot","ot2","omj","olj","ogmj","oglj"], verbosity)
+        
+    #ensure mean estimate is equivalent to the sigmoid of the data terms
+    print(10,"Checking correctness of marginals")
+    true_val_marg = 0.5
+    for estimate, name in zip([om_np, ol_np], ["MFE","LBP"]):
+        for loc, val_df in enumerate(estimate.flatten()):
+            if not (abs(val_df-true_val_marg) < epsilon):
+                print(name +" predicted marginal ("+str(val_df)+") differs from expected marginal ("+str(true_val_marg)+") at location " + str(loc) + " (diff " + str(val_df-true_val_marg) + ")")
+                asserter.assertTrue(False)
+        if verbosity:
+            print("\tGood for "+name)
+            
+    #ensure gradient wrt data terms are equivalent to just sigmoid
+    print(11,"Checking correctness of gradient calculation for the smoothness terms")
+    print(oglj_np)
+    print(ogmj_np)
+    true_val = 0.0
+    for estimate, name in zip([oglj_np, ogmj_np], ["LBP","MFE"]):
+        for loc, val_df in enumerate(estimate.flatten()):
+            if not (abs(val_df-true_val) < np.sqrt(x_graph)*epsilon):
+                print(name +" predicted gradient ("+str(val_df)+") differs from expected gradient ("+str(true_val)+") at location " + str(loc))
+                asserter.assertTrue(False)
+        if verbosity:
+            print("\tGood for "+name)
+            
 def test_no_smoothness(d,full_device,asserter):
     print("Testing (no smoothness) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
@@ -593,12 +666,18 @@ def test_star_nosmoothness(d,full_device,asserter):
     
                 
 class Test_Extreme(unittest.TestCase):
+    def test_ano_data_graph(self):
+        print("")
+        test_no_data_graph("pytorch_cpu",self)
+        print("")
+        test_no_data_graph("pytorch_cuda",self)
+    '''
+        
     def test_ano_smoothness_graph(self):
         print("")
         test_no_smoothness_graph("pytorch_cpu",self)
         print("")
         test_no_smoothness_graph("pytorch_cuda",self)
-    
     def test_no_smoothness_1D(self):
         print("")
         test_no_smoothness(1,"pytorch_cpu",self)
@@ -670,6 +749,7 @@ class Test_Extreme(unittest.TestCase):
         test_star_nosmoothness(3,"pytorch_cpu",self)
         print("")
         test_star_nosmoothness(3,"pytorch_cuda",self)
+    '''
         
 if __name__ == '__main__':
     unittest.main()

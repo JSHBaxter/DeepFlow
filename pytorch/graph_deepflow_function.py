@@ -176,6 +176,8 @@ class DenseGraph_LBP_Binary_PytorchNative(torch.autograd.Function):
         #compute the missing parts of the forward pass
         prod_me0 = torch.prod(me0,dim=2)
         prod_me1 = torch.prod(me1,dim=2)
+        grad_prod_me0 = torch.sum(grad_me0/torch.permute(me0, (0, 1, 3, 2)),dim=2)
+        prod_me1 = torch.prod(me1,dim=2)
         mv0 =                              (torch.unsqueeze(prod_me0,dim=-1) / torch.permute(me0,(0,1,3,2))) + DenseGraph_LBP_Binary_PytorchNative.epsilon_low
         mv1 = torch.unsqueeze(ed,dim=-1) * (torch.unsqueeze(prod_me1,dim=-1) / torch.permute(me1,(0,1,3,2))) + DenseGraph_LBP_Binary_PytorchNative.epsilon_low
         av = mv0+mv1
@@ -188,23 +190,17 @@ class DenseGraph_LBP_Binary_PytorchNative(torch.autograd.Function):
         while True:
             
             #backprop back to vertex messages
-            #me0 = er * mv1 + mv0
-            #me1 = er * mv0 + mv1
             grad_mv0 = grad_me0 + er * grad_me1
             grad_mv1 = grad_me1 + er * grad_me0
-            grad_r += mv0+mv1
+            grad_r += grad_me1*mv0 + grad_me0*mv1
                         
             #backprop through renormalisation
             grad_mv0, grad_mv1 = (grad_mv0 - grad_mv1) * mv1 / av, (grad_mv1 - grad_mv0) * mv0 / av
             
             #backprop back to edge messages
-            #mv0 =                              (torch.unsqueeze(torch.prod(me0,dim=2),dim=-1) / torch.permute(me0,(0,1,3,2)))
-            #mv1 = torch.unsqueeze(ed,dim=-1) * (torch.unsqueeze(torch.prod(me1,dim=2),dim=-1) / torch.permute(me1,(0,1,3,2)))
-            #mv0[:,:,i,j] = torch.prod(me0,dim=2)[:,:,i] / me0[:,:,j,i]
-            #mv1[:,:,i,j] = ed[:,:,i]*torch.prod(me1,dim=2)[:,:,i] / me1[:,:,j,i]
             grad_d += torch.sum(grad_mv1 * torch.unsqueeze(prod_me1,dim=-1) / torch.permute(me1,(0,1,3,2)),dim=-1)
-            grad_me0 = torch.unsqueeze(prod_me0,dim=2) * torch.sum( 1 / (torch.unsqueeze(me0,dim=3)*torch.unsqueeze(me0,dim=2)), dim=2) - torch.unsqueeze(prod_me0,dim=2) / (me0**2)
-            grad_me1 = torch.unsqueeze(ed*prod_me1,dim=2) * torch.sum( 1 / (torch.unsqueeze(me1,dim=3)*torch.unsqueeze(me1,dim=2)), dim=2) - torch.unsqueeze(ed*prod_me1,dim=2) / (me1**2)
+            grad_me0 = (prod_me0 / (me0 ** 2)) * torch.sum(grad_mv0 * mv0, dim=-1,keepdim=True) - grad_mv0 * mv0 / me0
+            grad_me1 = ed.unsqueeze(-1) * ((prod_me1 / (me1 ** 2)) * torch.sum(grad_mv1 * mv1, dim=-1, keepdim=True) - (grad_mv1 * mv1 / me1))
             
             iter+=1
             if iter >= max_num_iters:
@@ -212,8 +208,7 @@ class DenseGraph_LBP_Binary_PytorchNative(torch.autograd.Function):
         
         #correct to no longer be in the exponential domain
         grad_r *= er
-        grad_d = grad_d*ed
-        
+        grad_d *= ed
         return grad_d, grad_r
     
     
@@ -232,7 +227,6 @@ class DenseGraph_MFE_Categorical_PytorchNative(torch.autograd.Function):
         edge_weight = torch.max(torch.sum(torch.abs(torch.unsqueeze(r,dim=1)-torch.unsqueeze(r,dim=2)),dim=3),dim=2)[0]
         node_weight = 0.5 * torch.sum(edge_weight,dim=-1)
         decay_const = torch.max(node_weight)
-        print(decay_const)
         
         #use the decay constant to find the number of iterations to perform
         if decay_const >= 1-DenseGraph_MFE_Categorical_PytorchNative.epsilon:
