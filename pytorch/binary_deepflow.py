@@ -1,9 +1,25 @@
-import torch
-from binary_deepflow_function import Binary_MAP1d, Binary_Mean1d_PytorchNative, Binary_LBP1d_PytorchNative, BinaryDeepFlow1dLoss_functional
-from binary_deepflow_function import Binary_MAP2d, Binary_Mean2d_PytorchNative, Binary_LBP2d_PytorchNative, BinaryDeepFlow2dLoss_functional
-from binary_deepflow_function import Binary_MAP3d, Binary_Mean3d_PytorchNative, Binary_LBP3d_PytorchNative, BinaryDeepFlow3dLoss_functional
 import math
+
+import torch
+from binary_deepflow_function import (
+    Binary_LBP1d_PytorchNative,
+    Binary_LBP2d_PytorchNative,
+    Binary_LBP3d_PytorchNative,
+    Binary_MAP1d,
+    Binary_MAP1dStar,
+    Binary_MAP2d,
+    Binary_MAP2dStar,
+    Binary_MAP3d,
+    Binary_MAP3dStar,
+    Binary_Mean1d_PytorchNative,
+    Binary_Mean2d_PytorchNative,
+    Binary_Mean3d_PytorchNative,
+    BinaryDeepFlow1dLoss_functional,
+    BinaryDeepFlow2dLoss_functional,
+    BinaryDeepFlow3dLoss_functional,
+)
 from torch.nn.functional import pad
+
 
 class BinaryDeepFlow1dLoss(torch.nn.Module):
     def __init__(self) -> None:
@@ -229,7 +245,7 @@ class BinaryDeepFlow1dStar(torch.nn.Module):
             return marginals_u, marginals_j
             
         elif self.test_type == "MAP":
-            return Binary_MAP1d.apply(d,rx)
+            return Binary_MAP1dStar.apply(d,rx,lx)
             
         else:
             raise Exception("Uknown test-time solve type: " + str(self.test_type))
@@ -280,7 +296,7 @@ class BinaryDeepFlow2dStar(torch.nn.Module):
             return marginals_u, marginals_jx, marginals_jy
             
         elif self.test_type == "MAP":
-            return Binary_MAP2d.apply(d,rx,ry)
+            return Binary_MAP2dStar.apply(d,rx,ry,lx,ly)
             
         else:
             raise Exception("Uknown test-time solve type: " + str(self.test_type))
