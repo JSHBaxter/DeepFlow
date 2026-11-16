@@ -1,8 +1,8 @@
-import torch
 import deepflow
-from deepflow_function import DeepFlowFunction
 import numpy as np
-from itertools import product
+import torch
+from deepflow_function import DeepFlowFunction
+
 
 def check_ordering(p,b,l):
     p = p.detach().cpu().numpy().astype(int)
@@ -38,7 +38,7 @@ def mix_regularisation_terms(p,b,l,device,r):
     r_eff = [torch.zeros([b,l,l]+sz,device=device) for rd in r]
         
     #find the leaves
-    leaves, antileaves, branches = make_leaf_branch_list(p,lb,l)
+    _, _, branches = make_leaf_branch_list(p,lb,l)
     
     #go through every pair and add reg terms for non-shared parents
     for i in range(l):
@@ -69,12 +69,12 @@ def mix_marginal_fields(p,y):
 
 
 def sum_up_joint_marginals(p,marginals_j):
-    dims = len(marginals_j)
+    # dims = len(marginals_j)
     p = p.detach().cpu().numpy().astype(int)
-    b = marginals_j[0].shape[0]
+    # b = marginals_j[0].shape[0]
     c = marginals_j[0].shape[1]
     bc = len(p)
-    leaves, antileaves, branches = make_leaf_branch_list(p,bc,c)
+    leaves, antileaves, _ = make_leaf_branch_list(p,bc,c)
     leaves = [[l-(bc-c) for l in ll] for ll in leaves]
     antileaves = [[l-(bc-c) for l in ll] for ll in antileaves]
     
@@ -208,7 +208,7 @@ def HMF_MeanNd_calculate_joint(d,r,u,p):
     energy = d + r_mix[:,(bc-c):,...]
     u = torch.softmax(energy,dim=1)
     u_mix = mix_marginal_fields(p,u)
-    leaves, antileaves, branches = make_leaf_branch_list(p,bc,c)
+    _, _, branches = make_leaf_branch_list(p,bc,c)
     marginals_j = []
     for i,rd in enumerate(r):
         
@@ -272,8 +272,8 @@ def HMF_MeanNd_calculate_joint(d,r,u,p):
     return marginals_j
 
 def HMF_MeanNd_PytorchNative_forward(d,r,p):
-    dims = len(r)
-    bc,b,c = p.shape[0],d.shape[0],d.shape[1]
+    # dims = len(r)
+    bc,_,c = p.shape[0],d.shape[0],d.shape[1]
 
     max_iter = 2*sum(d.shape[2:]) #todo put in a real convergence criterion
     u = torch.softmax(d,dim=1)
@@ -298,15 +298,15 @@ def HMF_MeanNd_PytorchNative_forward(d,r,p):
     return u, max_iter
 
 def HMF_MeanNd_PytorchNative_backwards(max_iter,d,r,u,grad_u_org,p):
-    dims = len(r)
-    bc,b,c = p.shape[0],d.shape[0],d.shape[1]
-    eye_matrix = torch.eye(c,device=u.device).view(tuple([1,c,c]+[1,]*(len(d.shape)-2)))
+    # dims = len(r)
+    bc,_,c = p.shape[0],d.shape[0],d.shape[1]
+    # eye_matrix = torch.eye(c,device=u.device).view(tuple([1,c,c]+[1,]*(len(d.shape)-2)))
     grad_d = torch.zeros_like(d)
     grad_r = [torch.zeros_like(rd) for rd in r]
     u_mix = mix_marginal_fields(p,u)
     grad_u_mix = torch.zeros_like(u_mix)
     grad_e_mix = torch.zeros_like(u_mix)
-    leaves, antileaves, branches = make_leaf_branch_list(p,bc,c)
+    # leaves, antileaves, branches = make_leaf_branch_list(p,bc,c)
     
     grad_u_mix[:,(bc-c):,...] += grad_u_org
     
@@ -395,7 +395,7 @@ def HMF_MAPNd_PytorchNative_ALMM_forward(d,r,order):
     order_backward = list(reversed(order_forward))
     b,bc,c,sz = d.shape[0], r[0].shape[1], d.shape[1],list(d.shape[2:])
     D = -(d - torch.max(d,dim=1,keepdim=True)[0]) / d_eff_mean
-    D_eff_mean = torch.mean(torch.sort(D,dim=1)[0][:,1,...]).item()
+    # D_eff_mean = torch.mean(torch.sort(D,dim=1)[0][:,1,...]).item()
     div = torch.zeros_like(r[0])
     r = [rd/d_eff_mean for rd in r]
     q = [torch.zeros_like(rd) for rd in r]
@@ -442,7 +442,7 @@ def HMF_MAPNd_PytorchNative_ALMM_forward(d,r,order):
                 elif i == 1:
                     qd[:,:,:,:-1,...] -= tau * (cap[:,:,:,1:,...]-cap[:,:,:,:-1,...])
                 elif i == 2:
-                    qd[:,:,:,:,:-1,...] -= tau * (cap[:,curr,:,:,1:,...]-cap[:,:,:,:,:-1,...])
+                    qd[:,:,:,:,:-1,...] -= tau * (cap[:,:,:,:,1:,...]-cap[:,:,:,:,:-1,...])
                 qd[qd > rd] = rd[qd > rd]
                 qd[qd < -rd] = -rd[qd < -rd]
 
@@ -497,7 +497,7 @@ def HMF_MAPNd_PytorchNative_ALMM_forward(d,r,order):
             else:
                 u_diff[:,curr,...] -= p[:,par,...]
         u_diff *= cc
-        most_changed = torch.unravel_index(torch.argmax(torch.sum(torch.abs(u_diff),1)),[b,]+sz)
+        # most_changed = torch.unravel_index(torch.argmax(torch.sum(torch.abs(u_diff),1)),[b,]+sz)
         #print(most_changed)
         #print(u[most_changed[0],:,most_changed[1],most_changed[2]])
         u -= u_diff
@@ -539,7 +539,7 @@ def HMF_MAPNd_PytorchNative_Bregman_forward(d,r,order):
     u = 0.1*u/torch.sum(u,dim=1,keepdim=True) + 0.9 / c
     d = torch.zeros_like(r[0])
     q = [torch.zeros_like(rd) for rd in r]
-    D_eff_mean = torch.mean(torch.sort(D,dim=1)[0][:,1,...]).item()
+    # D_eff_mean = torch.mean(torch.sort(D,dim=1)[0][:,1,...]).item()
     cc = 0.25
     icc = 1/cc
     tau = 0.1*cc
@@ -603,10 +603,45 @@ def HMF_MAPNd_PytorchNative_Bregman_forward(d,r,order):
     return u
     
     
+def HMF_MAP1d_PytorchNative_forward(d, rx, p):
+    """Solve the hierarchical chain exactly, including branch boundary costs."""
+    DeepFlowFunction.check_var_dims([d, rx], 1, True)
+    b, c, n = d.shape
+    bc = rx.shape[1]
+    check_ordering(p, bc, c)
+    parents = p.detach().cpu().tolist()
+
+    # A transition pays for every hierarchy node whose membership changes.
+    membership = d.new_zeros((bc, c))
+    for leaf in range(c):
+        node = bc - c + leaf
+        while node != -1:
+            membership[node, leaf] = 1
+            node = parents[node]
+    differences = torch.abs(membership[:, :, None] - membership[:, None, :])
+
+    scores = d[:, :, 0]
+    predecessors = torch.empty((b, c, n), dtype=torch.long, device=d.device)
+    for site in range(1, n):
+        transition_cost = torch.einsum("bk,kij->bij", rx[:, :, site - 1], differences)
+        best_scores, previous = torch.max(scores[:, :, None] - transition_cost, dim=1)
+        scores = best_scores + d[:, :, site]
+        # Remove a common offset to limit roundoff on long chains.
+        scores = scores - scores.max(dim=1, keepdim=True).values
+        predecessors[:, :, site] = previous
+
+    labels = torch.empty((b, n), dtype=torch.long, device=d.device)
+    labels[:, -1] = scores.argmax(dim=1)
+    batch = torch.arange(b, device=d.device)
+    for site in range(n - 1, 0, -1):
+        labels[:, site - 1] = predecessors[batch, labels[:, site], site]
+    return torch.zeros_like(d).scatter_(1, labels[:, None, :], 1)
+
+
 class HMF_MAP1d_PytorchNative(torch.autograd.Function):
     @staticmethod
     def forward(ctx, d, rx, p):
-        return HMF_MAPNd_PytorchNative_ALMM_forward(d,[rx],p)
+        return HMF_MAP1d_PytorchNative_forward(d, rx, p)
     @staticmethod
     def backward(ctx, g_u):
         raise Exception("No backwards pass for MAP")
@@ -777,4 +812,3 @@ class HMF_Mean3d(torch.autograd.Function):
         else:
             deepflow.hmf_meanpass_3d_cpu_backward(grad_output, u, rx, ry, rz, grad_d, grad_rx, grad_ry, grad_rz, p)
         return grad_d, grad_rx, grad_ry, grad_rz, torch.zeros_like(p)
-        

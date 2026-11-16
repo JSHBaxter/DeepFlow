@@ -13,7 +13,8 @@ class Potts_MAP1d(torch.autograd.Function):
             deepflow.potts_auglag_1d_gpu_forward(d,rx, output)
         else:
             deepflow.potts_auglag_1d_cpu_forward(d,rx, output)
-        return (output > 0.5).float()
+        # The native MAP solver returns log probabilities.
+        return (output > math.log(0.5)).float()
             
     #For the optimisers, there is no well defined backwards
     @staticmethod
@@ -32,7 +33,8 @@ class Potts_MAP2d(torch.autograd.Function):
             deepflow.potts_auglag_2d_gpu_forward(d,rx, ry, output)
         else:
             deepflow.potts_auglag_2d_cpu_forward(d,rx, ry, output)
-        return (output > 0.5).float()
+        # The native MAP solver returns log probabilities.
+        return (output > math.log(0.5)).float()
             
     #For the optimisers, there is no well defined backwards
     @staticmethod
@@ -51,7 +53,8 @@ class Potts_MAP3d(torch.autograd.Function):
             deepflow.potts_auglag_3d_gpu_forward(d, rx, ry, rz, output)
         else:
             deepflow.potts_auglag_3d_cpu_forward(d, rx, ry, rz, output)
-        return (output > 0.5).float()
+        # The native MAP solver returns log probabilities.
+        return (output > math.log(0.5)).float()
         
     #For the optimisers, there is no well defind backwards
     @staticmethod
@@ -92,7 +95,7 @@ class Potts_Mean1d(torch.autograd.Function):
 
 class Potts_Mean1d_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-6
+    epsilon = 10**-7
     
     @staticmethod
     def forward(ctx, d, rx):
@@ -163,7 +166,7 @@ def Potts_LBP_backward_branch_helper(g, m, er):
             
 class Potts_LBP1d_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-4
+    epsilon = 10**-7
     
     @staticmethod
     def forward(ctx, d, rx):
@@ -296,7 +299,7 @@ class Potts_Mean2d(torch.autograd.Function):
     
 class Potts_Mean2d_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-4
+    epsilon = 10**-7
     
     @staticmethod
     def forward(ctx, d, rx, ry):
@@ -363,7 +366,7 @@ class Potts_Mean2d_PytorchNative(torch.autograd.Function):
 
 class Potts_LBP2d_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-4
+    epsilon = 10**-7
     
     @staticmethod
     def forward(ctx, d, rx, ry):
@@ -399,8 +402,8 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
             #messages in x
             mvxd = ed[:,:,1:,:].clone()
             mvxd[:,:,:-1,:] *= mexd[:,:,1:,:]
-            mvxd[:,:,:,:-1] *= meyd[:,:,:-1,:]
-            mvxd[:,:,:,1:] *= meyu[:,:,:-1,:]
+            mvxd[:,:,:,:-1] *= meyd[:,:,1:,:]
+            mvxd[:,:,:,1:] *= meyu[:,:,1:,:]
             mvxu = ed[:,:,:-1,:].clone()
             mvxu[:,:,1:,:] *= mexu[:,:,:-1,:]
             mvxu[:,:,:,:-1] *= meyd[:,:,:-1,:]
@@ -409,8 +412,8 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
             #messages in y
             mvyd = ed[:,:,:,1:].clone()
             mvyd[:,:,:,:-1] *= meyd[:,:,:,1:]
-            mvyd[:,:,:-1,:] *= mexd[:,:,:,:-1]
-            mvyd[:,:,1:,:] *= mexu[:,:,:,:-1]
+            mvyd[:,:,:-1,:] *= mexd[:,:,:,1:]
+            mvyd[:,:,1:,:] *= mexu[:,:,:,1:]
             mvyu = ed[:,:,:,:-1].clone()
             mvyu[:,:,:,1:] *= meyu[:,:,:,:-1]
             mvyu[:,:,:-1,:] *= mexd[:,:,:,:-1]
@@ -451,8 +454,8 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
         #messages in x
         mvxd = ed[:,:,1:,:].clone()
         mvxd[:,:,:-1,:] *= mexd[:,:,1:,:]
-        mvxd[:,:,:,:-1] *= meyd[:,:,:-1,:]
-        mvxd[:,:,:,1:] *= meyu[:,:,:-1,:]
+        mvxd[:,:,:,:-1] *= meyd[:,:,1:,:]
+        mvxd[:,:,:,1:] *= meyu[:,:,1:,:]
         mvxu = ed[:,:,:-1,:].clone()
         mvxu[:,:,1:,:] *= mexu[:,:,:-1,:]
         mvxu[:,:,:,:-1] *= meyd[:,:,:-1,:]
@@ -461,8 +464,8 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
         #messages in y
         mvyd = ed[:,:,:,1:].clone()
         mvyd[:,:,:,:-1] *= meyd[:,:,:,1:]
-        mvyd[:,:,:-1,:] *= mexd[:,:,:,:-1]
-        mvyd[:,:,1:,:] *= mexu[:,:,:,:-1]
+        mvyd[:,:,:-1,:] *= mexd[:,:,:,1:]
+        mvyd[:,:,1:,:] *= mexu[:,:,:,1:]
         mvyu = ed[:,:,:,:-1].clone()
         mvyu[:,:,:,1:] *= meyu[:,:,:,:-1]
         mvyu[:,:,:-1,:] *= mexd[:,:,:,:-1]
@@ -509,21 +512,21 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
             #backprop back to edge messages in x direction TODO Check correctness
             to_add = grad_mvxd.clone() #ed part for mvxd equation
             to_add[:,:,:-1,:] *= mexd[:,:,1:,:]
-            to_add[:,:,:,:-1] *= meyd[:,:,:-1,:]
-            to_add[:,:,:,1:] *= meyu[:,:,:-1,:]
+            to_add[:,:,:,:-1] *= meyd[:,:,1:,:]
+            to_add[:,:,:,1:] *= meyu[:,:,1:,:]
             grad_d[:,:,1:,:] += to_add 
             to_add = grad_mvxd * ed[:,:,1:,:] #mexd part for mvxd equation
-            to_add[:,:,:,:-1] *= meyd[:,:,:-1,:]
-            to_add[:,:,:,1:] *= meyu[:,:,:-1,:]
+            to_add[:,:,:,:-1] *= meyd[:,:,1:,:]
+            to_add[:,:,:,1:] *= meyu[:,:,1:,:]
             grad_mexd[:,:,1:,:] += to_add[:,:,:-1,:]
             to_add = grad_mvxd * ed[:,:,1:,:] #meyu part for mvxd equation
             to_add[:,:,:-1,:] *= mexd[:,:,1:,:]
-            to_add[:,:,:,:-1] *= meyd[:,:,:-1,:]
-            grad_meyu[:,:,:-1,:] += to_add[:,:,:,1:]
+            to_add[:,:,:,:-1] *= meyd[:,:,1:,:]
+            grad_meyu[:,:,1:,:] += to_add[:,:,:,1:]
             to_add = grad_mvxd * ed[:,:,1:,:] #meyd part for mvxd equation
             to_add[:,:,:-1,:] *= mexd[:,:,1:,:]
-            to_add[:,:,:,1:] *= meyu[:,:,:-1,:]
-            grad_meyd[:,:,:-1,:] += to_add[:,:,:,:-1]
+            to_add[:,:,:,1:] *= meyu[:,:,1:,:]
+            grad_meyd[:,:,1:,:] += to_add[:,:,:,:-1]
             
             to_add = grad_mvxu.clone() #ed part for mvxu equation
             to_add[:,:,1:,:] *= mexu[:,:,:-1,:]
@@ -546,21 +549,21 @@ class Potts_LBP2d_PytorchNative(torch.autograd.Function):
             #backprop back to edge messages in y direction
             to_add = grad_mvyd.clone() #ed part for mvyd equation
             to_add[:,:,:,:-1] *= meyd[:,:,:,1:]
-            to_add[:,:,:-1,:] *= mexd[:,:,:,:-1]
-            to_add[:,:,1:,:] *= mexu[:,:,:,:-1]
+            to_add[:,:,:-1,:] *= mexd[:,:,:,1:]
+            to_add[:,:,1:,:] *= mexu[:,:,:,1:]
             grad_d[:,:,:,1:] += to_add 
             to_add = grad_mvyd * ed[:,:,:,1:] # meyd part for mvyd equation
-            to_add[:,:,:-1,:] *= mexd[:,:,:,:-1]
-            to_add[:,:,1:,:] *= mexu[:,:,:,:-1]
+            to_add[:,:,:-1,:] *= mexd[:,:,:,1:]
+            to_add[:,:,1:,:] *= mexu[:,:,:,1:]
             grad_meyd[:,:,:,1:] += to_add[:,:,:,:-1]
             to_add = grad_mvyd * ed[:,:,:,1:] # mexd part for mvyd equation
             to_add[:,:,:,:-1] *= meyd[:,:,:,1:]
-            to_add[:,:,1:,:] *= mexu[:,:,:,:-1]
-            grad_mexd[:,:,:,:-1] += to_add[:,:,:-1,:]
+            to_add[:,:,1:,:] *= mexu[:,:,:,1:]
+            grad_mexd[:,:,:,1:] += to_add[:,:,:-1,:]
             to_add = grad_mvyd * ed[:,:,:,1:] # mexu part for mvyd equation
             to_add[:,:,:,:-1] *= meyd[:,:,:,1:]
-            to_add[:,:,:-1,:] *= mexd[:,:,:,:-1]
-            grad_mexu[:,:,:,:-1] += to_add[:,:,1:,:]
+            to_add[:,:,:-1,:] *= mexd[:,:,:,1:]
+            grad_mexu[:,:,:,1:] += to_add[:,:,1:,:]
             
             to_add = grad_mvyu.clone() #ed part for mvyu equation
             to_add[:,:,:,1:] *= meyu[:,:,:,:-1]
@@ -625,7 +628,7 @@ class Potts_Mean3d(torch.autograd.Function):
         
 class Potts_Mean3d_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-4
+    epsilon = 10**-7
     
     @staticmethod
     def forward(ctx, d, rx, ry, rz):
@@ -700,7 +703,7 @@ class Potts_Mean3d_PytorchNative(torch.autograd.Function):
     
 class Potts_LBP3d_PytorchNative(torch.autograd.Function):
 
-    epsilon = 10**-4
+    epsilon = 10**-7
     
     @staticmethod
     def forward(ctx, d, rx, ry, rz):
@@ -742,10 +745,10 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #messages in x
             mvxd = ed[:,:,1:,:,:].clone()
             mvxd[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-            mvxd[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-            mvxd[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-            mvxd[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-            mvxd[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
+            mvxd[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+            mvxd[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+            mvxd[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+            mvxd[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
             mvxu = ed[:,:,:-1,:,:].clone()
             mvxu[:,:,1:,:,:] *= mexu[:,:,:-1,:,:]
             mvxu[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
@@ -756,10 +759,10 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #messages in y
             mvyd = ed[:,:,:,1:,:].clone()
             mvyd[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-            mvyd[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-            mvyd[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-            mvyd[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-            mvyd[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
+            mvyd[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+            mvyd[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+            mvyd[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+            mvyd[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
             mvyu = ed[:,:,:,:-1,:].clone()
             mvyu[:,:,:,1:,:] *= meyu[:,:,:,:-1,:]
             mvyu[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
@@ -770,10 +773,10 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #messages in z
             mvzd = ed[:,:,:,:,1:].clone()
             mvzd[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-            mvzd[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-            mvzd[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-            mvzd[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-            mvzd[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
+            mvzd[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+            mvzd[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+            mvzd[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+            mvzd[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
             mvzu = ed[:,:,:,:,:-1].clone()
             mvzu[:,:,:,:,1:] *= mezu[:,:,:,:,:-1]
             mvzu[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
@@ -823,10 +826,10 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
         #messages in x
         mvxd = ed[:,:,1:,:,:].clone()
         mvxd[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-        mvxd[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-        mvxd[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-        mvxd[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-        mvxd[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
+        mvxd[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+        mvxd[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+        mvxd[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+        mvxd[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
         mvxu = ed[:,:,:-1,:,:].clone()
         mvxu[:,:,1:,:,:] *= mexu[:,:,:-1,:,:]
         mvxu[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
@@ -837,10 +840,10 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
         #messages in y
         mvyd = ed[:,:,:,1:,:].clone()
         mvyd[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-        mvyd[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-        mvyd[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-        mvyd[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-        mvyd[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
+        mvyd[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+        mvyd[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+        mvyd[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+        mvyd[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
         mvyu = ed[:,:,:,:-1,:].clone()
         mvyu[:,:,:,1:,:] *= meyu[:,:,:,:-1,:]
         mvyu[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
@@ -851,10 +854,10 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
         #messages in z
         mvzd = ed[:,:,:,:,1:].clone()
         mvzd[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-        mvzd[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-        mvzd[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-        mvzd[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-        mvzd[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
+        mvzd[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+        mvzd[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+        mvzd[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+        mvzd[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
         mvzu = ed[:,:,:,:,:-1].clone()
         mvzu[:,:,:,:,1:] *= mezu[:,:,:,:,:-1]
         mvzu[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
@@ -917,41 +920,41 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #backprop back to edge messages in x direction TODO Check correctness
             to_add = grad_mvxd.clone() #ed part for mvxd equation
             to_add[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
             grad_d[:,:,1:,:,:] += to_add 
             to_add = grad_mvxd * ed[:,:,1:,:,:] #mexd part for mvxd equation
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
             grad_mexd[:,:,1:,:,:] += to_add[:,:,:-1,:]
             to_add = grad_mvxd * ed[:,:,1:,:,:] #meyu part for mvxd equation
             to_add[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
-            grad_meyu[:,:,:-1,:,:] += to_add[:,:,:,1:,:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
+            grad_meyu[:,:,1:,:,:] += to_add[:,:,:,1:,:]
             to_add = grad_mvxd * ed[:,:,1:,:,:] #meyd part for mvxd equation
             to_add[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
-            grad_meyd[:,:,:-1,:,:] += to_add[:,:,:,:-1,:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
+            grad_meyd[:,:,1:,:,:] += to_add[:,:,:,:-1,:]
             to_add = grad_mvxd * ed[:,:,1:,:,:] #mezu part for mvxd equation
             to_add[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:-1,:,:]
-            grad_mezu[:,:,:-1,:,:] += to_add[:,:,:,:,1:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,1:,:,:]
+            grad_mezu[:,:,1:,:,:] += to_add[:,:,:,:,1:]
             to_add = grad_mvxd * ed[:,:,1:,:,:] #mezd part for mvxd equation
             to_add[:,:,:-1,:,:] *= mexd[:,:,1:,:,:]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:-1,:,:]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:-1,:,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:-1,:,:]
-            grad_mezd[:,:,:-1,:,:] += to_add[:,:,:,:,:-1]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,1:,:,:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,1:,:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,1:,:,:]
+            grad_mezd[:,:,1:,:,:] += to_add[:,:,:,:,:-1]
             
             to_add = grad_mvxu.clone() #ed part for mvxu equation
             to_add[:,:,1:,:,:] *= mexu[:,:,:-1,:,:]
@@ -995,41 +998,41 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #backprop back to edge messages in y direction TODO Check correctness            
             to_add = grad_mvyd.clone() #ed part for mvyd equation
             to_add[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
             grad_d[:,:,:,1:,:] += to_add 
             to_add = grad_mvyd * ed[:,:,:,1:,:] # meyd part for mvyd equation
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
             grad_meyd[:,:,:,1:,:] += to_add[:,:,:,:-1,:]
             to_add = grad_mvyd * ed[:,:,:,1:,:] # mexd part for mvyd equation
             to_add[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
-            grad_mexd[:,:,:,:-1,:] += to_add[:,:,:-1,:,:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
+            grad_mexd[:,:,:,1:,:] += to_add[:,:,:-1,:,:]
             to_add = grad_mvyd * ed[:,:,:,1:,:] # mexu part for mvyd equation
             to_add[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
-            grad_mexu[:,:,:,:-1,:] += to_add[:,:,1:,:,:]           
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
+            grad_mexu[:,:,:,1:,:] += to_add[:,:,1:,:,:]
             to_add = grad_mvyd * ed[:,:,:,1:,:] #mezd part for mvyd equation
             to_add[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-            to_add[:,:,:,:,1:] *= mezu[:,:,:,:-1,:]
-            grad_mezd[:,:,:,:-1,:] += to_add[:,:,:,:,:-1]           
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+            to_add[:,:,:,:,1:] *= mezu[:,:,:,1:,:]
+            grad_mezd[:,:,:,1:,:] += to_add[:,:,:,:,:-1]
             to_add = grad_mvyd * ed[:,:,:,1:,:] #mezu part for mvyd equation
             to_add[:,:,:,:-1,:] *= meyd[:,:,:,1:,:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:-1,:]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:-1,:]
-            to_add[:,:,:,:,:-1] *= mezd[:,:,:,:-1,:]
-            grad_mezu[:,:,:,:-1,:] += to_add[:,:,:,:,1:]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,1:,:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,1:,:]
+            to_add[:,:,:,:,:-1] *= mezd[:,:,:,1:,:]
+            grad_mezu[:,:,:,1:,:] += to_add[:,:,:,:,1:]
             
             to_add = grad_mvyu.clone() #ed part for mvyu equation
             to_add[:,:,:,1:,:] *= meyu[:,:,:,:-1,:]
@@ -1073,41 +1076,41 @@ class Potts_LBP3d_PytorchNative(torch.autograd.Function):
             #backprop back to edge messages in z direction TODO Check correctness
             to_add = grad_mvzd.clone() #ed part for mvzd equation
             to_add[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
             grad_d[:,:,:,:,1:] += to_add
             to_add = grad_mvzd * ed[:,:,:,:,1:] #mezd part for mvzd equation
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
             grad_mezd[:,:,:,:,1:] += to_add[:,:,:,:,:-1]
             to_add = grad_mvzd * ed[:,:,:,:,1:] #mexd part for mvzd equation
             to_add[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
-            grad_mexd[:,:,:,:,:-1] += to_add[:,:,:-1,:,:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
+            grad_mexd[:,:,:,:,1:] += to_add[:,:,:-1,:,:]
             to_add = grad_mvzd * ed[:,:,:,:,1:] #mexu part for mvzd equation
             to_add[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
-            grad_mexu[:,:,:,:,:-1] += to_add[:,:,1:,:,:]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
+            grad_mexu[:,:,:,:,1:] += to_add[:,:,1:,:,:]
             to_add = grad_mvzd * ed[:,:,:,:,1:] #meyd part for mvzd equation
             to_add[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,:-1]
-            grad_meyd[:,:,:,:,:-1] += to_add[:,:,:,:-1,:]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+            to_add[:,:,:,1:,:] *= meyu[:,:,:,:,1:]
+            grad_meyd[:,:,:,:,1:] += to_add[:,:,:,:-1,:]
             to_add = grad_mvzd * ed[:,:,:,:,1:] #meyu part for mvzd equation
             to_add[:,:,:,:,:-1] *= mezd[:,:,:,:,1:]
-            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,:-1]
-            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,:-1]
-            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,:-1]
-            grad_meyu[:,:,:,:,:-1] += to_add[:,:,:,1:,:]
+            to_add[:,:,:-1,:,:] *= mexd[:,:,:,:,1:]
+            to_add[:,:,1:,:,:] *= mexu[:,:,:,:,1:]
+            to_add[:,:,:,:-1,:] *= meyd[:,:,:,:,1:]
+            grad_meyu[:,:,:,:,1:] += to_add[:,:,:,1:,:]
             
             to_add = grad_mvzu.clone() #ed part for mvzu equation
             to_add[:,:,:,:,1:] *= mezu[:,:,:,:,:-1]

@@ -279,7 +279,7 @@ class DenseGraph_MFE_Categorical_PytorchNative(torch.autograd.Function):
             
             #backprop back through softmax to energy
             #marginal = torch.softmax(energy,dim=1)
-            grad_e = marginal*(grad_m - torch.unsqueeze(torch.sum(grad_m*(1-marginal),dim=1),dim=1))
+            grad_e = marginal * (grad_m - torch.sum(grad_m * marginal, dim=1, keepdim=True))
                         
             #backprop back to edge messages
             #energy = d + torch.sum(torch.sum(torch.permute(r,(0,1,2,4,3)) * torch.unsqueeze(torch.unsqueeze(marginal-0.5,dim=2),dim=-1),dim=1),dim=-2)
@@ -463,7 +463,7 @@ class DenseGraph_MAP_Categorical_PytorchNative(torch.autograd.Function):
             p_s = torch.unsqueeze((1/cc + torch.sum(capacity,dim=1))/c,dim=1)
             capacity = p_s - div + u/cc
             p_t = capacity
-            p_t = (d*(p_t > d) + p_t*(p_t < d))
+            p_t = torch.minimum(p_t, d)
             
             #update constraint multipliers and constraint to simplex
             erru = p_s - p_t - div
