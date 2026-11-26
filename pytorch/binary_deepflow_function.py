@@ -1,7 +1,10 @@
 import torch
 import deepflow
 from deepflow_function import DeepFlowFunction
-from math import log, prod
+from math import log, prod, floor
+import math
+from binary_lbp_utils import (BinaryLBPOptions, checked_iteration, check_residual,
+                              peak_abs, compiled_step, forward_step, backward_step)
 from itertools import product
 
 class BinaryDeepFlow1dLoss_functional(torch.autograd.Function):
@@ -186,7 +189,8 @@ def Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,meu0,med0
     #and return messages
     return mvu0, mvd0, mvu1, mvd1
     
-def Binary_LBPnD_PytorchNative_forward(d, ru, rd):
+def Binary_LBPnD_PytorchNative_forward(d, ru, rd, options=None, diagnostics=None):
+    options = options or BinaryLBPOptions(check_every=1)
     dims = len(ru)
     DeepFlowFunction.check_var_dims([d,]+ru,dims)
     DeepFlowFunction.check_var_dims([d,]+rd,dims)
@@ -194,34 +198,25 @@ def Binary_LBPnD_PytorchNative_forward(d, ru, rd):
     alpha = 0.05
     
     #create containers for edge messages
-    m_epsilon = 10**-10
     meu0 = []
     med0 = []
     meu1 = []
     med1 = []
-    err_meu0 = []
-    err_med0 = []
-    err_meu1 = []
-    err_med1 = []
     for i in range(dims):
         s_prime = tuple([b,c,]+[(si-1 if isi==i else si) for isi,si in enumerate(s)])
         meu0.append(torch.ones(s_prime,device=d.device))
         med0.append(torch.ones(s_prime,device=d.device))
         meu1.append(torch.ones(s_prime,device=d.device))
         med1.append(torch.ones(s_prime,device=d.device))
-        err_meu0.append(torch.zeros(s_prime,device=d.device))
-        err_med0.append(torch.zeros(s_prime,device=d.device))
-        err_meu1.append(torch.zeros(s_prime,device=d.device))
-        err_med1.append(torch.zeros(s_prime,device=d.device))
     
     #calculate theoretical worst decay rate
     epsilon = 10**-7
-    max_reg = max([torch.max(torch.nan_to_num(ri,nan=0,posinf=0,neginf=0)) for ri in ru+rd])
-    min_decay_const = (2*dims-1)*(1-torch.exp(-max_reg/2))/(1+torch.exp(-max_reg/2))
-    has_infs = [not torch.all(torch.isfinite(ri)) for ri in ru+rd]
-    if any(has_infs):
-        min_decay_const = 1
-    
+    max_reg = torch.stack([torch.nan_to_num(ri, nan=0, posinf=0, neginf=0).amax()
+                           for ri in ru + rd]).amax()
+    decay = (2*dims-1)*(1-torch.exp(-max_reg/2))/(1+torch.exp(-max_reg/2))
+    finite = torch.stack([torch.isfinite(ri).all() for ri in ru + rd]).all()
+    min_decay_const = torch.where(finite, decay, torch.ones_like(decay)).item()
+
     #get a maximum number of iterations to perform
     max_num_iters = None
     if min_decay_const <= epsilon:
@@ -240,64 +235,24 @@ def Binary_LBPnD_PytorchNative_forward(d, ru, rd):
     eru = [torch.exp(-ri) for ri in ru]
     erd = [torch.exp(-ri) for ri in rd]
     
-    iter = 0
-    while True:
-        
-        mvu0, mvd0, mvu1, mvd1 = Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0, ed1, meu0, med0, meu1, med1)
-        
-        #normalised messages
-        avu = [mvu0[i]+mvu1[i]+2*m_epsilon for i in range(dims)]
-        avd = [mvd0[i]+mvd1[i]+2*m_epsilon for i in range(dims)]
-        for i in range(dims):
-            mvu0[i] = (mvu0[i]+m_epsilon) / avu[i]
-            mvu1[i] = (mvu1[i]+m_epsilon) / avu[i]
-            mvd0[i] = (mvd0[i]+m_epsilon) / avd[i]
-            mvd1[i] = (mvd1[i]+m_epsilon) / avd[i]
-        
-        #compute edge to vertex messages
-        for i in range(dims):
-            if i == 0:
-                new_med0 = mvd0[i] + eru[i][:,:,:-1,...] * mvd1[i]
-                new_med1 = mvd1[i] + erd[i][:,:,:-1,...] * mvd0[i]
-                new_meu0 = mvu0[i] + erd[i][:,:,:-1,...] * mvu1[i]
-                new_meu1 = mvu1[i] + eru[i][:,:,:-1,...] * mvu0[i]
-            elif i == 1:
-                new_med0 = mvd0[i] + eru[i][:,:,:,:-1,...] * mvd1[i]
-                new_med1 = mvd1[i] + erd[i][:,:,:,:-1,...] * mvd0[i]
-                new_meu0 = mvu0[i] + erd[i][:,:,:,:-1,...] * mvu1[i]
-                new_meu1 = mvu1[i] + eru[i][:,:,:,:-1,...] * mvu0[i]
-            elif i == 2:
-                new_med0 = mvd0[i] + eru[i][:,:,:,:,:-1,...] * mvd1[i]
-                new_med1 = mvd1[i] + erd[i][:,:,:,:,:-1,...] * mvd0[i]
-                new_meu0 = mvu0[i] + erd[i][:,:,:,:,:-1,...] * mvu1[i]
-                new_meu1 = mvu1[i] + eru[i][:,:,:,:,:-1,...] * mvu0[i]
-            err_med0[i] = med0[i] - new_med0
-            err_med1[i] = med1[i] - new_med1
-            err_meu0[i] = meu0[i] - new_meu0
-            err_meu1[i] = meu1[i] - new_meu1
-            med0[i] = (1-alpha)*med0[i] + alpha*new_med0
-            med1[i] = (1-alpha)*med1[i] + alpha*new_med1
-            meu0[i] = (1-alpha)*meu0[i] + alpha*new_meu0
-            meu1[i] = (1-alpha)*meu1[i] + alpha*new_meu1
-
-        #calculate early convergence criteria
-        max_change = max([torch.sum(torch.abs(em)) for em in err_med0] + 
-                         [torch.sum(torch.abs(em)) for em in err_med1] + 
-                         [torch.sum(torch.abs(em)) for em in err_meu0] + 
-                         [torch.sum(torch.abs(em)) for em in err_meu1] )
-        
-                
-        iter+=1
-        if max_change < epsilon or iter > max_num_iters:
+    # Preserve the legacy strict `iter > max_num_iters` endpoint.
+    limit = floor(max_num_iters) + 1
+    step = compiled_step("forward") if options.compile_updates else forward_step
+    for iteration in range(1, limit + 1):
+        check = checked_iteration(iteration, limit, options)
+        meu0, med0, meu1, med1, errors = step(
+            Binary_LBPnD_PytorchNative_forward_compute_vertex_messages,
+            ed0, ed1, eru, erd, meu0, med0, meu1, med1, check,
+        )
+        if check and check_residual(errors, iteration, limit, epsilon, "forward", options, diagnostics):
             break
-    
-    #finally return the edge messages (all else can be discarded / easily reconstructed)
-    print(min_decay_const,max_num_iters,iter,max_change)
-    return meu0, med0, meu1, med1, iter
+    return meu0, med0, meu1, med1, iteration
+
     
     
 def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_med1, 
-                                meu0, med0, meu1, med1, d, ru, rd, max_num_iters):
+                                meu0, med0, meu1, med1, d, ru, rd, max_num_iters, options=None, diagnostics=None):
+    options = options or BinaryLBPOptions(check_every=1)
     dims = len(ru)
     numels = prod(d.shape[2:])
     sumels = sum(d.shape[2:])
@@ -306,15 +261,26 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
     grad_ru = [torch.zeros_like(ri) for ri in ru]
     grad_rd = [torch.zeros_like(ri) for ri in rd]
 
-    #see if you can exit early
-    max_grad = max([torch.max(torch.abs(gm)) for gm in grad_meu0] + 
-                   [torch.max(torch.abs(gm)) for gm in grad_med0] + 
-                   [torch.max(torch.abs(gm)) for gm in grad_meu1] + 
-                   [torch.max(torch.abs(gm)) for gm in grad_med1] )
+    # The iterative adjoint updates these buffers in-place. Own them: autograd
+    # may supply expanded/aliased gradients (e.g. after sum()), or reuse them.
+    grad_meu0 = [g.clone() for g in grad_meu0]
+    grad_med0 = [g.clone() for g in grad_med0]
+    grad_meu1 = [g.clone() for g in grad_meu1]
+    grad_med1 = [g.clone() for g in grad_med1]
+    # One startup transfer, with the original float32 tolerance arithmetic.
+    initial = peak_abs(grad_meu0 + grad_med0 + grad_meu1 + grad_med1)
+    max_grad, epsilon = torch.stack((initial, (10**-8) * initial)).cpu().tolist()
+    if not math.isfinite(max_grad):
+        raise FloatingPointError("Non-finite initial binary LBP backward gradient")
+    if diagnostics is not None:
+        diagnostics["initial_residual"] = max_grad
     if max_grad == 0:
+        if diagnostics is not None:
+            diagnostics.update(phase="backward", history=[], iterations=0,
+                               iteration_limit=max_num_iters + 1, residual=0.0,
+                               tolerance=0.0, converged=True, status="zero_gradient")
         return grad_d0, grad_ru, grad_rd
-    epsilon = (10**-8)*max_grad
-    
+
     ed1 = torch.exp(d * (d<0))
     ed0 = torch.exp(-d * (d>0))
     eru = [torch.exp(-ri) for ri in ru]
@@ -334,170 +300,19 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
     #print("mvu/d0",[(torch.min(torch.abs(mvu0[i])),torch.min(torch.abs(mvd0[i]))) for i in range(dims)])
     #print("mvu/d1`",[(torch.min(torch.abs(mvu1[i])),torch.min(torch.abs(mvd1[i]))) for i in range(dims)])
     del avu, avd
-    grad_mvu0 = [None for i in range(dims)]
-    grad_mvd0 = [None for i in range(dims)]
-    grad_mvu1 = [None for i in range(dims)]
-    grad_mvd1 = [None for i in range(dims)]
-    
-    iter = 0
-    while True:
+    limit = max_num_iters + 1
+    step = compiled_step("backward") if options.compile_updates else backward_step
+    for iteration in range(1, limit + 1):
+        step(grad_meu0, grad_med0, grad_meu1, grad_med1,
+             grad_d0, grad_d1, grad_ru, grad_rd, d, eru, erd,
+             mvu0, mvd0, mvu1, mvd1, nmvu0, nmvd0, nmvu1, nmvd1,
+             dnmvu0, dnmvd0, dnmvu1, dnmvd1, meu0, med0, meu1, med1)
+        if checked_iteration(iteration, limit, options):
+            gradients = grad_med0 + grad_med1 + grad_meu0 + grad_meu1
+            if check_residual(gradients, iteration, limit, epsilon, "backward", options, diagnostics):
+                break
 
-        #backprop back to vertex messages
-        
-        for i in range(dims):
-            if i == 0:
-                grad_mvu0[i] = grad_meu0[i] + eru[i][:,:,:-1,...]*grad_meu1[i]
-                grad_mvu1[i] = grad_meu1[i] + erd[i][:,:,:-1,...]*grad_meu0[i]
-                grad_mvd0[i] = grad_med0[i] + erd[i][:,:,:-1,...]*grad_med1[i]
-                grad_mvd1[i] = grad_med1[i] + eru[i][:,:,:-1,...]*grad_med0[i]
-                grad_ru[i][:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i]
-                grad_rd[i][:,:,:-1,...] += grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
-            if i == 1:
-                grad_mvu0[i] = grad_meu0[i] + eru[i][:,:,:,:-1,...]*grad_meu1[i]
-                grad_mvu1[i] = grad_meu1[i] + erd[i][:,:,:,:-1,...]*grad_meu0[i]
-                grad_mvd0[i] = grad_med0[i] + erd[i][:,:,:,:-1,...]*grad_med1[i]
-                grad_mvd1[i] = grad_med1[i] + eru[i][:,:,:,:-1,...]*grad_med0[i]
-                grad_ru[i][:,:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i]
-                grad_rd[i][:,:,:,:-1,...] += grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
-            if i == 2:
-                grad_mvu0[i] = grad_meu0[i] + eru[i][:,:,:,:,:-1,...]*grad_meu1[i]
-                grad_mvu1[i] = grad_meu1[i] + erd[i][:,:,:,:,:-1,...]*grad_meu0[i]
-                grad_mvd0[i] = grad_med0[i] + erd[i][:,:,:,:,:-1,...]*grad_med1[i]
-                grad_mvd1[i] = grad_med1[i] + eru[i][:,:,:,:,:-1,...]*grad_med0[i]
-                grad_ru[i][:,:,:,:,:-1,...] += grad_meu1[i]*nmvu0[i] + grad_meu0[i]*nmvu1[i]
-                grad_rd[i][:,:,:,:,:-1,...] += grad_med1[i]*nmvd0[i] + grad_med0[i]*nmvd1[i]
-        
-        
-        #backprop through renormalisation
-        for i in range(dims):
-            grad_mvu0[i], grad_mvu1[i] = dnmvu1[i]*(grad_mvu0[i] - grad_mvu1[i]), dnmvu0[i]*(grad_mvu1[i] - grad_mvu0[i])
-            grad_mvd0[i], grad_mvd1[i] = dnmvd1[i]*(grad_mvd0[i] - grad_mvd1[i]), dnmvd0[i]*(grad_mvd1[i] - grad_mvd0[i])
-
-        #clear gradient buffers for the edge messages (about to compute updated ones
-        alpha = 0.25 #dampening rate
-        for i in range(dims):
-            grad_med0[i] *= (1-alpha)/alpha
-            grad_meu0[i] *= (1-alpha)/alpha
-            grad_med1[i] *= (1-alpha)/alpha
-            grad_meu1[i] *= (1-alpha)/alpha
-
-        #handle data terms
-        for ni in range(dims):
-            #print("grad_mvu1",grad_mvu1[ni])
-            #print("mvu1",mvu1[ni])
-            if ni == 0:
-                grad_d1[:,:,:-1,...] += (grad_mvu1[ni] * mvu1[ni])*(d[:,:,:-1,...]<0)
-                grad_d1[:,:,1:,...] += (grad_mvd1[ni] * mvd1[ni])*(d[:,:,1:,...]<0)
-                grad_d0[:,:,:-1,...] += (grad_mvu0[ni] * mvu0[ni])*(d[:,:,:-1,...]>0)
-                grad_d0[:,:,1:,...] += (grad_mvd0[ni] * mvd0[ni])*(d[:,:,1:,...]>0)
-            elif ni == 1:
-                grad_d1[:,:,:,:-1,...] += (grad_mvu1[ni] * mvu1[ni])*(d[:,:,:,:-1,...]<0)
-                grad_d1[:,:,:,1:,...] += (grad_mvd1[ni] * mvd1[ni])*(d[:,:,:,1:,...]<0)
-                grad_d0[:,:,:,:-1,...] += (grad_mvu0[ni] * mvu0[ni])*(d[:,:,:,:-1,...]>0)
-                grad_d0[:,:,:,1:,...] += (grad_mvd0[ni] * mvd0[ni])*(d[:,:,:,1:,...]>0)
-            elif ni == 2:
-                grad_d1[:,:,:,:,:-1,...] += (grad_mvu1[ni] * mvu1[ni])*(d[:,:,:,:,:-1,...]<0)
-                grad_d1[:,:,:,:,1:,...] += (grad_mvd1[ni] * mvd1[ni])*(d[:,:,:,:,1:,...]<0)
-                grad_d0[:,:,:,:,:-1,...] += (grad_mvu0[ni] * mvu0[ni])*(d[:,:,:,:,:-1,...]>0)
-                grad_d0[:,:,:,:,1:,...] += (grad_mvd0[ni] * mvd0[ni])*(d[:,:,:,:,1:,...]>0)
-            
-        #handle colinear edges
-        for ni in range(dims):
-            if ni == 0:
-                grad_meu1[ni][:,:,:-1,...] += grad_mvu1[ni][:,:,1:,...] * mvu1[ni][:,:,1:,...] / meu1[ni][:,:,:-1,...]
-                grad_meu0[ni][:,:,:-1,...] += grad_mvu0[ni][:,:,1:,...] * mvu0[ni][:,:,1:,...] / meu0[ni][:,:,:-1,...]
-                grad_med1[ni][:,:,1:,...] += grad_mvd1[ni][:,:,:-1,...] * mvd1[ni][:,:,:-1,...] / med1[ni][:,:,1:,...]
-                grad_med0[ni][:,:,1:,...] += grad_mvd0[ni][:,:,:-1,...] * mvd0[ni][:,:,:-1,...] / med0[ni][:,:,1:,...]
-            elif ni == 1:
-                grad_meu1[ni][:,:,:,:-1,...] += grad_mvu1[ni][:,:,:,1:,...] * mvu1[ni][:,:,:,1:,...] / meu1[ni][:,:,:,:-1,...]
-                grad_meu0[ni][:,:,:,:-1,...] += grad_mvu0[ni][:,:,:,1:,...] * mvu0[ni][:,:,:,1:,...] / meu0[ni][:,:,:,:-1,...]
-                grad_med1[ni][:,:,:,1:,...] += grad_mvd1[ni][:,:,:,:-1,...] * mvd1[ni][:,:,:,:-1,...] / med1[ni][:,:,:,1:,...]
-                grad_med0[ni][:,:,:,1:,...] += grad_mvd0[ni][:,:,:,:-1,...] * mvd0[ni][:,:,:,:-1,...] / med0[ni][:,:,:,1:,...]
-            elif ni == 2:
-                grad_meu1[ni][:,:,:,:,:-1,...] += grad_mvu1[ni][:,:,:,:,1:,...] * mvu1[ni][:,:,:,:,1:,...] / meu1[ni][:,:,:,:,:-1,...]
-                grad_meu0[ni][:,:,:,:,:-1,...] += grad_mvu0[ni][:,:,:,:,1:,...] * mvu0[ni][:,:,:,:,1:,...] / meu0[ni][:,:,:,:,:-1,...]
-                grad_med1[ni][:,:,:,:,1:,...] += grad_mvd1[ni][:,:,:,:,:-1,...] * mvd1[ni][:,:,:,:,:-1,...] / med1[ni][:,:,:,:,1:,...]
-                grad_med0[ni][:,:,:,:,1:,...] += grad_mvd0[ni][:,:,:,:,:-1,...] * mvd0[ni][:,:,:,:,:-1,...] / med0[ni][:,:,:,:,1:,...]
-        
-        # Accumulate contributions from every source direction.
-        for ni in range(dims):
-            #put in contributions from other directions
-            for di2 in range(dims):
-                if ni == di2:
-                    continue
-
-                if di2 == 0:
-                    grad_contribution_1_d_d = grad_mvd1[ni][:,:,:-1,...] * mvd1[ni][:,:,:-1,...]
-                    grad_contribution_1_u_d = grad_mvd1[ni][:,:,1:,...] * mvd1[ni][:,:,1:,...]
-                    grad_contribution_1_d_u = grad_mvu1[ni][:,:,:-1,...] * mvu1[ni][:,:,:-1,...]
-                    grad_contribution_1_u_u = grad_mvu1[ni][:,:,1:,...] * mvu1[ni][:,:,1:,...]
-                    grad_contribution_0_d_d = grad_mvd0[ni][:,:,:-1,...] * mvd0[ni][:,:,:-1,...]
-                    grad_contribution_0_u_d = grad_mvd0[ni][:,:,1:,...] * mvd0[ni][:,:,1:,...]
-                    grad_contribution_0_d_u = grad_mvu0[ni][:,:,:-1,...] * mvu0[ni][:,:,:-1,...]
-                    grad_contribution_0_u_u = grad_mvu0[ni][:,:,1:,...] * mvu0[ni][:,:,1:,...]
-                elif di2 == 1:
-                    grad_contribution_1_d_d = grad_mvd1[ni][:,:,:,:-1,...] * mvd1[ni][:,:,:,:-1,...]
-                    grad_contribution_1_u_d = grad_mvd1[ni][:,:,:,1:,...] * mvd1[ni][:,:,:,1:,...]
-                    grad_contribution_1_d_u = grad_mvu1[ni][:,:,:,:-1,...] * mvu1[ni][:,:,:,:-1,...]
-                    grad_contribution_1_u_u = grad_mvu1[ni][:,:,:,1:,...] * mvu1[ni][:,:,:,1:,...]
-                    grad_contribution_0_d_d = grad_mvd0[ni][:,:,:,:-1,...] * mvd0[ni][:,:,:,:-1,...]
-                    grad_contribution_0_u_d = grad_mvd0[ni][:,:,:,1:,...] * mvd0[ni][:,:,:,1:,...]
-                    grad_contribution_0_d_u = grad_mvu0[ni][:,:,:,:-1,...] * mvu0[ni][:,:,:,:-1,...]
-                    grad_contribution_0_u_u = grad_mvu0[ni][:,:,:,1:,...] * mvu0[ni][:,:,:,1:,...]
-                elif di2 == 2:
-                    grad_contribution_1_d_d = grad_mvd1[ni][:,:,:,:,:-1,...] * mvd1[ni][:,:,:,:,:-1,...]
-                    grad_contribution_1_u_d = grad_mvd1[ni][:,:,:,:,1:,...] * mvd1[ni][:,:,:,:,1:,...]
-                    grad_contribution_1_d_u = grad_mvu1[ni][:,:,:,:,:-1,...] * mvu1[ni][:,:,:,:,:-1,...]
-                    grad_contribution_1_u_u = grad_mvu1[ni][:,:,:,:,1:,...] * mvu1[ni][:,:,:,:,1:,...]
-                    grad_contribution_0_d_d = grad_mvd0[ni][:,:,:,:,:-1,...] * mvd0[ni][:,:,:,:,:-1,...]
-                    grad_contribution_0_u_d = grad_mvd0[ni][:,:,:,:,1:,...] * mvd0[ni][:,:,:,:,1:,...]
-                    grad_contribution_0_d_u = grad_mvu0[ni][:,:,:,:,:-1,...] * mvu0[ni][:,:,:,:,:-1,...]
-                    grad_contribution_0_u_u = grad_mvu0[ni][:,:,:,:,1:,...] * mvu0[ni][:,:,:,:,1:,...]
-            
-                if ni == 0:
-                    grad_med1[di2][:,:,:-1,...] += grad_contribution_1_d_u / med1[di2][:,:,:-1,...]
-                    grad_meu1[di2][:,:,:-1,...] += grad_contribution_1_u_u / meu1[di2][:,:,:-1,...]
-                    grad_med1[di2][:,:,1:,...] += grad_contribution_1_d_d / med1[di2][:,:,1:,...]
-                    grad_meu1[di2][:,:,1:,...] += grad_contribution_1_u_d / meu1[di2][:,:,1:,...]
-                    grad_med0[di2][:,:,:-1,...] += grad_contribution_0_d_u / med0[di2][:,:,:-1,...]
-                    grad_meu0[di2][:,:,:-1,...] += grad_contribution_0_u_u / meu0[di2][:,:,:-1,...]
-                    grad_med0[di2][:,:,1:,...] += grad_contribution_0_d_d / med0[di2][:,:,1:,...]
-                    grad_meu0[di2][:,:,1:,...] += grad_contribution_0_u_d / meu0[di2][:,:,1:,...]
-                elif ni == 1:
-                    grad_med1[di2][:,:,:,:-1,...] += grad_contribution_1_d_u / med1[di2][:,:,:,:-1,...]
-                    grad_meu1[di2][:,:,:,:-1,...] += grad_contribution_1_u_u / meu1[di2][:,:,:,:-1,...]
-                    grad_med1[di2][:,:,:,1:,...] += grad_contribution_1_d_d / med1[di2][:,:,:,1:,...]
-                    grad_meu1[di2][:,:,:,1:,...] += grad_contribution_1_u_d / meu1[di2][:,:,:,1:,...]
-                    grad_med0[di2][:,:,:,:-1,...] += grad_contribution_0_d_u / med0[di2][:,:,:,:-1,...]
-                    grad_meu0[di2][:,:,:,:-1,...] += grad_contribution_0_u_u / meu0[di2][:,:,:,:-1,...]
-                    grad_med0[di2][:,:,:,1:,...] += grad_contribution_0_d_d / med0[di2][:,:,:,1:,...]
-                    grad_meu0[di2][:,:,:,1:,...] += grad_contribution_0_u_d / meu0[di2][:,:,:,1:,...]
-                elif ni == 2:
-                    grad_med1[di2][:,:,:,:,:-1,...] += grad_contribution_1_d_u / med1[di2][:,:,:,:,:-1,...]
-                    grad_meu1[di2][:,:,:,:,:-1,...] += grad_contribution_1_u_u / meu1[di2][:,:,:,:,:-1,...]
-                    grad_med1[di2][:,:,:,:,1:,...] += grad_contribution_1_d_d / med1[di2][:,:,:,:,1:,...]
-                    grad_meu1[di2][:,:,:,:,1:,...] += grad_contribution_1_u_d / meu1[di2][:,:,:,:,1:,...]
-                    grad_med0[di2][:,:,:,:,:-1,...] += grad_contribution_0_d_u / med0[di2][:,:,:,:,:-1,...]
-                    grad_meu0[di2][:,:,:,:,:-1,...] += grad_contribution_0_u_u / meu0[di2][:,:,:,:,:-1,...]
-                    grad_med0[di2][:,:,:,:,1:,...] += grad_contribution_0_d_d / med0[di2][:,:,:,:,1:,...]
-                    grad_meu0[di2][:,:,:,:,1:,...] += grad_contribution_0_u_d / meu0[di2][:,:,:,:,1:,...]
-        
-        #correct for scaling
-        for i in range(dims):
-            grad_med0[i] *= alpha
-            grad_meu0[i] *= alpha
-            grad_med1[i] *= alpha
-            grad_meu1[i] *= alpha
-
-        iter+=1
-        max_grad = max([torch.max(torch.abs(gm)) for gm in grad_med0] +
-                       [torch.max(torch.abs(gm)) for gm in grad_med1] +
-                       [torch.max(torch.abs(gm)) for gm in grad_meu0] +
-                       [torch.max(torch.abs(gm)) for gm in grad_meu1])
-        #print("Binary_LBPnD_PytorchNative_backward",iter,":",max_grad,end="\n")
-        if max_grad <= epsilon or iter > max_num_iters:
-            break
-
+    alpha = 0.25
     #correct to no longer be in the exponential domain
     for i in range(dims):
         grad_ru[i] *= -alpha * eru[i]
@@ -884,28 +699,35 @@ class Binary_LBP2d_PytorchNative(torch.autograd.Function):
     epsilon = 10**-4
     
     @staticmethod
-    def forward(ctx, d, rxu, rxd, ryu, ryd):
-        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(d,[rxu,ryu,],[rxd,ryd,])
+    def forward(ctx, d, rxu, rxd, ryu, ryd, options=None, diagnostics=None):
+        meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(
+            d, [rxu, ryu], [rxd, ryd], options,
+            diagnostics["forward"] if diagnostics is not None else None,
+        )
         mexu0,mexu1,mexd0,mexd1 = meu0[0],meu1[0],med0[0],med1[0]
         meyu0,meyu1,meyd0,meyd1 = meu0[1],meu1[1],med0[1],med1[1]
         ctx.save_for_backward(d,rxu,rxd,ryu,ryd,
                                       mexu0,mexu1,mexd0,mexd1,
                                       meyu0,meyu1,meyd0,meyd1,
-                                      torch.tensor(num_iters))
+                                      )
+        ctx.num_iters, ctx.options, ctx.diagnostics = num_iters, options, diagnostics
+        ctx.input_count = len(ctx.needs_input_grad)
         return mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1
     
     @staticmethod 
     def backward(ctx, grad_mexu0,grad_mexu1,grad_mexd0,grad_mexd1,grad_meyu0,grad_meyu1,grad_meyd0,grad_meyd1):
-        d,rxu,rxd,ryu,ryd,mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1,max_num_iters = ctx.saved_tensors
+        d,rxu,rxd,ryu,ryd,mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1 = ctx.saved_tensors
         
         grad_d, grad_ru, grad_rd = Binary_LBPnD_PytorchNative_backward([grad_mexu0,grad_meyu0,], [grad_mexd0,grad_meyd0,],
                                                                        [grad_mexu1,grad_meyu1,], [grad_mexd1,grad_meyd1,],
                                                                        [mexu0,meyu0,], [mexd0,meyd0,],
                                                                        [mexu1,meyu1,], [mexd1,meyd1,],
                                                                        d, [rxu,ryu,], [rxd,ryd,], 
-                                                                       int(max_num_iters.cpu().item()))
+                                                                       ctx.num_iters, ctx.options,
+                                                                       ctx.diagnostics["backward"] if ctx.diagnostics is not None else None)
                         
-        return grad_d, grad_ru[0], grad_rd[0], grad_ru[1], grad_rd[1]
+        result = (grad_d, grad_ru[0], grad_rd[0], grad_ru[1], grad_rd[1])
+        return result + (None,) * (ctx.input_count - 5)
      
     
 class Binary_LBP3d_PytorchNative(torch.autograd.Function):

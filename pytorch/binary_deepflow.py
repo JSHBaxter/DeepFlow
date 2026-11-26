@@ -1,4 +1,5 @@
 import math
+from binary_lbp_utils import BinaryLBPOptions
 
 import torch
 from binary_deepflow_function import (
@@ -252,20 +253,35 @@ class BinaryDeepFlow1dStar(torch.nn.Module):
 
 class BinaryDeepFlow2dStar(torch.nn.Module):
     
-    def __init__(self, test_type="MAP") -> None:
+    """Binary star LBP with configurable convergence checks and optional fusion.
+
+    `last_convergence` contains scalar-only forward/backward diagnostics from the
+    latest invocation. Compilation is opt-in and may change floating-point rounding.
+    `check_every=1, compile_updates=False` reproduces the original check schedule.
+    """
+    def __init__(self, test_type="MAP", check_every=100, compile_updates=False,
+                 record_history=True, report_every=0) -> None:
         super().__init__()
         self.test_type = test_type
+        self.lbp_options = BinaryLBPOptions(check_every, compile_updates, record_history, report_every)
+        self.last_convergence = {}
         
     def forward(self,d,rx,ry,lx,ly):
         
         #if we are in training or only "soft" mode, always use training solvers
         if self.training or self.test_type is None:
             
+            # New dictionaries per call: graphs retain their own diagnostic target.
+            self.last_convergence = {
+                "forward": {"history": [], "status": "not_run"},
+                "backward": {"history": [], "status": "not_run"},
+            }
             #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
             mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1 = Binary_LBP2d_PytorchNative.apply(d,rx + torch.nan_to_num(math.inf*(lx==1),0,math.inf),
                                                                                                  rx + torch.nan_to_num(math.inf*(lx==-1),0,math.inf),
                                                                                                  ry + torch.nan_to_num(math.inf*(ly==1),0,math.inf),
-                                                                                                 ry + torch.nan_to_num(math.inf*(ly==-1),0,math.inf))
+                                                                                                 ry + torch.nan_to_num(math.inf*(ly==-1),0,math.inf),
+                                                                                                 self.lbp_options, self.last_convergence)
 
             marginal_node_0 = torch.exp(-d * (d > 0) ) * pad(mexd0,(0,0,0,1),value=1) * pad(mexu0,(0,0,1,0),value=1) * pad(meyd0,(0,1,0,0),value=1) * pad(meyu0,(1,0,0,0),value=1)
             marginal_node_1 = torch.exp( d * (d < 0) ) * pad(mexd1,(0,0,0,1),value=1) * pad(mexu1,(0,0,1,0),value=1) * pad(meyd1,(0,1,0,0),value=1) * pad(meyu1,(1,0,0,0),value=1)
