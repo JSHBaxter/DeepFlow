@@ -205,10 +205,12 @@ def Binary_LBPnD_PytorchNative_forward(d, ru, rd, options=None, diagnostics=None
     med1 = []
     for i in range(dims):
         s_prime = tuple([b,c,]+[(si-1 if isi==i else si) for isi,si in enumerate(s)])
-        meu0.append(torch.ones(s_prime,device=d.device))
-        med0.append(torch.ones(s_prime,device=d.device))
-        meu1.append(torch.ones(s_prime,device=d.device))
-        med1.append(torch.ones(s_prime,device=d.device))
+        meu0.append(torch.ones(s_prime, device=d.device, dtype=d.dtype))
+        med0.append(torch.ones(s_prime, device=d.device, dtype=d.dtype))
+        meu1.append(torch.ones(s_prime, device=d.device, dtype=d.dtype))
+        med1.append(torch.ones(s_prime, device=d.device, dtype=d.dtype))
+    if diagnostics is not None:
+        diagnostics["message_dtype"] = str(meu0[0].dtype)
     
     #calculate theoretical worst decay rate
     epsilon = 10**-7
@@ -278,6 +280,8 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
     grad_d1 =  torch.zeros_like(d) #(will multiply out the ed at the end, keeps everything in exponential domain)
     grad_ru = [torch.zeros_like(ri) for ri in ru]
     grad_rd = [torch.zeros_like(ri) for ri in rd]
+    if diagnostics is not None:
+        diagnostics["gradient_dtype"] = str(grad_d0.dtype)
 
     # The iterative adjoint updates these buffers in-place. Own them: autograd
     # may supply expanded/aliased gradients (e.g. after sum()), or reuse them.

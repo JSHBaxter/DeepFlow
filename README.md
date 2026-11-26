@@ -151,3 +151,43 @@ DEEPFLOW_TEST_COMPILE=1 python -m unittest discover -s pytorch -p 'test_binary_l
 
 The tests use CUDA when available and otherwise CPU. They exercise real PyTorch
 LBP/autograd without requiring the native MAP extension.
+
+### Float64 reference test
+
+The soft LBP solver allocates its message buffers in the unary input dtype, including
+float64. This does not add float64 support to native hard MAP inference.
+`binary_lbp_reference.compare_binary_star_precision` compares one frozen float32
+problem with its float64 cast, without recomputing the U-Net or updating parameters:
+
+```python
+from binary_lbp_reference import compare_binary_star_precision
+
+report, artifacts = compare_binary_star_precision(
+    (scores, rx, ry, lx, ly), targets,
+    check_every=100, compile_updates=False,
+)
+print(report["differences"])
+print(report["float64_converged"])
+```
+
+Both runs disable stall stopping, preserve the original tolerances and budget rules,
+and retain residual histories. The report includes probability and mask differences,
+Dice losses, unary-gradient relative error and cosine, convergence status and timings.
+The artifacts contain CPU copies of the exact input problem and both results.
+Float64 may still reach its iteration limit: a report with `float64_converged=False`
+is not a converged accuracy reference. Eager execution defaults to isolating precision
+from compiler rounding; compiled runs are optional and have first-use overhead.
+
+The optimized segmentation notebook includes a reference section after training. It
+defaults to loading the trained checkpoint into a separate model copy and selecting
+one full-resolution validation image. The active model and optimizer are untouched.
+It saves JSON, a frozen input/output tensor bundle, and spatial/residual plots.
+Restart the kernel to import the dtype fix, reconstruct the notebook dependencies,
+then run the reference cells using the saved checkpoint. A missing checkpoint raises
+an error rather than silently comparing an untrained model.
+
+Run all LBP execution and reference tests with:
+
+```bash
+DEEPFLOW_TEST_COMPILE=1 python -m unittest discover -s pytorch -p 'test_binary_lbp*.py'
+```
