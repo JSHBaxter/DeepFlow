@@ -258,12 +258,22 @@ class BinaryDeepFlow2dStar(torch.nn.Module):
     `last_convergence` contains scalar-only forward/backward diagnostics from the
     latest invocation. Compilation is opt-in and may change floating-point rounding.
     `check_every=1, compile_updates=False` reproduces the original check schedule.
+    Forward monitoring measures actual updates and probability drift at checks.
+    Optional `stop_on_stall` reports "stalled", never convergence, and defaults off.
     """
     def __init__(self, test_type="MAP", check_every=100, compile_updates=False,
-                 record_history=True, report_every=0) -> None:
+                 record_history=True, report_every=0, monitor_updates=True,
+                 stop_on_stall=False, stall_patience=5, stall_min_iterations=1000,
+                 stall_message_atol=0.0, stall_probability_atol=0.0) -> None:
         super().__init__()
         self.test_type = test_type
-        self.lbp_options = BinaryLBPOptions(check_every, compile_updates, record_history, report_every)
+        self.lbp_options = BinaryLBPOptions(
+            check_every=check_every, compile_updates=compile_updates,
+            record_history=record_history, report_every=report_every,
+            monitor_updates=monitor_updates, stop_on_stall=stop_on_stall,
+            stall_patience=stall_patience, stall_min_iterations=stall_min_iterations,
+            stall_message_atol=stall_message_atol, stall_probability_atol=stall_probability_atol,
+        )
         self.last_convergence = {}
         
     def forward(self,d,rx,ry,lx,ly):

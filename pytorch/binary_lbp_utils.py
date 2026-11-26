@@ -15,12 +15,25 @@ class BinaryLBPOptions:
     compile_updates: bool = False
     record_history: bool = True
     report_every: int = 0
+    monitor_updates: bool = True
+    stop_on_stall: bool = False
+    stall_patience: int = 5  # Consecutive checked intervals, not iterations.
+    stall_min_iterations: int = 1000
+    stall_message_atol: float = 0.0
+    stall_probability_atol: float = 0.0
 
     def __post_init__(self):
-        for name, minimum in (("check_every", 1), ("report_every", 0)):
+        for name, minimum in (("check_every", 1), ("report_every", 0),
+                              ("stall_patience", 1), ("stall_min_iterations", 0)):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
                 raise ValueError(f"{name} must be an integer >= {minimum}")
+        for name in ("stall_message_atol", "stall_probability_atol"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not math.isfinite(value) or value < 0:
+                raise ValueError(f"{name} must be finite and nonnegative")
+        if self.stop_on_stall and not self.monitor_updates:
+            raise ValueError("stop_on_stall=True requires monitor_updates=True")
 
 
 def checked_iteration(iteration, limit, options):
@@ -33,27 +46,56 @@ def peak_abs(values):
     return torch.stack([value.detach().abs().amax() for value in values]).amax()
 
 
-def check_residual(values, iteration, limit, tolerance, phase, options, diagnostics):
+def check_residual(values, iteration, limit, tolerance, phase, options, diagnostics,
+                   forward_metrics=None):
     absolute = [value.detach().abs() for value in values]
     if phase == "forward":
         residual = torch.stack([value.sum() for value in absolute]).amax()
     else:
         residual = torch.stack([value.amax() for value in absolute]).amax()
+    forward_metrics = forward_metrics or {}
+    names = [name for name, value in forward_metrics.items() if value is not None]
     if diagnostics is not None:
         mean = torch.stack([value.mean() for value in absolute]).amax()
         peak = torch.stack([value.amax() for value in absolute]).amax()
-        # One device-to-host transfer per checked iteration, not per direction.
-        residual, mean, peak = torch.stack((residual, mean, peak)).cpu().tolist()
+        # One transfer includes all diagnostics; no additional host decisions.
+        scalars = torch.stack((residual, mean, peak, *(forward_metrics[name] for name in names))).cpu().tolist()
+        residual, mean, peak = scalars[:3]
+        metrics = dict.fromkeys(forward_metrics)
+        metrics.update(zip(names, scalars[3:]))
+        finite = all(math.isfinite(value) for value in scalars)
     else:
         residual, mean, peak = residual.item(), None, None
-    finite = math.isfinite(residual) and (mean is None or math.isfinite(mean) and math.isfinite(peak))
+        metrics = {}
+        finite = math.isfinite(residual)
     converged = finite and (residual < tolerance if phase == "forward" else residual <= tolerance)
+    stagnant = False
+    stable_checks = 0
+    if phase == "forward" and diagnostics is not None and metrics:
+        # Require both the instantaneous update and the drift since the previous
+        # check to be small, plus probability stability. The first check has no
+        # previous snapshot and can never count as a stable interval.
+        stable = finite and iteration >= options.stall_min_iterations
+        for name, atol in (("actual_update_max_abs", options.stall_message_atol),
+                           ("message_change_max_abs", options.stall_message_atol),
+                           ("probability_change_max_abs", options.stall_probability_atol)):
+            value = metrics.get(name)
+            stable = stable and value is not None and value <= atol
+        stable_checks = diagnostics.get("stable_checks", 0) + 1 if stable else 0
+        stagnant = stable_checks >= options.stall_patience
     status = ("nonfinite" if not finite else "converged" if converged
+              else "stalled" if stagnant and options.stop_on_stall
               else "iteration_limit" if iteration == limit else "running")
     if diagnostics is not None:
         initial = diagnostics.setdefault("initial_residual", residual)
         row = dict(iteration=iteration, residual=residual, mean_abs=mean, max_abs=peak,
-                   relative_residual=residual / initial if initial else 0.0)
+                   relative_residual=residual / initial if initial else 0.0, **metrics)
+        if phase == "forward" and metrics:
+            reason = ("exact_freeze" if options.stall_message_atol == 0 and options.stall_probability_atol == 0
+                      else "within_tolerance") if stagnant else None
+            row.update(stable_checks=stable_checks, stagnation_detected=stagnant)
+            diagnostics.update(stable_checks=stable_checks, stagnation_detected=stagnant,
+                               stagnation_reason=reason, **metrics)
         if options.record_history:
             diagnostics.setdefault("history", []).append(row)
         diagnostics.update(phase=phase, iterations=iteration, iteration_limit=limit,
@@ -64,8 +106,15 @@ def check_residual(values, iteration, limit, tolerance, phase, options, diagnost
         else:
             due = iteration % options.report_every == 0
         if iteration == 1 or due or status != "running":
+            extra = ""
+            if metrics:
+                probability_change = metrics.get("probability_change_max_abs")
+                probability_text = "n/a" if probability_change is None else f"{probability_change:.3g}"
+                extra = (f", update_max={metrics['actual_update_max_abs']:.3g}, "
+                         f"message_delta={metrics['message_change_max_abs'] if metrics['message_change_max_abs'] is not None else 'n/a'}, "
+                         f"prob_delta={probability_text}, stagnant={stagnant}")
             print(f"LBP {phase}: {iteration}/{limit}, residual={residual:.6g}, "
-                  f"tol={tolerance:.3g}, status={status}", flush=True)
+                  f"tol={tolerance:.3g}, status={status}{extra}", flush=True)
             if diagnostics is not None:
                 diagnostics["last_report_iteration"] = iteration
     if not finite:
@@ -82,7 +131,8 @@ def compiled_step(phase):
     return torch.compile(step, fullgraph=True, dynamic=False)
 
 
-def forward_step(vertex_messages, ed0, ed1, eru, erd, meu0, med0, meu1, med1, compute_error):
+def forward_step(vertex_messages, ed0, ed1, eru, erd, meu0, med0, meu1, med1,
+                 compute_error, monitor_updates=False):
     dims, alpha, m_epsilon = len(eru), 0.05, 1e-10
     err_med0, err_med1, err_meu0, err_meu1 = ([None] * dims for _ in range(4))
     mvu0, mvd0, mvu1, mvd1 = vertex_messages(ed0, ed1, meu0, med0, meu1, med1)
@@ -96,6 +146,9 @@ def forward_step(vertex_messages, ed0, ed1, eru, erd, meu0, med0, meu1, med1, co
         mvd0[i] = (mvd0[i]+m_epsilon) / avd[i]
         mvd1[i] = (mvd1[i]+m_epsilon) / avd[i]
 
+    # Retain old tensor references before rebinding the message lists. These
+    # tensors are not modified by this update; no clones are needed in the kernel.
+    before = med0 + med1 + meu0 + meu1 if monitor_updates else []
     #compute edge to vertex messages
     for i in range(dims):
         if i == 0:
@@ -124,7 +177,46 @@ def forward_step(vertex_messages, ed0, ed1, eru, erd, meu0, med0, meu1, med1, co
         meu1[i] = (1-alpha)*meu1[i] + alpha*new_meu1
 
     errors = err_med0 + err_med1 + err_meu0 + err_meu1 if compute_error else []
-    return meu0, med0, meu1, med1, errors
+    updates = [new - old for new, old in zip(med0 + med1 + meu0 + meu1, before)]
+    return meu0, med0, meu1, med1, errors, updates
+
+
+def node_probabilities(ed0, ed1, meu0, med0, meu1, med1):
+    """Same foreground marginal arithmetic/order as the binary layer, for 1D–3D."""
+    from torch.nn.functional import pad
+    dims = len(meu0)
+    node0, node1 = ed0, ed1
+    for axis in range(dims):
+        down, up = [0] * (2 * dims), [0] * (2 * dims)
+        down[2 * (dims - axis - 1) + 1] = 1
+        up[2 * (dims - axis - 1)] = 1
+        node0 = node0 * pad(med0[axis], tuple(down), value=1)
+        node0 = node0 * pad(meu0[axis], tuple(up), value=1)
+        node1 = node1 * pad(med1[axis], tuple(down), value=1)
+        node1 = node1 * pad(meu1[axis], tuple(up), value=1)
+    return node1 / (node0 + node1)
+
+
+def forward_change_metrics(updates, messages, probabilities, previous_messages, previous_probabilities):
+    """Scalar tensors only. Differences span one step or one checked interval."""
+    absolute_updates = [update.abs() for update in updates]
+    metrics = {
+        "actual_update_max_abs": torch.stack([value.amax() for value in absolute_updates]).amax(),
+        "actual_update_mean_abs": torch.stack([value.mean() for value in absolute_updates]).amax(),
+        "message_change_max_abs": None,
+        "probability_change_max_abs": None,
+        "probability_change_mean_abs": None,
+        # Also detects invalid probabilities at the first check, before deltas exist.
+        "probability_min": probabilities.amin(),
+        "probability_max": probabilities.amax(),
+    }
+    if previous_messages is not None:
+        metrics["message_change_max_abs"] = peak_abs(
+            [new - old for new, old in zip(messages, previous_messages)])
+        change = (probabilities - previous_probabilities).abs()
+        metrics["probability_change_max_abs"] = change.amax()
+        metrics["probability_change_mean_abs"] = change.mean()
+    return metrics
 
 
 def backward_step(grad_meu0, grad_med0, grad_meu1, grad_med1,

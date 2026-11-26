@@ -71,6 +71,8 @@ star = BinaryDeepFlow2dStar(
     compile_updates=True,  # Optional torch.compile fusion; default is False.
     record_history=True,
     report_every=5000,     # Live progress at checked iterations; default is 0.
+    monitor_updates=True, # Actual damped updates and interval probability drift.
+    stop_on_stall=False,  # Diagnose first; optional early stop is disabled by default.
 )
 probabilities, joint_rows, joint_columns = star(scores, rx, ry, lx, ly)
 loss = dice_loss(probabilities, targets)
@@ -105,6 +107,40 @@ floating-point equivalence. Compile failures are explicit; disable compilation t
 use eager updates. First use for a shape includes compilation overhead; compare
 warmed runs when measuring performance. Python changes require a kernel restart
 but do not require rebuilding the native extension. Hard MAP inference is unchanged.
+
+Forward monitoring distinguishes the undamped proposal residual from the actual
+floating-point update after damping. At checks, history and final summaries include:
+
+- `actual_update_max_abs`, `actual_update_mean_abs`: one iteration's damped message
+  change (maximum element and maximum per-message mean).
+- `message_change_max_abs`: maximum message change since the previous check.
+- `probability_change_max_abs`, `probability_change_mean_abs`: foreground-probability
+  drift since the previous check; `None` at the first check.
+- `probability_min`, `probability_max`: the current probability range.
+- `stable_checks`, `stagnation_detected`, `stagnation_reason`: sampled stability.
+
+Snapshots stay inside the solver; no tensors are retained in diagnostic dictionaries.
+All scalar measurements share one host transfer per check. Monitoring is enabled by
+default for the 2D star layer; disable it with `monitor_updates=False` to compare cost.
+
+Stagnation detection requires the instantaneous actual update, the message drift
+across the check interval, and the maximum probability drift to meet their absolute
+tolerances for `stall_patience=5` consecutive checks after
+`stall_min_iterations=1000`. Defaults `stall_message_atol=0.0` and
+`stall_probability_atol=0.0` require exact equality. The first check cannot count as
+a stable interval. A flat proposal residual alone never triggers the detector.
+Sampled stability is not a mathematical fixed-point guarantee and can miss activity
+between checks; nonzero tolerances permit approximate stability.
+
+With `stop_on_stall=False`, detection is diagnostic only: the original tolerance and
+iteration cap remain active. Explicitly enable `stop_on_stall=True` to terminate
+with `status="stalled"`, `converged=False`. This preserves the original available
+backward budget rather than reducing it to the early forward iteration count.
+Monitoring must be enabled for this policy. Validate probabilities and gradients
+against the original-budget solve before using early stopping in training. The
+optimized notebook includes `STAR_COMPARE_STALL` for this optional comparison on
+identical unary scores and an expanded plot/JSON report. The comparison adds two
+solves and does not update network parameters.
 
 Run the execution-control tests from the DeepFlow directory:
 

@@ -23,7 +23,8 @@ if importlib.util.find_spec("deepflow") is None:
 else:
     import binary_deepflow_function as lbp
     from binary_deepflow import BinaryDeepFlow2dStar
-from binary_lbp_utils import BinaryLBPOptions, checked_iteration, check_residual
+from binary_lbp_utils import (BinaryLBPOptions, checked_iteration, check_residual,
+                              forward_step, node_probabilities)
 
 
 class BinaryLBPExecutionTest(unittest.TestCase):
@@ -48,11 +49,12 @@ class BinaryLBPExecutionTest(unittest.TestCase):
             ly[:, :, :, 1:-1] = 1
         return d, r, lx, ly
 
-    def run_module(self, compile_updates=False, hard=True, check_every=100):
+    def run_module(self, compile_updates=False, hard=True, check_every=100, monitor_updates=True):
         d, r, lx, ly = self.problem(hard)
         d, rx, ry = (v.clone().requires_grad_() for v in (d, r, r))
         solver = BinaryDeepFlow2dStar(
             test_type=None, check_every=check_every, compile_updates=compile_updates,
+            monitor_updates=monitor_updates,
         )
         outputs = solver(d, rx, ry, lx, ly)
         loss = (outputs[0] * torch.arange(12, device=self.device).reshape_as(d)).mean()
@@ -169,6 +171,123 @@ class BinaryLBPExecutionTest(unittest.TestCase):
             messages = function.apply(d, *([r] * (2 * (len(shape) - 2))))
             sum(message.square().mean() for message in messages).backward()
             self.assertTrue(torch.isfinite(d.grad).all())
+
+    def stable_metrics(self, update=0., message=0., probability=0.):
+        return {"actual_update_max_abs": torch.tensor(update, device=self.device),
+                "actual_update_mean_abs": torch.tensor(update, device=self.device),
+                "message_change_max_abs": None if message is None else torch.tensor(message, device=self.device),
+                "probability_change_max_abs": None if probability is None else torch.tensor(probability, device=self.device)}
+
+    def test_stall_requires_multiple_checks_and_never_claims_convergence(self):
+        options = BinaryLBPOptions(stop_on_stall=True, stall_patience=2, stall_min_iterations=0)
+        trace = {}
+        values = [torch.ones(2, device=self.device)]
+        self.assertFalse(check_residual(values, 1, 500, 1e-7, "forward", options, trace,
+                                        self.stable_metrics(message=None, probability=None)))
+        self.assertEqual(trace["stable_checks"], 0)
+        self.assertFalse(check_residual(values, 100, 500, 1e-7, "forward", options, trace, self.stable_metrics()))
+        self.assertTrue(check_residual(values, 200, 500, 1e-7, "forward", options, trace, self.stable_metrics()))
+        self.assertEqual(trace["status"], "stalled")
+        self.assertEqual(trace["stagnation_reason"], "exact_freeze")
+        self.assertFalse(trace["converged"])
+
+    def test_stall_is_diagnostic_only_by_default_without_history(self):
+        options = BinaryLBPOptions(stall_patience=1, stall_min_iterations=0, record_history=False)
+        trace = {}
+        self.assertFalse(check_residual([torch.ones(1, device=self.device)], 100, 500, 1e-7,
+                                        "forward", options, trace, self.stable_metrics()))
+        self.assertTrue(trace["stagnation_detected"])
+        self.assertEqual(trace["status"], "running")
+        self.assertNotIn("history", trace)
+
+    def test_flat_proposal_residual_does_not_imply_stall(self):
+        options = BinaryLBPOptions(stop_on_stall=True, stall_patience=1, stall_min_iterations=0)
+        for changed in ("actual_update_max_abs", "message_change_max_abs", "probability_change_max_abs"):
+            trace = {}
+            metrics = self.stable_metrics()
+            metrics[changed] = torch.tensor(1e-6, device=self.device)
+            self.assertFalse(check_residual([torch.ones(1, device=self.device)], 100, 500, 1e-7,
+                                            "forward", options, trace, metrics))
+            self.assertFalse(trace["stagnation_detected"])
+
+    def test_stability_counter_resets_and_honours_minimum_iterations(self):
+        options = BinaryLBPOptions(stop_on_stall=True, stall_patience=2, stall_min_iterations=200)
+        trace = {}
+        values = [torch.ones(1, device=self.device)]
+        check_residual(values, 100, 600, 1e-7, "forward", options, trace, self.stable_metrics())
+        self.assertEqual(trace["stable_checks"], 0)
+        check_residual(values, 200, 600, 1e-7, "forward", options, trace, self.stable_metrics())
+        self.assertEqual(trace["stable_checks"], 1)
+        check_residual(values, 300, 600, 1e-7, "forward", options, trace, self.stable_metrics(message=1e-6))
+        self.assertEqual(trace["stable_checks"], 0)
+
+    def test_monitoring_leaves_eager_probabilities_and_gradients_unchanged(self):
+        monitored = self.run_module(monitor_updates=True)
+        unmonitored = self.run_module(monitor_updates=False)
+        torch.testing.assert_close(monitored[0], unmonitored[0], rtol=0, atol=0)
+        for a, b in zip(monitored[1], unmonitored[1]):
+            torch.testing.assert_close(a, b, rtol=0, atol=0)
+        trace = monitored[2]["forward"]
+        self.assertIsNone(trace["history"][0]["probability_change_max_abs"])
+        self.assertEqual(trace["probability_min"], monitored[0].min().item())
+        self.assertEqual(trace["probability_max"], monitored[0].max().item())
+        self.assertNotIn("actual_update_max_abs", unmonitored[2]["forward"])
+        # Traces are JSON-compatible and retain no GPU tensors.
+        import json
+        json.dumps(monitored[2], allow_nan=False)
+
+    def test_actual_update_metric_is_after_damping(self):
+        d, r, _, _ = self.problem(False)
+        groups = [[torch.ones((1, 1, 2, 4), device=self.device),
+                   torch.ones((1, 1, 3, 3), device=self.device)] for _ in range(4)]
+        before = [v.clone() for g in (groups[1], groups[3], groups[0], groups[2]) for v in g]
+        result = forward_step(lbp.Binary_LBPnD_PytorchNative_forward_compute_vertex_messages,
+                              torch.exp(-d * (d > 0)), torch.exp(d * (d < 0)),
+                              [torch.exp(-r)] * 2, [torch.exp(-r)] * 2, *groups, True, True)
+        after = [v for g in (result[1], result[3], result[0], result[2]) for v in g]
+        for update, old, new in zip(result[5], before, after):
+            torch.testing.assert_close(update, new-old, rtol=0, atol=0)
+        self.assertGreater(result[4][0].abs().max().item(), result[5][0].abs().max().item())
+
+    def test_node_probability_monitor_uses_layer_arithmetic(self):
+        d, r, _, _ = self.problem(False)
+        result = lbp.Binary_LBPnD_PytorchNative_forward(
+            d, [r, r], [r, r], BinaryLBPOptions(monitor_updates=False))
+        probabilities = node_probabilities(torch.exp(-d * (d > 0)), torch.exp(d * (d < 0)), *result[:4])
+        zeros = torch.zeros_like(d)
+        expected = BinaryDeepFlow2dStar(test_type=None)(d, r, r, zeros, zeros)[0]
+        torch.testing.assert_close(probabilities, expected, rtol=0, atol=0)
+
+    def test_real_float32_freeze_preserves_outputs_gradients_and_adjoint_budget(self):
+        # A deterministic CPU example demonstrates the proposal/update distinction.
+        # Test with actual LBP rather than a mocked stopping decision.
+        d = torch.full((1, 1, 3, 4), 0.5)
+        r = torch.full_like(d, 0.15)
+        zero = torch.zeros_like(d)
+        results = []
+        for stop in (False, True):
+            x, rx, ry = (value.clone().requires_grad_() for value in (d, r, r))
+            solver = BinaryDeepFlow2dStar(test_type=None, check_every=50,
+                                         stop_on_stall=stop, stall_min_iterations=0, stall_patience=2)
+            p = solver(x, rx, ry, zero, zero)[0]
+            gradients = torch.autograd.grad(p.square().mean(), (x, rx, ry))
+            results.append((p.detach(), gradients, solver.last_convergence))
+        baseline, stopped = results
+        self.assertEqual(baseline[2]["forward"]["status"], "iteration_limit")
+        self.assertEqual(stopped[2]["forward"]["status"], "stalled")
+        self.assertGreater(stopped[2]["forward"]["residual"], 1e-7)
+        self.assertLess(stopped[2]["forward"]["iterations"], baseline[2]["forward"]["iterations"])
+        self.assertEqual(stopped[2]["backward"]["iteration_limit"], baseline[2]["backward"]["iteration_limit"])
+        torch.testing.assert_close(stopped[0], baseline[0], rtol=0, atol=0)
+        for actual, expected in zip(stopped[1], baseline[1]):
+            torch.testing.assert_close(actual, expected, rtol=0, atol=0)
+
+    def test_stall_option_validation(self):
+        for kwargs in ({"stop_on_stall": True, "monitor_updates": False},
+                       {"stall_patience": 0}, {"stall_min_iterations": -1},
+                       {"stall_message_atol": -1}, {"stall_probability_atol": float("nan")}):
+            with self.assertRaises(ValueError):
+                BinaryLBPOptions(**kwargs)
 
     @unittest.skipUnless(os.environ.get("DEEPFLOW_TEST_COMPILE") == "1", "opt-in compilation test")
     def test_compiled_probabilities_and_all_input_gradients(self):
