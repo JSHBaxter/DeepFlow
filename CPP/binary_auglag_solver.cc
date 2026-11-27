@@ -120,9 +120,6 @@ void BINARY_AUGLAG_SOLVER<DEV>::run(){
     //run one last block, just to be safe
     for (int iter = 0; iter < min_iter; iter++)
         block_iter();
-
-    //get final output
-    log_buffer(MAXFLOW_ALGORITHM<DEV>::dev, u, u, n_s*n_c);
     
     //deallocate temporary buffers
     spatial_flow->deinit();
