@@ -231,7 +231,7 @@ def HMF_MeanNd_calculate_joint(d,r,u,p):
         size_tuple = list([b,c,c]+list(rd.shape[2:]))
         size_tuple[3+i] -= 1
         
-        branch_mask = torch.zeros(c, bc, dtype=torch.bool)
+        branch_mask = torch.zeros(c, bc, dtype=torch.bool, device=d.device)
         for ci in range(c):
             branch_mask[ci, branches[bc-c+ci]] = True
         unshared_mask = branch_mask[:, None, :] ^ branch_mask[None, :, :]
@@ -388,24 +388,24 @@ class HMF_Mean3d_PytorchNative(torch.autograd.Function):
     
     
 def HMF_MAPNd_PytorchNative_ALMM_forward(d,r,order):
-    d_eff_mean = -torch.mean(torch.sort(d-torch.amax(d,1,keepdims=True),dim=1)[0][:,-2,...])+10**-16
     DeepFlowFunction.check_var_dims([d,]+r,len(r),True)
     check_ordering(order,r[0].shape[1],d.shape[1])
     order_forward = list(enumerate(order.detach().cpu().numpy().astype(int)))
     order_backward = list(reversed(order_forward))
     b,bc,c,sz = d.shape[0], r[0].shape[1], d.shape[1],list(d.shape[2:])
-    D = -(d - torch.max(d,dim=1,keepdim=True)[0]) / d_eff_mean
-    D_eff_mean = torch.mean(torch.sort(D,dim=1)[0][:,1,...]).item()
+    D = -(d - torch.max(d,dim=1,keepdim=True)[0])
+    D_range = torch.amin(torch.sum(D.view(D.shape[0],D.shape[1],-1),-1,keepdim=True),1,keepdim=True)
+    D /= D_range
     div = torch.zeros_like(r[0])
-    r = [rd/d_eff_mean for rd in r]
+    r = [rd/D_range for rd in r]
     q = [torch.zeros_like(rd) for rd in r]
     cc = 0.25
     icc = 1/cc
     tau = 0.1
-    conv_crit = 0.001
+    conv_crit = 0.01
+    patience = int(0.5/conv_crit)
     
     max_iter = 20*sum(sz)
-    min_iter = 10
     
     #get the number of children for each node
     num_children = [0]*bc
@@ -423,9 +423,9 @@ def HMF_MAPNd_PytorchNative_ALMM_forward(d,r,order):
     for curr,par in order_backward:
         if par != -1:
             u[:,par,...] += u[:,curr,...]
-    #print(u)
     
     iter = 0
+    patience_iter = 0
     while True:
         
         #update capacities and spatial flows
@@ -511,11 +511,18 @@ def HMF_MAPNd_PytorchNative_ALMM_forward(d,r,order):
         elif perc_impr > 0.0:
             cc /= 1.001
         icc = 1/cc
-        #print(iter,"tot ps",new_sum_ps,old_sum_ps,perc_impr,cc,"conv test",conv_test)
+        print("\r",iter,"tot ps",new_sum_ps.cpu().item(),old_sum_ps.cpu().item(),perc_impr.cpu().item(),cc,"conv test",conv_test,"\033[K",end="")
         old_sum_ps = new_sum_ps
+        
+        #figure out convergence
         iter += 1
-        if iter > min_iter and (iter > max_iter or conv_test < conv_crit):
+        if iter > max_iter or conv_test < conv_crit:
+            patience_iter += 1
+        else:
+            patience_iter = 0
+        if patience_iter > patience:
             break
+    print("\r\033[K",end="")
             
     #and binarise
     u = (u[:,(bc-c):,...]==torch.amax(u[:,(bc-c):,...],1,keepdims=True)).float()
@@ -550,7 +557,7 @@ def HMF_MAPNd_PytorchNative_Bregman_forward(d,r,order):
     
     iter = 0
     while True:
-        #push down costs
+        #calculate the divergence
         div = torch.zeros_like(r[0])
         for i,qd in enumerate(q):
             if i == 0:
@@ -562,6 +569,8 @@ def HMF_MAPNd_PytorchNative_Bregman_forward(d,r,order):
             elif i == 2:
                 div[:,:,:,:,:-1,...] -= qd[:,:,:,:,:-1,...]
                 div[:,:,:,:,1:,...] += qd[:,:,:,:,:-1,...]
+        
+        #push down costs
         for curr, par in order_forward:
             if par == -1:
                 d[:,curr,...] = ds + div[:,curr,...]
