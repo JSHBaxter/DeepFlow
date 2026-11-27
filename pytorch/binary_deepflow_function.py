@@ -228,6 +228,8 @@ def Binary_LBPnD_PytorchNative_forward(d, ru, rd, options=None, diagnostics=None
     if max_num_iters is None or max_num_iters > (10*sum(s) if len(s) > 1 else s[0]):
         max_num_iters = (10*sum(s) if len(s) > 1 else s[0]+1)
     max_num_iters += 10
+    if dims == 1 and max_num_iters > 2*s[0]:
+        max_num_iters = 2*s[0]
     max_num_iters /= alpha
     max_num_iters += int(log(epsilon) / log(1-alpha)) + 1
     
