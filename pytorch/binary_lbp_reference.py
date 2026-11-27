@@ -2,7 +2,7 @@
 
 The U-Net is deliberately outside this comparison. Identical unary scores, finite
 weights, directions, targets, equations and stopping tolerances are used in both
-runs. Stall stopping is disabled so float64 can progress beyond a float32 freeze.
+runs. Both precisions use the original residual criteria and iteration limits.
 An unconverged float64 run is explicitly reported and is not an accuracy certificate.
 """
 import copy
@@ -20,7 +20,7 @@ def _synchronize(device):
 
 
 def compare_binary_star_precision(inputs, targets, *, check_every=100,
-                                  compile_updates=False, report_every=0,
+                                  compile_updates=False,
                                   smooth=1e-6, metadata=None):
     """Return (JSON-compatible report, CPU tensor artifacts) without optimizer steps.
 
@@ -62,7 +62,7 @@ def compare_binary_star_precision(inputs, targets, *, check_every=100,
     report = dict(
         shape=list(scores.shape), device=str(scores.device), torch_version=str(torch.__version__),
         source_dtype=str(scores.dtype), compile_updates=compile_updates,
-        check_every=check_every, smooth=smooth, stop_on_stall=False,
+        check_every=check_every, smooth=smooth,
         metadata=copy.deepcopy(metadata or {}),
         timing_note="Wall time includes first-use compilation; not a steady-state benchmark.",
     )
@@ -71,13 +71,11 @@ def compare_binary_star_precision(inputs, targets, *, check_every=100,
     for name, dtype in (("float32", torch.float32), ("float64", torch.float64)):
         solver = BinaryDeepFlow2dStar(
             test_type=None, check_every=check_every, compile_updates=compile_updates,
-            record_history=True, report_every=report_every,
-            monitor_updates=True, stop_on_stall=False,
+            record_history=True,
         )
         d = frozen[0].to(dtype=dtype).clone().requires_grad_()
         rest = tuple(t.to(dtype=dtype).contiguous() for t in frozen[1:])
         y = target.to(dtype=dtype)
-        print(f"Starting {name} reference, shape={tuple(d.shape)}, device={d.device}", flush=True)
         with torch.enable_grad():
             _synchronize(d.device)
             started = perf_counter()
@@ -112,10 +110,7 @@ def compare_binary_star_precision(inputs, targets, *, check_every=100,
                             backward_seconds=backward_seconds, trace=trace)
         artifacts[name] = dict(probabilities=probabilities.detach().cpu(),
                                unary_gradient=gradient.detach().cpu())
-        print(f"Finished {name}: forward={trace['forward']['status']} "
-              f"({trace['forward']['iterations']} iterations), "
-              f"backward={trace['backward']['status']} "
-              f"({trace['backward']['iterations']} iterations)", flush=True)
+
 
     # Compare in float64 on CPU so subtraction/comparison adds no float32 rounding.
     p32 = artifacts["float32"]["probabilities"].double()

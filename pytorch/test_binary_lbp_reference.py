@@ -20,7 +20,6 @@ else:
     import binary_deepflow_function as lbp
     from binary_deepflow import BinaryDeepFlow2dStar
     from binary_lbp_reference import compare_binary_star_precision
-from binary_lbp_utils import BinaryLBPOptions
 
 
 class BinaryLBPReferenceTest(unittest.TestCase):
@@ -82,10 +81,6 @@ class BinaryLBPReferenceTest(unittest.TestCase):
             report, artifacts = compare_binary_star_precision(inputs, targets, check_every=50)
         f32 = report["float32"]["trace"]["forward"]
         f64 = report["float64"]["trace"]["forward"]
-        # The tiny problem's cap is below the detector's 1000-step minimum;
-        # verify the actual freeze rather than expecting its patience flag.
-        self.assertEqual(f32["actual_update_max_abs"], 0.)
-        self.assertEqual(f32["message_change_max_abs"], 0.)
         self.assertEqual(f32["status"], "iteration_limit")
         self.assertEqual(f64["status"], "converged")
         self.assertLess(f64["residual"], 1e-7)
@@ -99,8 +94,13 @@ class BinaryLBPReferenceTest(unittest.TestCase):
         inputs[0].requires_grad_()
         copies = [value.detach().clone() for value in inputs]
         state = torch.random.get_rng_state().clone()
-        with contextlib.redirect_stdout(io.StringIO()), torch.no_grad():
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr), torch.no_grad():
             report, artifacts = compare_binary_star_precision(inputs, target, metadata={"source": "test"})
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertTrue(report["float32"]["trace"]["forward"]["history"])
+        self.assertTrue(report["float64"]["trace"]["forward"]["history"])
         for actual, expected in zip(inputs, copies):
             torch.testing.assert_close(actual, expected, rtol=0, atol=0)
         self.assertIsNone(inputs[0].grad)
@@ -109,6 +109,7 @@ class BinaryLBPReferenceTest(unittest.TestCase):
         for value in artifacts["inputs"].values():
             self.assertEqual(value.device.type, "cpu")
             self.assertFalse(value.requires_grad)
+
 
     def test_invalid_frozen_problem(self):
         inputs, target = self.problem()

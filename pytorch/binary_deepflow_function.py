@@ -4,8 +4,7 @@ from deepflow_function import DeepFlowFunction
 from math import log, prod, floor
 import math
 from binary_lbp_utils import (BinaryLBPOptions, checked_iteration, check_residual,
-                              peak_abs, compiled_step, forward_step, backward_step,
-                              node_probabilities, forward_change_metrics)
+                              peak_abs, compiled_step, forward_step, backward_step)
 from itertools import product
 
 class BinaryDeepFlow1dLoss_functional(torch.autograd.Function):
@@ -191,7 +190,7 @@ def Binary_LBPnD_PytorchNative_forward_compute_vertex_messages(ed0,ed1,meu0,med0
     return mvu0, mvd0, mvu1, mvd1
     
 def Binary_LBPnD_PytorchNative_forward(d, ru, rd, options=None, diagnostics=None):
-    options = options or BinaryLBPOptions(check_every=1, monitor_updates=False)
+    options = options or BinaryLBPOptions(check_every=1)
     dims = len(ru)
     DeepFlowFunction.check_var_dims([d,]+ru,dims)
     DeepFlowFunction.check_var_dims([d,]+rd,dims)
@@ -241,41 +240,22 @@ def Binary_LBPnD_PytorchNative_forward(d, ru, rd, options=None, diagnostics=None
     # Preserve the legacy strict `iter > max_num_iters` endpoint.
     limit = floor(max_num_iters) + 1
     step = compiled_step("forward") if options.compile_updates else forward_step
-    previous_messages = previous_probabilities = None
-    # Keep counters even when the caller does not request a returned trace.
-    if options.monitor_updates and diagnostics is None:
-        diagnostics = {}
     for iteration in range(1, limit + 1):
         check = checked_iteration(iteration, limit, options)
-        monitor = check and options.monitor_updates
-        meu0, med0, meu1, med1, errors, updates = step(
+        meu0, med0, meu1, med1, errors = step(
             Binary_LBPnD_PytorchNative_forward_compute_vertex_messages,
-            ed0, ed1, eru, erd, meu0, med0, meu1, med1, check, monitor,
+            ed0, ed1, eru, erd, meu0, med0, meu1, med1, check,
         )
-        if check:
-            metrics = None
-            if monitor:
-                with torch.no_grad():
-                    probabilities = node_probabilities(ed0, ed1, meu0, med0, meu1, med1)
-                    messages = med0 + med1 + meu0 + meu1
-                    metrics = forward_change_metrics(
-                        updates, messages, probabilities, previous_messages, previous_probabilities)
-                    # Detached snapshots live only inside this solve, never in the
-                    # returned trace or autograd context. Own storage for safety.
-                    previous_messages = [value.detach().clone() for value in messages]
-                    previous_probabilities = probabilities.detach().clone()
-            if check_residual(errors, iteration, limit, epsilon, "forward", options, diagnostics, metrics):
-                break
+        if check and check_residual(errors, iteration, limit, epsilon, "forward", options, diagnostics):
+            break
     return meu0, med0, meu1, med1, iteration
 
     
     
 def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_med1, 
                                 meu0, med0, meu1, med1, d, ru, rd, max_num_iters, options=None, diagnostics=None):
-    options = options or BinaryLBPOptions(check_every=1, monitor_updates=False)
+    options = options or BinaryLBPOptions(check_every=1)
     dims = len(ru)
-    numels = prod(d.shape[2:])
-    sumels = sum(d.shape[2:])
     grad_d0 =  torch.zeros_like(d) #(will multiply out the ed at the end, keeps everything in exponential domain)
     grad_d1 =  torch.zeros_like(d) #(will multiply out the ed at the end, keeps everything in exponential domain)
     grad_ru = [torch.zeros_like(ri) for ri in ru]
@@ -292,15 +272,20 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
     # One startup transfer, with the original float32 tolerance arithmetic.
     initial = peak_abs(grad_meu0 + grad_med0 + grad_meu1 + grad_med1)
     max_grad, epsilon = torch.stack((initial, (10**-8) * initial)).cpu().tolist()
-    if not math.isfinite(max_grad):
-        raise FloatingPointError("Non-finite initial binary LBP backward gradient")
     if diagnostics is not None:
         diagnostics["initial_residual"] = max_grad
+    if not math.isfinite(max_grad):
+        if diagnostics is not None:
+            diagnostics.update(phase="backward", iterations=0, iteration_limit=max_num_iters + 1,
+                               residual=max_grad, tolerance=epsilon, converged=False, status="nonfinite")
+        raise FloatingPointError("Non-finite initial binary LBP backward gradient")
     if max_grad == 0:
         if diagnostics is not None:
-            diagnostics.update(phase="backward", history=[], iterations=0,
+            diagnostics.update(phase="backward", iterations=0,
                                iteration_limit=max_num_iters + 1, residual=0.0,
                                tolerance=0.0, converged=True, status="zero_gradient")
+            if options.record_history:
+                diagnostics.setdefault("history", [])
         return grad_d0, grad_ru, grad_rd
 
     ed1 = torch.exp(d * (d<0))
@@ -318,9 +303,6 @@ def Binary_LBPnD_PytorchNative_backward(grad_meu0, grad_med0, grad_meu1, grad_me
     #also save the normalised versions
     nmvu0, nmvu1 = [mvu0[i]/avu[i] for i in range(dims)], [mvu1[i]/avu[i] for i in range(dims)]
     nmvd0, nmvd1 = [mvd0[i]/avd[i] for i in range(dims)], [mvd1[i]/avd[i] for i in range(dims)]
-    #print("avu/d",[(torch.min(torch.abs(avu[i])),torch.min(torch.abs(avd[i]))) for i in range(dims)])
-    #print("mvu/d0",[(torch.min(torch.abs(mvu0[i])),torch.min(torch.abs(mvd0[i]))) for i in range(dims)])
-    #print("mvu/d1`",[(torch.min(torch.abs(mvu1[i])),torch.min(torch.abs(mvd1[i]))) for i in range(dims)])
     del avu, avd
     limit = max_num_iters + 1
     step = compiled_step("backward") if options.compile_updates else backward_step
@@ -722,8 +704,6 @@ class Binary_LBP2d_PytorchNative(torch.autograd.Function):
     
     @staticmethod
     def forward(ctx, d, rxu, rxd, ryu, ryd, options=None, diagnostics=None):
-        if diagnostics is None and options is not None and options.stop_on_stall:
-            diagnostics = {"forward": {}, "backward": {}}
         meu0, med0, meu1, med1, num_iters = Binary_LBPnD_PytorchNative_forward(
             d, [rxu, ryu], [rxd, ryd], options,
             diagnostics["forward"] if diagnostics is not None else None,
@@ -735,10 +715,6 @@ class Binary_LBP2d_PytorchNative(torch.autograd.Function):
                                       meyu0,meyu1,meyd0,meyd1,
                                       )
         ctx.num_iters, ctx.options, ctx.diagnostics = num_iters, options, diagnostics
-        # An optional forward stall stop must not silently shorten the adjoint's
-        # available budget. Genuine forward convergence retains legacy behaviour.
-        if diagnostics is not None and diagnostics["forward"].get("status") == "stalled":
-            ctx.num_iters = diagnostics["forward"]["iteration_limit"]
         ctx.input_count = len(ctx.needs_input_grad)
         return mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1
     

@@ -253,26 +253,18 @@ class BinaryDeepFlow1dStar(torch.nn.Module):
 
 class BinaryDeepFlow2dStar(torch.nn.Module):
     
-    """Binary star LBP with configurable convergence checks and optional fusion.
+    """Soft binary star LBP with sparse checks and opt-in compiled updates.
 
-    `last_convergence` contains scalar-only forward/backward diagnostics from the
-    latest invocation. Compilation is opt-in and may change floating-point rounding.
-    `check_every=1, compile_updates=False` reproduces the original check schedule.
-    Forward monitoring measures actual updates and probability drift at checks.
-    Optional `stop_on_stall` reports "stalled", never convergence, and defaults off.
+    Calls are silent. `last_convergence` always holds final scalar summaries for
+    this invocation; `record_history=True` also retains checked residual samples.
+    `test_type=None` selects soft LBP in both training and evaluation.
     """
     def __init__(self, test_type="MAP", check_every=100, compile_updates=False,
-                 record_history=True, report_every=0, monitor_updates=True,
-                 stop_on_stall=False, stall_patience=5, stall_min_iterations=1000,
-                 stall_message_atol=0.0, stall_probability_atol=0.0) -> None:
+                 record_history=False) -> None:
         super().__init__()
         self.test_type = test_type
         self.lbp_options = BinaryLBPOptions(
-            check_every=check_every, compile_updates=compile_updates,
-            record_history=record_history, report_every=report_every,
-            monitor_updates=monitor_updates, stop_on_stall=stop_on_stall,
-            stall_patience=stall_patience, stall_min_iterations=stall_min_iterations,
-            stall_message_atol=stall_message_atol, stall_probability_atol=stall_probability_atol,
+            check_every=check_every, compile_updates=compile_updates, record_history=record_history,
         )
         self.last_convergence = {}
         
@@ -283,9 +275,13 @@ class BinaryDeepFlow2dStar(torch.nn.Module):
             
             # New dictionaries per call: graphs retain their own diagnostic target.
             self.last_convergence = {
-                "forward": {"history": [], "status": "not_run"},
-                "backward": {"history": [], "status": "not_run"},
+                phase: dict(phase=phase, status="not_run", converged=False, iterations=0,
+                            iteration_limit=None, tolerance=None, initial_residual=None, residual=None)
+                for phase in ("forward", "backward")
             }
+            if self.lbp_options.record_history:
+                for summary in self.last_convergence.values():
+                    summary["history"] = []
             #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
             mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1 = Binary_LBP2d_PytorchNative.apply(d,rx + torch.nan_to_num(math.inf*(lx==1),0,math.inf),
                                                                                                  rx + torch.nan_to_num(math.inf*(lx==-1),0,math.inf),
