@@ -1,18 +1,14 @@
+import datetime
+import itertools
+import math
+import random
 import unittest
 
 import numpy as np
-import math
-import random
-
-import datetime
-import itertools
-
 import torch
+from binary_deepflow import BinaryDeepFlow1d
 from potts_deepflow import PottsDeepFlow1d, PottsDeepFlow2d, PottsDeepFlow3d
-from potts_deepflow_function import Potts_MAP1d,Potts_MAP2d,Potts_MAP3d
-from binary_deepflow import BinaryDeepFlow1d, BinaryDeepFlow2d, BinaryDeepFlow3d
-from binary_deepflow_function import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d
-
+from potts_deepflow_function import Potts_MAP1d, Potts_MAP2d, Potts_MAP3d
 from testing_binary import BINARY_run_all_solvers
 
 b=1
@@ -93,7 +89,7 @@ def test_no_smoothness(d,full_device,asserter):
     print("Testing (no smoothness) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
 
-    size_info, size_info_j, size_red_info, axes = get_size_info(d)
+    size_info, size_info_j, _, _ = get_size_info(d)
 
     #create data terms for testing (smoothness terms should be zero)
     data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
@@ -214,10 +210,7 @@ def test_no_smoothness(d,full_device,asserter):
     print(13,"Check MAP correctness")
     max_channel = np.ascontiguousarray(np.repeat(np.max(data_t,1,keepdims=True),data_t.shape[1],axis=1))
     for val_df, val_d, val_m in zip(oa_np.flatten(),data_t.flatten(),max_channel.flatten()):
-        if (val_d == val_m) and (val_df < 1-epsilon):
-            print("oa",val_df, val_d, val_m)
-            asserter.assertTrue(False)
-        elif (val_d != val_m) and (val_df > epsilon):
+        if (val_d == val_m) and (val_df < 1-epsilon) or (val_d != val_m) and (val_df > epsilon):
             print("oa",val_df, val_d, val_m)
             asserter.assertTrue(False)
 
@@ -234,7 +227,7 @@ def test_no_data(d,full_device,asserter):
     print("Testing (no data term) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
     
-    size_info, size_info_j, size_red_info, axes = get_size_info(d)
+    size_info, _, _, _ = get_size_info(d)
     size_nochannel_info = tuple([size_info[0],1]+list(size_info[2:]))
 
     #create data terms for testing (smoothness terms should be zero)
@@ -312,7 +305,7 @@ def test_no_data(d,full_device,asserter):
         buffer_equality_check(estimate, name, val_d, asserter=asserter)
             
     #ensure gradient wrt smoothness terms sum to zero in the channels dimension
-    exception_list = []
+    # exception_list = []
     print(11,"Checking correctness of gradient calculation")
     val_d = 0.0
     for estimate, name in zip(ogmj_np+oglj_np, ["MFE"+str(i) for i in range(d)]+["LBP"+str(i) for i in range(d)]):
@@ -322,9 +315,9 @@ def test_no_data(d,full_device,asserter):
 def test_smoothness_dom(d,full_device,asserter):
     print("Testing (smoothness dom) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
-    alg_type = "pytorch" if "pytorch" in full_device else "cpp"
+    # alg_type = "pytorch" if "pytorch" in full_device else "cpp"
 
-    size_info, size_info_j, size_red_info, axes = get_size_info(d)
+    size_info, _, _, _ = get_size_info(d)
 
     data_t = 0.01/(d*size_info[1])*np.random.normal(0,1,size=size_info).astype(np.float32)
     sums = [[np.sum(data_t[b,c,...]) for c in range(size_info[1])] for b in range(size_info[0])]
@@ -364,7 +357,7 @@ def test_smoothness_dom(d,full_device,asserter):
     #ensure MAP assigns 1 to the preferred c and 0 otherwise
     print(10,"Check MAP correctness")
     oa_epsilon = 0.01
-    totals = np.sum(data_t,axis=axes)
+    # totals = np.sum(data_t,axis=axes)
     for b,c in itertools.product(range(size_info[0]),range(size_info[1])):
         if c == c_preferred[b]:
             for val_df in oa_np[b,c,...].flatten():
@@ -381,14 +374,15 @@ def test_smoothness_dom(d,full_device,asserter):
 def test_mimic_binary(d,full_device,asserter):
     print("Testing (mimic binary) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
-    alg_type = "pytorch" if "pytorch" in full_device else "cpp"
+    # alg_type = "pytorch" if "pytorch" in full_device else "cpp"
     epsilon_light = 0.02
+    epsilon_lbp = 1e-5
     
-    size_info, size_info_j, size_red_info, axes = get_size_info(d)
+    size_info, size_info_j, _, _ = get_size_info(d)
     size_info_potts = tuple([size_info[0],2]+list(size_info[2:]))
     size_info_j_potts = [tuple([s[0],2]+list(s[2:])) for s in size_info_j]
-    size_info_binary = tuple([size_info[0],1]+list(size_info[2:]))
-    size_info_j_binary = [tuple([s[0],1]+list(s[2:])) for s in size_info_j]
+    # size_info_binary = tuple([size_info[0],1]+list(size_info[2:]))
+    # size_info_j_binary = [tuple([s[0],1]+list(s[2:])) for s in size_info_j]
     
     numels = math.prod(size_info[2:])
 
@@ -526,14 +520,14 @@ def test_mimic_binary(d,full_device,asserter):
     
     #check marginals
     print(10,"Ensure equivalent marginals")
-    exception_list = []
+    # exception_list = []
     for estimate, name in zip([(om_np,om_np_bin), (ol_np,ol_np_bin)], ["MFE","LBP"]):
-        buffer_equality_check(estimate[0][:,1,...],name+"_POTTS",estimate[1][:,0,...],name+"_BINARY",epsilon_light,asserter)
+        buffer_equality_check(estimate[0][:,1,...],name+"_POTTS",estimate[1][:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
         
     print(11,"Ensure equivalent joint marginals")
     for potts,binary, name in zip(omj_np+olj_np,omj_np_bin+olj_np_bin, ["MFE"+str(i) for i in range(d)]+["LBP"+str(i) for i in range(d)]):
-        buffer_equality_check(potts[:,0,...],name+"_POTTS0",binary[:,0,...],name+"_BINARY",epsilon_light,asserter)
-        buffer_equality_check(potts[:,1,...],name+"_POTTS1",binary[:,0,...],name+"_BINARY",epsilon_light,asserter)
+        buffer_equality_check(potts[:,0,...],name+"_POTTS0",binary[:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
+        buffer_equality_check(potts[:,1,...],name+"_POTTS1",binary[:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
     
     print(12,"Ensure same losses")
     if abs(all_losses[0] - all_losses[1]) > epsilon*math.sqrt(numels) or abs(all_losses[2] - all_losses[3]) > epsilon*math.sqrt(numels):
@@ -542,98 +536,97 @@ def test_mimic_binary(d,full_device,asserter):
     
     #check gradients
     print(13,"Ensure equivalent gradients with respect to the data terms")
-    exception_list = []
+    # exception_list = []
     for estimate, name in zip([(ot_np,ot_np_bin), (ot2_np,ot2_np_bin)], ["MFE","LBP"]):
-        buffer_equality_check(-estimate[0][:,0,...],name+"_POTTS0",estimate[1][:,0,...],name+"_BINARY",epsilon_light,asserter)
-        buffer_equality_check( estimate[1][:,0,...],name+"_POTTS1",estimate[1][:,0,...],name+"_BINARY",epsilon_light,asserter)
+        buffer_equality_check(-estimate[0][:,0,...],name+"_POTTS0",estimate[1][:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
+        buffer_equality_check( estimate[0][:,1,...],name+"_POTTS1",estimate[1][:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
     
     #check gradients
     print(14,"Ensure equivalent gradients with respect to the smoothness terms for LBP")
-    exception_list = []
+    # exception_list = []
     for potts,binary, name in zip(oglj_np,oglj_np_bin, ["LBP"+str(i) for i in range(d)]):
-        buffer_equality_check(potts[:,0,...],name+"_POTTS0",binary[:,0,...],name+"_BINARY",epsilon_light,asserter)
-        buffer_equality_check(potts[:,1,...],name+"_POTTS1",binary[:,0,...],name+"_BINARY",epsilon_light,asserter)
+        buffer_equality_check(potts[:,0,...],name+"_POTTS0",binary[:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
+        buffer_equality_check(potts[:,1,...],name+"_POTTS1",binary[:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
     
     #check gradients
     print(15,"Ensure weak equivalence (i.e. the average of the Potts model gives you the binary model) for gradients of smoothness terms")
     #Mathematically, this is a bit odd. I think it has to do with the fact that normally a Potts model has more than two labels so it doesn't "know"
     #that edges from label 0 must also be edges from label 1.
-    exception_list = []
+    # exception_list = []
     for potts,binary, name in zip(ogmj_np,ogmj_np_bin, ["MFE"+str(i) for i in range(d)]):
         potts_estimate = 0.5*(potts[:,0,...]+potts[:,1,...])
-        buffer_equality_check(potts_estimate,name+"_POTTS_AVG",binary[:,0,...],name+"_BINARY",epsilon_light,asserter)
+        buffer_equality_check(potts_estimate,name+"_POTTS_AVG",binary[:,0,...],name+"_BINARY",(epsilon_lbp if name.startswith("LBP") else epsilon_light),asserter)
     
     
-class Test_Extreme(unittest.TestCase):
-    
+class Test_Extreme(unittest.TestCase):    
     def test_no_smoothness_1D(self):
-        print("")
+        print()
         test_no_smoothness(1,"pytorch_cpu",self)
         #print("")
         #test_no_smoothness(1,"pytorch_cuda",self)
         
     def test_no_smoothness_2D(self):
-        print("")
+        print()
         test_no_smoothness(2,"pytorch_cpu",self)
         #print("")
         #test_no_smoothness(2,"pytorch_cuda",self)
 
     def test_no_smoothness_3D(self):
-        print("")
+        print()
         test_no_smoothness(3,"pytorch_cpu",self)
         #print("")
         #test_no_smoothness(3,"pytorch_cuda",self)
         
     def test_no_data_1D(self):
-        print("")
+        print()
         test_no_data(1,"pytorch_cpu",self)
         #print("")
         #test_no_data(1,"pytorch_cuda",self)
         
     def test_no_data_2D(self):
-        print("")
+        print()
         test_no_data(2,"pytorch_cpu",self)
         #print("")
         #test_no_data(2,"pytorch_cuda",self)
 
     def test_no_data_3D(self):
-        print("")
+        print()
         test_no_data(3,"pytorch_cpu",self)    
         #print("")
         #test_no_data(3,"pytorch_cuda",self)
 
     def test_smoothness_1D(self):
-        print("")
+        print()
         test_smoothness_dom(1,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(1,"pytorch_cuda",self)
 
     def test_smoothness_2D(self):
-        print("")
+        print()
         test_smoothness_dom(2,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(2,"pytorch_cuda",self)
 
     def test_smoothness_3D(self):
-        print("")
+        print()
         test_smoothness_dom(3,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(3,"pytorch_cuda",self)
         
     def test_zmimic_binary_1D(self):
-        print("")
+        print()
         test_mimic_binary(1,"pytorch_cpu",self)
         #print("")
         #test_mimic_binary(1,"pytorch_cuda",self)
     
     def test_zmimic_binary_2D(self):
-        print("")
+        print()
         test_mimic_binary(2,"pytorch_cpu",self)
         #print("")
         #test_mimic_binary(2,"pytorch_cuda",self)
     
     def test_zmimic_binary_3D(self):
-        print("")
+        print()
         test_mimic_binary(3,"pytorch_cpu",self)
     #    print("")
     #    test_mimic_binary(2,"pytorch_cuda",self)

@@ -1,12 +1,10 @@
-import unittest
-import numpy as np
-import time
-import torch
-from itertools import product
-from math import sqrt, log
 import datetime
+import unittest
+from itertools import product
+from math import log, sqrt
 
-
+import numpy as np
+import torch
 from graph_deepflow import BinaryDeepFlow, PottsDeepFlow
 
 epsilon = 0.5
@@ -29,8 +27,8 @@ def test_no_smoothness(device,model_type,b,c,N,asserter):
         operator_LBP = PottsDeepFlow(solve_type="LBP",activation=False,test_type="MAP")
         operator_MFE = PottsDeepFlow(solve_type="MFE",activation=False,test_type="MAP")
     else: #model_type == "Binary"
-        operator_LBP = BinaryDeepFlow(solve_type="LBP",activation=False,test_type="MAP")
-        operator_MFE = BinaryDeepFlow(solve_type="MFE",activation=False,test_type="MAP")
+        operator_LBP = BinaryDeepFlow(solve_type="LBP",test_type="MAP")
+        operator_MFE = BinaryDeepFlow(solve_type="MFE",test_type="MAP")
     
     t = torch.tensor(data_t, device=torch.device(device))
     t2 = torch.tensor(data_t.copy(), device=torch.device(device))
@@ -43,8 +41,14 @@ def test_no_smoothness(device,model_type,b,c,N,asserter):
     r2.requires_grad = True
     
     om = operator_MFE(t,r)
+    if model_type == "Binary":
+        # Binary training returns (node marginals, edge disagreement marginals).
+        om, _ = om
     om_np = om.detach().cpu().numpy()
     ol = operator_LBP(t2,r2)
+    if model_type == "Binary":
+        # Binary training returns (node marginals, edge disagreement marginals).
+        ol, _ = ol
     ol_np = ol.detach().cpu().numpy()
     
     loss = torch.sum(w*om)
@@ -68,32 +72,22 @@ def test_no_smoothness(device,model_type,b,c,N,asserter):
     
     #resize into more usable form
     dt_np_l = {(ib,ic):data_t[ib,ic,...].flatten() for ib,ic in product(range(b),range(c))}
-    dw_np_l = {(ib,ic):data_w[ib,ic,...].flatten() for ib,ic in product(range(b),range(c))}
     oa_np_l = {(ib,ic):oa_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
-    om_np_l = {(ib,ic):om_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
-    ol_np_l = {(ib,ic):ol_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
-    ot_np_l = {(ib,ic):ot_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
-    ot2_np_l = {(ib,ic):ot2_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
         
-    #ensure mean pass is equivalent to the data terms only
-    for ib,ic in product(range(b),range(c)): 
-        for val_df, val_d in zip(om_np_l[(ib,ic)],dt_np_l[(ib,ic)]):
-            if(APD(val_df,val_d) > epsilon):
-                raise Exception(str(val_df) + "\t" + str(val_d))
-    for ib,ic in product(range(b),range(c)): 
-        for val_df, val_d in zip(ol_np_l[(ib,ic)],dt_np_l[(ib,ic)]):
-            if(APD(val_df,val_d) > epsilon):
-                raise Exception(str(val_df) + "\t" + str(val_d)+"\t" + str(APD(val_df,val_d)))
-    
-    #ensure gradient wrt data terms are passed immediately through
-    for ib,ic in product(range(b),range(c)): 
-        for val_df, val_d in zip(ot_np_l[(ib,ic)],dw_np_l[(ib,ic)]):
-            if(APD(val_df,val_d) > epsilon):
-                raise Exception(str(val_df) + "\t" + str(val_d))
-    for ib,ic in product(range(b),range(c)): 
-        for val_df, val_d in zip(ot2_np_l[(ib,ic)],dw_np_l[(ib,ic)]):
-            if(APD(val_df,val_d) > epsilon):
-                raise Exception(str(val_df) + "\t" + str(val_d))
+    # Without edges, Binary returns sigmoid probabilities; Potts with
+    # activation=False returns logits. Check the corresponding derivatives.
+    if model_type == "Binary":
+        expected_nodes = torch.sigmoid(t.detach()).cpu().numpy()
+        expected_grad = data_w * expected_nodes * (1 - expected_nodes)
+    else:
+        expected_nodes = data_t
+        expected_grad = data_w
+    # Potts sums log messages over up to 256 neighbours in float32.
+    atol = 1e-6 if model_type == "Binary" else 1e-5
+    for actual in (om_np, ol_np):
+        np.testing.assert_allclose(actual, expected_nodes, rtol=1e-5, atol=atol)
+    for actual in (ot_np, ot2_np):
+        np.testing.assert_allclose(actual, expected_grad, rtol=1e-5, atol=atol)
     
     #if it is a Potts model, ensure MAP assigns 1 to highest term and 0 to everything else
     if model_type == "Potts":
@@ -137,8 +131,8 @@ def test_middling_smoothness(device,model_type,b,c,N,asserter):
         operator_LBP = PottsDeepFlow(solve_type="LBP",activation=False,test_type="MAP")
         operator_MFE = PottsDeepFlow(solve_type="MFE",activation=False,test_type="MAP")
     else: #model_type == "Binary"
-        operator_LBP = BinaryDeepFlow(solve_type="LBP",activation=False,test_type="MAP")
-        operator_MFE = BinaryDeepFlow(solve_type="MFE",activation=False,test_type="MAP")
+        operator_LBP = BinaryDeepFlow(solve_type="LBP",test_type="MAP")
+        operator_MFE = BinaryDeepFlow(solve_type="MFE",test_type="MAP")
     
     t = torch.tensor(data_t, device=torch.device(device))
     t2 = torch.tensor(data_t.copy(), device=torch.device(device))
@@ -151,8 +145,14 @@ def test_middling_smoothness(device,model_type,b,c,N,asserter):
     r2.requires_grad = True
     
     om = operator_MFE(t,r)
+    if model_type == "Binary":
+        # Binary training returns (node marginals, edge disagreement marginals).
+        om, _ = om
     om_np = om.detach().cpu().numpy()
     ol = operator_LBP(t2,r2)
+    if model_type == "Binary":
+        # Binary training returns (node marginals, edge disagreement marginals).
+        ol, _ = ol
     ol_np = ol.detach().cpu().numpy()
     
     loss = torch.sum(w*om)
@@ -196,8 +196,8 @@ def test_high_smoothness(device,model_type,b,c,N,asserter):
         operator_LBP = PottsDeepFlow(solve_type="LBP",activation=False,test_type="MAP")
         operator_MFE = PottsDeepFlow(solve_type="MFE",activation=False,test_type="MAP")
     else: #model_type == "Binary"
-        operator_LBP = BinaryDeepFlow(solve_type="LBP",activation=False,test_type="MAP")
-        operator_MFE = BinaryDeepFlow(solve_type="MFE",activation=False,test_type="MAP")
+        operator_LBP = BinaryDeepFlow(solve_type="LBP",test_type="MAP")
+        operator_MFE = BinaryDeepFlow(solve_type="MFE",test_type="MAP")
     
     t = torch.tensor(data_t, device=torch.device(device))
     t2 = torch.tensor(data_t.copy(), device=torch.device(device))
@@ -209,8 +209,14 @@ def test_high_smoothness(device,model_type,b,c,N,asserter):
     r2.requires_grad = True
     
     om = operator_MFE(t,r)
+    if model_type == "Binary":
+        # Binary training returns (node marginals, edge disagreement marginals).
+        om, _ = om
     om_np = om.detach().cpu().numpy()
     ol = operator_LBP(t2,r2)
+    if model_type == "Binary":
+        # Binary training returns (node marginals, edge disagreement marginals).
+        ol, _ = ol
     ol_np = ol.detach().cpu().numpy()
     
     operator_LBP.eval()
@@ -225,8 +231,8 @@ def test_high_smoothness(device,model_type,b,c,N,asserter):
     #resize into more usable form
     dt_np_l = {(ib,ic):data_t[ib,ic,...].flatten() for ib,ic in product(range(b),range(c))}
     oa_np_l = {(ib,ic):oa_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
-    om_np_l = {(ib,ic):om_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
-    ol_np_l = {(ib,ic):ol_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
+    # om_np_l = {(ib,ic):om_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
+    # ol_np_l = {(ib,ic):ol_np[ib,ic,...].flatten()  for ib,ic in product(range(b),range(c))}
     
     #if it is a Potts model, ensure MAP assigns 1 to highest term and 0 to everything else
     if model_type == "Potts":
@@ -258,7 +264,7 @@ class Test_Extreme(unittest.TestCase):
     bcN_list = [(1,3,5),(1,5,12),(2,3,6),(1,3,256)]
     
     def test_no_smoothness(self):
-        print("")
+        print()
         for b,c,N in Test_Extreme.bcN_list:
             print("Potts no smoothness:\t",b,c,N,end="")
             start_time = datetime.datetime.now()
@@ -273,7 +279,7 @@ class Test_Extreme(unittest.TestCase):
             print("\t",end_time-start_time)
     
     def test_high_smoothness(self):
-        print("")
+        print()
         for b,c,N in Test_Extreme.bcN_list:
             print("Potts high smoothness:\t",b,c,N,end="")
             start_time = datetime.datetime.now()
@@ -288,7 +294,7 @@ class Test_Extreme(unittest.TestCase):
             print("\t",end_time-start_time)
     
     def test_middling_smoothness(self):
-        print("")
+        print()
         for b,c,N in Test_Extreme.bcN_list:
             print("Potts middling smoothness:\t",b,c,N,end="")
             start_time = datetime.datetime.now()

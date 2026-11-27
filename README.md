@@ -57,3 +57,51 @@ C compiler to a particular version using the C make variable.
 (Please note that the TensorFlow portions are no longer being supported as we are
 moving to a more research-friend PyTorch-native philosophy for new algorithm
 development. Your understanding is appreciated.)
+## PyTorch soft binary star LBP
+
+```python
+from binary_deepflow import BinaryDeepFlow2dStar
+
+star = BinaryDeepFlow2dStar(
+    test_type=None,          # Soft LBP in training and evaluation.
+    check_every=100,         # First step, multiples of k, and the exact original cap.
+    compile_updates=False, # Opt-in compiled tensor update blocks.
+    record_history=False,  # Default: final scalar summaries only.
+)
+u, joint_rows, joint_columns = star(scores, rx, ry, lx, ly)
+loss = dice_loss(u, targets)
+loss.backward()
+print(star.last_convergence["forward"]["status"])
+```
+
+Successful solver and precision-reference calls write nothing to stdout or stderr.
+There is no progress-printing or callback policy. Default `test_type="MAP"` still
+selects native hard MAP in evaluation; `test_type=None` keeps soft LBP in evaluation.
+Native MAP behavior and ordinary LBP callers' original check schedule are unchanged.
+
+`BinaryLBPOptions` contains only `check_every`, `compile_updates`, and `record_history`.
+Use keyword construction. Update equations, arithmetic order, damping, epsilon values,
+residual reductions and iteration limits are preserved. Buffers inherit the input
+dtype, supporting float32 and float64 soft LBP. Compilation remains opt-in with
+`fullgraph=True`, `dynamic=False` and explicit failures. First use includes compiler
+overhead; compiled/eager agreement is not a mathematical accuracy guarantee.
+
+### Final summaries and explicit history
+
+`last_convergence` holds scalar-only forward/backward summaries: `phase`, `status`,
+`converged`, `iterations`, `iteration_limit`, `tolerance`, `initial_residual`, `residual`,
+and the existing message/gradient dtype fields. Status is `not_run` before a phase,
+`running` at intermediate checks, and `converged`, `iteration_limit`, `nonfinite`, or
+`zero_gradient` at termination. A cap-only exit is never reported as convergence.
+Non-finite residuals raise at a scheduled check.
+
+Pass `record_history=True` for plots. Each checked row adds iteration, residual,
+mean/max absolute error and relative residual. Without it, no history rows,
+history-only mean/max reductions or message/probability snapshots are allocated.
+Checked scalars share one transfer. Forward retains the maximum sum of absolute
+message errors; backward retains the maximum absolute message-gradient residual.
+History mode does not change these stopping rules.
+
+Each invocation owns its dictionary: a pending backward updates its own forward's
+trace, not a newer call's trace. Save/copy a trace before another forward if needed.
+No tensors are retained in the diagnostic dictionaries.

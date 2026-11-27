@@ -1,7 +1,12 @@
 import torch
-from graph_deepflow_function import DenseGraph_LBP_Categorical_PytorchNative, DenseGraph_MFE_Categorical_PytorchNative, DenseGraph_MAP_Categorical_PytorchNative
-from graph_deepflow_function import DenseGraph_LBP_Binary_PytorchNative, DenseGraph_MFE_Binary_PytorchNative, DenseGraph_MAP_Binary_PytorchNative
-import math
+from graph_deepflow_function import (
+    DenseGraph_LBP_Binary_PytorchNative,
+    DenseGraph_LBP_Categorical_PytorchNative,
+    DenseGraph_MAP_Binary_PytorchNative,
+    DenseGraph_MAP_Categorical_PytorchNative,
+    DenseGraph_MFE_Binary_PytorchNative,
+    DenseGraph_MFE_Categorical_PytorchNative,
+)
 
 
 class BinaryDeepFlow(torch.nn.Module):
@@ -94,7 +99,7 @@ class PottsDeepFlow(torch.nn.Module):
                     return marginal_logit
                 
                 epsilon = 10**-10
-                me = DenseGraph_LBP_Categorical_PytorchNative.apply(d,r)
+                me0 = DenseGraph_LBP_Categorical_PytorchNative.apply(d,r)
                 
                 #estimate the marginals for each node
                 marginal_node = torch.exp(d)*torch.prod(me0,dim=2)

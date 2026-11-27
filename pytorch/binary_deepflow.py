@@ -1,9 +1,26 @@
-import torch
-from binary_deepflow_function import Binary_MAP1d, Binary_Mean1d_PytorchNative, Binary_LBP1d_PytorchNative, BinaryDeepFlow1dLoss_functional
-from binary_deepflow_function import Binary_MAP2d, Binary_Mean2d_PytorchNative, Binary_LBP2d_PytorchNative, BinaryDeepFlow2dLoss_functional
-from binary_deepflow_function import Binary_MAP3d, Binary_Mean3d_PytorchNative, Binary_LBP3d_PytorchNative, BinaryDeepFlow3dLoss_functional
 import math
+from binary_lbp_utils import BinaryLBPOptions
+
+import torch
+from binary_deepflow_function import (
+    Binary_LBP1d_PytorchNative,
+    Binary_LBP2d_PytorchNative,
+    Binary_LBP3d_PytorchNative,
+    Binary_MAP1d,
+    Binary_MAP1dStar,
+    Binary_MAP2d,
+    Binary_MAP2dStar,
+    Binary_MAP3d,
+    Binary_MAP3dStar,
+    Binary_Mean1d_PytorchNative,
+    Binary_Mean2d_PytorchNative,
+    Binary_Mean3d_PytorchNative,
+    BinaryDeepFlow1dLoss_functional,
+    BinaryDeepFlow2dLoss_functional,
+    BinaryDeepFlow3dLoss_functional,
+)
 from torch.nn.functional import pad
+
 
 class BinaryDeepFlow1dLoss(torch.nn.Module):
     def __init__(self) -> None:
@@ -229,27 +246,48 @@ class BinaryDeepFlow1dStar(torch.nn.Module):
             return marginals_u, marginals_j
             
         elif self.test_type == "MAP":
-            return Binary_MAP1d.apply(d,rx)
+            return Binary_MAP1dStar.apply(d,rx,lx)
             
         else:
             raise Exception("Uknown test-time solve type: " + str(self.test_type))
 
 class BinaryDeepFlow2dStar(torch.nn.Module):
     
-    def __init__(self, test_type="MAP") -> None:
+    """Soft binary star LBP with sparse checks and opt-in compiled updates.
+
+    Calls are silent. `last_convergence` always holds final scalar summaries for
+    this invocation; `record_history=True` also retains checked residual samples.
+    `test_type=None` selects soft LBP in both training and evaluation.
+    """
+    def __init__(self, test_type="MAP", check_every=100, compile_updates=False,
+                 record_history=False) -> None:
         super().__init__()
         self.test_type = test_type
+        self.lbp_options = BinaryLBPOptions(
+            check_every=check_every, compile_updates=compile_updates, record_history=record_history,
+        )
+        self.last_convergence = {}
         
     def forward(self,d,rx,ry,lx,ly):
         
         #if we are in training or only "soft" mode, always use training solvers
         if self.training or self.test_type is None:
             
+            # New dictionaries per call: graphs retain their own diagnostic target.
+            self.last_convergence = {
+                phase: dict(phase=phase, status="not_run", converged=False, iterations=0,
+                            iteration_limit=None, tolerance=None, initial_residual=None, residual=None)
+                for phase in ("forward", "backward")
+            }
+            if self.lbp_options.record_history:
+                for summary in self.last_convergence.values():
+                    summary["history"] = []
             #if we are in parallel loopy belief propagation, get the final converged messages and calculate the marginal
             mexu0,mexu1,mexd0,mexd1,meyu0,meyu1,meyd0,meyd1 = Binary_LBP2d_PytorchNative.apply(d,rx + torch.nan_to_num(math.inf*(lx==1),0,math.inf),
                                                                                                  rx + torch.nan_to_num(math.inf*(lx==-1),0,math.inf),
                                                                                                  ry + torch.nan_to_num(math.inf*(ly==1),0,math.inf),
-                                                                                                 ry + torch.nan_to_num(math.inf*(ly==-1),0,math.inf))
+                                                                                                 ry + torch.nan_to_num(math.inf*(ly==-1),0,math.inf),
+                                                                                                 self.lbp_options, self.last_convergence)
 
             marginal_node_0 = torch.exp(-d * (d > 0) ) * pad(mexd0,(0,0,0,1),value=1) * pad(mexu0,(0,0,1,0),value=1) * pad(meyd0,(0,1,0,0),value=1) * pad(meyu0,(1,0,0,0),value=1)
             marginal_node_1 = torch.exp( d * (d < 0) ) * pad(mexd1,(0,0,0,1),value=1) * pad(mexu1,(0,0,1,0),value=1) * pad(meyd1,(0,1,0,0),value=1) * pad(meyu1,(1,0,0,0),value=1)
@@ -280,7 +318,7 @@ class BinaryDeepFlow2dStar(torch.nn.Module):
             return marginals_u, marginals_jx, marginals_jy
             
         elif self.test_type == "MAP":
-            return Binary_MAP2d.apply(d,rx,ry)
+            return Binary_MAP2dStar.apply(d,rx,ry,lx,ly)
             
         else:
             raise Exception("Uknown test-time solve type: " + str(self.test_type))

@@ -56,7 +56,7 @@ int BINARY_AUGLAG_SOLVER<DEV>::get_buffer_size(){
 }
 
 template<typename DEV>
-BINARY_AUGLAG_SOLVER<DEV>::~BINARY_AUGLAG_SOLVER<DEV>(){
+BINARY_AUGLAG_SOLVER<DEV>::~BINARY_AUGLAG_SOLVER(){
     delete spatial_flow;
 }
 

@@ -1,15 +1,17 @@
+import datetime
+import itertools
+import math
+import random
 import unittest
 
 import numpy as np
-import math
-import random
-
-import datetime
-import itertools
-
 import torch
 from hmf_deepflow import HMFDeepFlow1d, HMFDeepFlow2d, HMFDeepFlow3d
-from hmf_deepflow_function import HMF_MAP1d_PytorchNative,HMF_MAP2d_PytorchNative,HMF_MAP3d_PytorchNative
+from hmf_deepflow_function import (
+    HMF_MAP1d_PytorchNative,
+    HMF_MAP2d_PytorchNative,
+    HMF_MAP3d_PytorchNative,
+)
 
 b=1
 c=int(random.uniform(3,8))
@@ -100,7 +102,7 @@ def test_no_smoothness(d,full_device,asserter):
     print("Testing (no smoothness) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
 
-    parentage, size_info, size_info_r, size_info_j, axes = get_size_info(d,device)
+    parentage, size_info, size_info_r, size_info_j, _ = get_size_info(d,device)
 
     #create data terms for testing (smoothness terms should be zero)
     data_t = np.random.normal(0,1,size=size_info).astype(np.float32)
@@ -252,10 +254,7 @@ def test_no_smoothness(d,full_device,asserter):
     
     max_channel = np.ascontiguousarray(np.repeat(np.max(data_t,1,keepdims=True),data_t.shape[1],axis=1))
     for val_df, val_d, val_m in zip(oa_np.flatten(),data_t.flatten(),max_channel.flatten()):
-        if (val_d == val_m) and (val_df < 1-epsilon):
-            print("oa",val_df, val_d, val_m)
-            asserter.assertTrue(False)
-        elif (val_d != val_m) and (val_df > epsilon):
+        if (val_d == val_m) and (val_df < 1-epsilon) or (val_d != val_m) and (val_df > epsilon):
             print("oa",val_df, val_d, val_m)
             asserter.assertTrue(False)
 
@@ -272,7 +271,7 @@ def test_no_data(d,full_device,asserter):
     print("Testing (no data term) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
     
-    parentage, size_info, size_info_r, size_info_j, axes = get_size_info(d,device)
+    parentage, size_info, size_info_r, _, _ = get_size_info(d,device)
     size_nochannel_info = tuple([size_info[0],1]+list(size_info[2:]))
 
     #create data terms for testing (smoothness terms should be zero)
@@ -346,13 +345,11 @@ def test_no_data(d,full_device,asserter):
     
     #ensure mean estimate is 50/50
     print(10,"Checking correctness of marginals")
-    exception_list = []
     val_d = 1/data_t.shape[1]
     for estimate, name in zip([om_np, ol_np], ["MFE","LBP"]):
         buffer_equality_check(estimate, name, val_d, asserter=asserter)
             
     #ensure gradient wrt smoothness terms sum to zero in the channels dimension
-    exception_list = []
     print(11,"Checking correctness of gradient calculation")
     val_d = 0.0
     for estimate, name in zip(ogmj_np+oglj_np, ["MFE"+str(i) for i in range(d)]+["LBP"+str(i) for i in range(d)]):
@@ -362,9 +359,9 @@ def test_no_data(d,full_device,asserter):
 def test_smoothness_dom(d,full_device,asserter):
     print("Testing (smoothness dom) \tDim: " +str(d)+ " \tDev: " + full_device + "\t Start Time:\t" + str(datetime.datetime.now()))
     device = "cuda" if "cuda" in full_device else "cpu"
-    alg_type = "pytorch" if "pytorch" in full_device else "cpp"
+    # alg_type = "pytorch" if "pytorch" in full_device else "cpp"
 
-    parentage, size_info, size_info_r, size_info_j, axes = get_size_info(d,device)
+    parentage, size_info, size_info_r, _, _ = get_size_info(d,device)
 
     data_t = 0.1/(d*size_info[1])*np.random.normal(0,1,size=size_info).astype(np.float32)
     sums = [[np.sum(data_t[b,c,...]) for c in range(size_info[1])] for b in range(size_info[0])]
@@ -404,7 +401,7 @@ def test_smoothness_dom(d,full_device,asserter):
     #ensure MAP assigns 1 to the preferred c and 0 otherwise
     print(10,"Check MAP correctness")
     oa_epsilon = 0.01
-    totals = np.sum(data_t,axis=axes)
+    # totals = np.sum(data_t,axis=axes)
     num_wrong = {}
     for b,c in itertools.product(range(size_info[0]),range(size_info[1])):
         num_wrong[b,c] = 0
@@ -422,55 +419,55 @@ def test_smoothness_dom(d,full_device,asserter):
     
 class Test_Extreme(unittest.TestCase):
     def test_no_smoothness_1D(self):
-        print("")
+        print()
         test_no_smoothness(1,"pytorch_cpu",self)
         #print("")
         #test_no_smoothness(1,"pytorch_cuda",self)
     
     def test_no_smoothness_2D(self):
-        print("")
+        print()
         test_no_smoothness(2,"pytorch_cpu",self)
         #print("")
         #test_no_smoothness(2,"pytorch_cuda",self)
 
     def test_no_smoothness_3D(self):
-        print("")
+        print()
         test_no_smoothness(3,"pytorch_cpu",self)
         #print("")
         #test_no_smoothness(3,"pytorch_cuda",self)
         
     def test_no_data_1D(self):
-        print("")
+        print()
         test_no_data(1,"pytorch_cpu",self)
         #print("")
         #test_no_data(1,"pytorch_cuda",self)
         
     def test_no_data_2D(self):
-        print("")
+        print()
         test_no_data(2,"pytorch_cpu",self)
         #print("")
         #test_no_data(2,"pytorch_cuda",self)
 
     def test_no_data_3D(self):
-        print("")
+        print()
         test_no_data(3,"pytorch_cpu",self)    
         #print("")
         #test_no_data(3,"pytorch_cuda",self)
         
     def test_smoothness_1D(self):
-        print("")
+        print()
         test_smoothness_dom(1,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(1,"pytorch_cuda",self)   
         
     def test_smoothness_2D(self):
-        print("")
+        print()
         test_smoothness_dom(2,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(2,"pytorch_cuda",self)
 
     def test_smoothness_3D(self):
-        print("")
+        print()
         test_smoothness_dom(3,"pytorch_cpu",self)
         #print("")
         #test_smoothness_dom(3,"pytorch_cuda",self)
