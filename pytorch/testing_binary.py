@@ -14,9 +14,9 @@ from binary_deepflow_function import Binary_MAP1d,Binary_MAP2d,Binary_MAP3d,Bina
 from graph_deepflow import BinaryDeepFlow
 from graph_deepflow_function import DenseGraph_MAP_Binary_PytorchNative
 
-b=1#2**(int(3*random.uniform(0,1))+1)
-c=1#int(4*random.uniform(0,1))+3
-x=2**9
+b=2**(int(3*random.uniform(0,1))+1)
+c=int(4*random.uniform(0,1))+3
+x=2**12
 x_graph = 64
 epsilon = 10**-6
 verbosity = True
@@ -671,7 +671,6 @@ class Test_Extreme(unittest.TestCase):
         test_no_data_graph("pytorch_cpu",self)
         print("")
         test_no_data_graph("pytorch_cuda",self)
-    '''
         
     def test_ano_smoothness_graph(self):
         print("")
@@ -749,7 +748,6 @@ class Test_Extreme(unittest.TestCase):
         test_star_nosmoothness(3,"pytorch_cpu",self)
         print("")
         test_star_nosmoothness(3,"pytorch_cuda",self)
-    '''
         
 if __name__ == '__main__':
     unittest.main()
