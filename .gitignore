@@ -1,0 +1,23 @@
+# Build directories and Python extension packaging
+build/
+dist/
+*.egg-info/
+__pycache__/
+
+# Compiled objects and libraries
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.pyd
+*.out
+
+# C++ test executables
+/DeepFlow/testing_CPP/testing_binary
+/DeepFlow/testing_CPP/testing_potts
+/DeepFlow/testing_CPP/testing_hmf
+synthetic_pelvis

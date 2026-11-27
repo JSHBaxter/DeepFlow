@@ -1,14 +1,29 @@
 import torch
-import numpy as np
-
 from deepflow_function import DeepFlowFunction
+from hmf_deepflow_function import (
+    HMF_MAP1d_PytorchNative,
+    HMF_MAP2d_PytorchNative,
+    HMF_MAP3d_PytorchNative,
+    HMF_Mean1d_PytorchNative,
+    HMF_Mean2d_PytorchNative,
+    HMF_Mean3d_PytorchNative,
+    HMF_MeanNd_calculate_joint,
+    HMFDeepFlow1dLoss_functional,
+    HMFDeepFlow2dLoss_functional,
+    HMFDeepFlow3dLoss_functional,
+    check_ordering,
+    mix_regularisation_terms,
+    sum_up_joint_marginals,
+)
+from unhmf_deepflow_function import (
+    UNHMF_LBP1d_PytorchNative,
+    UNHMF_LBP2d_PytorchNative,
+    UNHMF_LBP3d_PytorchNative,
+    UNHMFMarginalFromMessageGradientSafe1D,
+    UNHMFMarginalFromMessageGradientSafe2D,
+    UNHMFMarginalFromMessageGradientSafe3D,
+)
 
-from hmf_deepflow_function import mix_regularisation_terms, sum_up_joint_marginals, check_ordering
-from unhmf_deepflow_function import UNHMFMarginalFromMessageGradientSafe1D, UNHMFMarginalFromMessageGradientSafe2D, UNHMFMarginalFromMessageGradientSafe3D
-from unhmf_deepflow_function import UNHMF_LBP1d_PytorchNative, UNHMF_LBP2d_PytorchNative, UNHMF_LBP3d_PytorchNative
-from hmf_deepflow_function import HMFDeepFlow1dLoss_functional,HMFDeepFlow2dLoss_functional,HMFDeepFlow3dLoss_functional
-from hmf_deepflow_function import HMF_MAP1d_PytorchNative, HMF_MAP2d_PytorchNative, HMF_MAP3d_PytorchNative
-from hmf_deepflow_function import HMF_Mean1d_PytorchNative, HMF_Mean2d_PytorchNative, HMF_Mean3d_PytorchNative, HMF_MeanNd_calculate_joint
 
 class HMFDeepFlow1dLoss(torch.nn.Module):
     def __init__(self) -> None:
@@ -28,7 +43,7 @@ class HMFDeepFlow3dLoss(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.f = HMFDeepFlow3dLoss_functional()
-    def forward(self, d, rx, ry, rz, marginals_u, marginals_jx, marginals_jy, marginals_jz, p):
+    def forward(self, d, rx, ry, rz, marginals_u, marginals_jx, marginals_jy, marginals_jz, y, p):
         return self.f.apply(d, rx, ry, rz, marginals_u, marginals_jx, marginals_jy, marginals_jz, y, p)
     
 class HMFDeepFlow1d(torch.nn.Module):
@@ -39,7 +54,7 @@ class HMFDeepFlow1d(torch.nn.Module):
         
     def forward(self,d,rx,p):
         DeepFlowFunction.check_var_dims([d,rx],1,True)
-        b,c,sx = d.shape[0],d.shape[1],d.shape[2]
+        b,c,_ = d.shape[0],d.shape[1],d.shape[2]
         check_ordering(p,rx.shape[1],d.shape[1])
         
         #if we are in training or only "soft" mode, always use training solvers
@@ -79,7 +94,7 @@ class HMFDeepFlow2d(torch.nn.Module):
         
     def forward(self,d,rx,ry,p):
         DeepFlowFunction.check_var_dims([d,rx,ry],2,True)
-        b,c,sx,sy = d.shape[0],d.shape[1],d.shape[2],d.shape[3]
+        b,c,_,_ = d.shape[0],d.shape[1],d.shape[2],d.shape[3]
         check_ordering(p,rx.shape[1],d.shape[1])
         
         #if we are in training or only "soft" mode, always use training solvers
@@ -122,7 +137,7 @@ class HMFDeepFlow3d(torch.nn.Module):
         
     def forward(self,d,rx,ry,rz,p):
         DeepFlowFunction.check_var_dims([d,rx,ry,rz],3,True)
-        b,c,sx,sy,sz = d.shape[0],d.shape[1],d.shape[2],d.shape[3],d.shape[4]
+        b,c,_,_,_ = d.shape[0],d.shape[1],d.shape[2],d.shape[3],d.shape[4]
         check_ordering(p,rx.shape[1],d.shape[1])
         
         #if we are in training or only "soft" mode, always use training solvers

@@ -1,5 +1,7 @@
-from setuptools import setup, Extension
 from itertools import product
+
+import torch
+from setuptools import setup
 
 #note that this needs to run without build isolation to get this extension type to handle CUDA, unfortunately.
 #looking for fix now so build isolation can be used

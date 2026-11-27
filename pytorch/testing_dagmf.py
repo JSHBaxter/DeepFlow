@@ -1,16 +1,19 @@
 import unittest
-
-import numpy as np
-
-import time
-
-import itertools
 from itertools import product
 
+import numpy as np
 import torch
-from dagmf_deepflow import DAGMF_MAP1d,DAGMF_MAP2d,DAGMF_MAP3d
-from dagmf_deepflow import DAGMF_Mean1d,DAGMF_Mean2d,DAGMF_Mean3d
-from dagmf_deepflow import DAGMF_LBP1d_PytorchNative,DAGMF_LBP2d_PytorchNative,DAGMF_LBP3d_PytorchNative
+from dagmf_deepflow import (
+    DAGMF_LBP1d_PytorchNative,
+    DAGMF_LBP2d_PytorchNative,
+    DAGMF_LBP3d_PytorchNative,
+    DAGMF_MAP1d,
+    DAGMF_MAP2d,
+    DAGMF_MAP3d,
+    DAGMF_Mean1d,
+    DAGMF_Mean2d,
+    DAGMF_Mean3d,
+)
 
 b=1
 l=2
@@ -56,7 +59,7 @@ def get_size_into(d, device):
     
 def test_no_smoothness(d,device,asserter):
     print("Testing (no smoothness) \t Dim: " +str(d)+ " \t Dev: " + device)
-    size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
+    size_info_d, size_info_r, _, _, _, parentage = get_size_into(d, device)
 
     data_t = np.random.normal(0,1,size=size_info_d).astype(np.float32)
     data_w = np.random.normal(0,1,size=size_info_d).astype(np.float32)
@@ -156,7 +159,7 @@ def test_no_smoothness(d,device,asserter):
 def test_smoothness_dom(d,device,asserter):
     print("Testing (smoothness dom.) \t Dim: " +str(d)+ " \t Dev: " + device)
 
-    size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
+    size_info_d, size_info_r, _, _, _, parentage = get_size_into(d, device)
 
     data_t = 1*np.random.uniform(0,1,size=size_info_d).astype(np.float32)
     sums = [np.sum(data_t[:,i,...]) for i in range(c)]
@@ -197,8 +200,8 @@ def test_smoothness_dom(d,device,asserter):
     #resize into more usable form
     dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
     oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
-    om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
-    x_space = len(dt_np_l[0])
+    # om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    # x_space = len(dt_np_l[0])
     
     #ensure MAP assigns 1 to highest terms
     sums = [np.sum(o) for o in dt_np_l]
@@ -215,7 +218,7 @@ def test_smoothness_dom(d,device,asserter):
 def test_mixed_smoothness(levels,d,device,asserter):
     print("Testing (mixed smoothness) \t Dim: " +str(d)+ "\t Level: " + str(levels) + " \t Dev: " + device)
 
-    size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, parentage = get_size_into(d, device)
+    size_info_d, size_info_r, _, _, _, parentage = get_size_into(d, device)
 
     #first crack at making data terms
     data_t = np.random.uniform(0,1,size=size_info_d).astype(np.float32)
@@ -295,8 +298,8 @@ def test_mixed_smoothness(levels,d,device,asserter):
     #resize into more usable form
     dt_np_l = [data_t[0,i,...].flatten() for i in range(c)]
     oa_np_l = [oa_np[0,i,...].flatten()  for i in range(c)]
-    om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
-    x_space = len(dt_np_l[0])
+    # om_np_l = [om_np[0,i,...].flatten()  for i in range(c)]
+    # x_space = len(dt_np_l[0])
     
     #ensure MAP assigns 0 to terms not in the 'best' tree
     highest_idx = [data_t[0,i,...].flatten()  for i in range(c)]
@@ -333,7 +336,7 @@ def test_mixed_smoothness(levels,d,device,asserter):
 def test_device_equivalence(d,device_list,asserter):
     print("Testing (dev equiv.) \t Dim: " +str(d)+ " \t Dev:",device_list)
 
-    size_info_d, size_info_r, size_red_info_d, size_red_info_r, axes, p = get_size_into(d, 'cpu')
+    size_info_d, size_info_r, _, _, _, p = get_size_into(d, 'cpu')
 
     data_t = np.random.uniform(0,1,size=size_info_d).astype(np.float32)
     data_w = np.random.uniform(0,1,size=size_info_d).astype(np.float32)
@@ -435,52 +438,52 @@ class Test_Extreme(unittest.TestCase):
 
 
     def test_no_smoothness_1D(self):
-        print("")
+        print()
         test_no_smoothness(1,"cpu",self)
         
     def test_no_smoothness_1D_cuda(self):
-        print("")
+        print()
         if torch.backends.cuda.is_built():  
             test_no_smoothness(1,"cuda",self)
 
     def test_no_smoothness_2D(self):
-        print("")
+        print()
         test_no_smoothness(2,"cpu",self)
 
     def test_no_smoothness_2D_cuda(self):
-        print("")
+        print()
         if torch.backends.cuda.is_built():
             test_no_smoothness(2,"cuda",self)
             
     def test_no_smoothness_3D(self):
-        print("")
+        print()
         test_no_smoothness(3,"cpu",self)
 
     def test_no_smoothness_3D_cuda(self):
-        print("")
+        print()
         if torch.backends.cuda.is_built():
             test_no_smoothness(3,"cuda",self)
 
     def test_smoothness_dom_1D(self):
-        print("")
+        print()
         #if torch.backends.cuda.is_built():
         #    test_smoothness_dom(1,"cuda",self)
         #test_smoothness_dom(1,"cpu",self)
 
     def test_smoothness_dom_2D(self):
-        print("")
+        print()
         #if torch.backends.cuda.is_built():
         #    test_smoothness_dom(2,"cuda",self)
         #test_smoothness_dom(2,"cpu",self)
 
     def test_smoothness_dom_3D(self):
-        print("")
+        print()
         #if torch.backends.cuda.is_built():
         #    test_smoothness_dom(3,"cuda",self)
         #test_smoothness_dom(3,"cpu",self)
 
     def test_mixed_smoothness_1D(self):
-        print("")
+        print()
         #for i in range(1,l):    
         #    test_mixed_smoothness(i,1,"cpu",self)
         #if torch.backends.cuda.is_built():
@@ -488,7 +491,7 @@ class Test_Extreme(unittest.TestCase):
         #        test_mixed_smoothness(i,1,"cuda",self)
 
     def test_mixed_smoothness_2D(self):
-        print("")
+        print()
         #for i in range(1,l):    
         #    test_mixed_smoothness(i,2,"cpu",self)
         #if torch.backends.cuda.is_built():
@@ -496,7 +499,7 @@ class Test_Extreme(unittest.TestCase):
         #        test_mixed_smoothness(i,2,"cuda",self)
 
     def test_mixed_smoothness_3D(self):
-        print("")
+        print()
         #for i in range(1,l):    
         #    test_mixed_smoothness(i,3,"cpu",self)
         #if torch.backends.cuda.is_built():
@@ -504,17 +507,17 @@ class Test_Extreme(unittest.TestCase):
         #        test_mixed_smoothness(i,3,"cuda",self)
             
     def test_equivalence_1d(self):
-        print("")
+        print()
         #f torch.backends.cuda.is_built():
         #   test_device_equivalence(1,["cpu","cuda"],self)
             
     def test_equivalence_2d(self):
-        print("")
+        print()
         #if torch.backends.cuda.is_built():
         #    test_device_equivalence(2,["cpu","cuda"],self)
             
     def test_equivalence_3d(self):
-        print("")
+        print()
         #if torch.backends.cuda.is_built():
         #    test_device_equivalence(3,["cpu","cuda"],self)
         
